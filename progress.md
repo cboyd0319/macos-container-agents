@@ -61,6 +61,9 @@ record verified Apple `container` networking evidence.
 - Apple DocC documentation was rendered with Playwright and cross-checked
   through generated DocC JSON endpoints because the raw HTML page is a
   JavaScript shell.
+- The complete user-supplied DocC snapshot was reviewed: 1,022 rendered
+  Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for
+  egress or allowlist control terms.
 - Apple `container` 1.0.0 exposes NAT networking, DNS selection, subnet
   settings, and host-only networks, but no reviewed domain egress allowlist
   surface was found in rendered docs, generated JSON, local CLI help, or the
@@ -148,6 +151,9 @@ macOS 26+ only runtime and verification boundary intact.
   follow-up hardening pass.
 - 2026-06-14: rendered Apple DocC networking docs with Playwright and checked
   generated DocC JSON endpoints for `ContainerNetworkService`.
+- 2026-06-14: complete user-supplied DocC snapshot review covered 1,022
+  rendered Markdown pages plus raw DocC JSON with zero fetch failures and no
+  exact hits for egress or allowlist control terms.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_mode_fails_closed_until_enforced tests.test_cli.CliTests.test_provider_network_mode_fails_closed_with_clear_message tests.test_cli.CliTests.test_plan_prints_dry_run_command`
   ran 3 focused tests and passed.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider`
@@ -164,3 +170,8 @@ macOS 26+ only runtime and verification boundary intact.
 - 2026-06-14: `git diff --check` and
   `python3 -m json.tool feature_list.json` passed after the provider egress
   preparation pass.
+- 2026-06-14: `python3 -m json.tool feature_list.json`,
+  `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path
+  leak scan, and
+  `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
+  passed after the complete DocC snapshot evidence update.

@@ -119,12 +119,14 @@
       ],
       "evidence": [
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
+        "2026-06-14: Reviewed the complete user-supplied DocC snapshot: 1,022 rendered Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for egress or allowlist control terms.",
         "2026-06-14: Local Apple `container` 1.0.0 CLI help and command reference expose DNS selection, NAT networking, and host-only networks, but no domain egress allowlist flag.",
         "2026-06-14: Added reserved `--network provider` mode that fails closed until provider egress enforcement exists.",
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed with 49 tests, pin check, ruff, mypy, and build.",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
         "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message."
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message.",
+        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update."
       ],
       "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice is fail-closed preparation, not completed provider allowlisting."
     },

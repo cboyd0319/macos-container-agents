@@ -163,6 +163,10 @@ Reviewed on 2026-06-14 for Apple `container` 1.0.0:
   <https://apple.github.io/container/data/documentation/containernetworkservice/networkmode/nat.json>,
   and
   <https://apple.github.io/container/data/documentation/containernetworkservice/networkconfiguration.json>.
+- Reviewed a complete local DocC snapshot supplied by the user. The snapshot
+  was captured from the Apple documentation entrypoint on 2026-06-14 and
+  contains 1,022 rendered Markdown pages plus raw DocC JSON with zero fetch
+  failures.
 - Official Apple `container` 1.0.0 command reference:
   <https://github.com/apple/container/blob/1.0.0/docs/command-reference.md>
 - Local installed CLI:
@@ -180,9 +184,17 @@ Observed command surface:
 - Apple's generated `ContainerNetworkService` docs expose `NetworkMode.nat`,
   where host NAT lets containers reach external services, and
   `NetworkConfiguration` fields for `id`, `mode`, and `subnet`.
+- The generated network plugin docs describe an XPC API for IP address
+  allocation on a network; they do not describe egress filtering.
+- The generated DNS docs expose nameservers, domain, search domain, options,
+  and local DNS domain management. These are name-resolution controls, not
+  packet or destination controls.
 - No domain allowlist or egress allowlist flag was found in the pinned command
-  reference, rendered DocC pages, generated DocC JSON, local CLI help, or
-  local docs search.
+  reference, rendered DocC pages, complete generated DocC JSON/Markdown
+  snapshot, local CLI help, or local docs search.
+- Exact searches across the complete DocC snapshot returned no hits for
+  `egress`, `allowlist`, `allow-list`, `allow list`, `denylist`, `blocklist`,
+  `firewall`, `packet filter`, `proxy`, or `domain allow`.
 
 Conclusion: RunHaven must not treat DNS selection as egress enforcement. The
 reserved `--network provider` mode should fail closed until RunHaven implements

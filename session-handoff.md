@@ -92,6 +92,9 @@ record verified Apple `container` networking evidence.
   follow-up hardening pass.
 - Rendered Apple DocC networking docs with Playwright and checked generated
   DocC JSON endpoints for `ContainerNetworkService`.
+- Complete user-supplied DocC snapshot review covered 1,022 rendered Markdown
+  pages plus raw DocC JSON with zero fetch failures and no exact hits for
+  egress or allowlist control terms.
 - `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_mode_fails_closed_until_enforced tests.test_cli.CliTests.test_provider_network_mode_fails_closed_with_clear_message tests.test_cli.CliTests.test_plan_prints_dry_run_command`
   ran 3 focused tests and passed.
 - `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider`
@@ -106,6 +109,10 @@ record verified Apple `container` networking evidence.
   reported 100/100 after the provider egress preparation pass.
 - `git diff --check` and `python3 -m json.tool feature_list.json` passed after
   the provider egress preparation pass.
+- `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`,
+  `git diff --check`, local absolute-path leak scan, and
+  `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
+  passed after the complete DocC snapshot evidence update.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -119,6 +126,9 @@ record verified Apple `container` networking evidence.
 - Apple DocC documentation was rendered with Playwright and cross-checked
   through generated DocC JSON endpoints because the raw HTML page is a
   JavaScript shell.
+- The complete user-supplied DocC snapshot was reviewed: 1,022 rendered
+  Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for
+  egress or allowlist control terms.
 - `--network provider` is now reserved and fails closed until RunHaven has a
   verified provider egress enforcement mechanism.
 - `runhaven plan` now prints explicit egress status for the selected network.
