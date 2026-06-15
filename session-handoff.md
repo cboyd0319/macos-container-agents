@@ -36,6 +36,7 @@ Add image doctor and preflight recovery diagnostics.
 - `src/runhaven/diagnostic_commands.py`
 - `src/runhaven/git_metadata.py`
 - `src/runhaven/image_commands.py`
+- `src/runhaven/images.py`
 - `src/runhaven/network_commands.py`
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/provider_observability.py`
@@ -71,6 +72,7 @@ Add image doctor and preflight recovery diagnostics.
 - `tests/test_cli_worktree_lifecycle.py`
 - `tests/test_codex_broker_smoke.py`
 - `tests/test_egress.py`
+- `tests/test_images.py`
 - `tests/test_plans.py`
 - `tests/test_provider_egress_smoke.py`
 - `docs/HARNESS_EVALUATION.md`
@@ -345,6 +347,17 @@ Add image doctor and preflight recovery diagnostics.
   `PYTHONPATH=src python3 -m runhaven image doctor shell`,
   `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
   local Markdown link check, and `git diff --check` also passed.
+- Image doctor source-metadata and inactive-state red/green tests first failed
+  because `image doctor` did not report stale images or inspect state volumes,
+  then passed after adding build source-digest labels, stale detection, and
+  read-only state-volume review.
+- Full image doctor source-metadata verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests,
+  pin check, ruff, mypy, and build; focused adjacent image/state/active tests,
+  touched-file compileall, touched-file ruff, touched-source mypy,
+  `PYTHONPATH=src python3 -m runhaven image doctor shell`, and
+  `PYTHONPATH=src python3 -m runhaven image build shell --dry-run` also
+  passed.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1300,8 +1313,10 @@ Add image doctor and preflight recovery diagnostics.
   pinned build plan as `image build`, with clearer repair intent for stale or
   missing local images.
 - `runhaven image doctor [AGENT]` checks local Apple `container` image
-  metadata for missing bundled RunHaven image tags and prints rebuild, network,
-  and state recovery guidance without mutating local resources.
+  metadata for missing or stale bundled RunHaven images, compares RunHaven
+  source-digest labels when present, uses timestamp fallback for older
+  unlabeled images, and reports inactive RunHaven state volumes for the
+  selected profile without mutating local resources.
 - `runhaven network list` lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those names and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -1318,9 +1333,9 @@ Add image doctor and preflight recovery diagnostics.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Add stale-image metadata comparison and deeper interrupted-preflight state
-   inspection so `runhaven image doctor` can distinguish missing tags from
-   stale builds or partial setup leftovers.
+6. Make `image doctor` state-volume review workspace-aware enough to print
+   exact reset commands when the user supplies a workspace, or continue with
+   the next mined UX improvement from `docs/harness/ux-research-ideas.md`.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

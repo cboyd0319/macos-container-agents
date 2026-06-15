@@ -116,9 +116,14 @@ networks, arbitrary user networks, images, volumes, or workspace files.
 Image diagnostics are read-only. `runhaven image doctor [AGENT]` reads
 `container image list --format json`, extracts image names from
 `configuration.name` and descriptor annotation values, accepts both RunHaven
-tags and `docker.io/`-prefixed tags, and returns nonzero when a selected
-bundled profile image is absent. It prints repair guidance, but it does not
-build images, delete resources, mount workspaces, or reset state.
+tags and `docker.io/`-prefixed tags, and compares the local image with the
+current bundled template inputs. New RunHaven image builds carry profile and
+source-digest labels; older unlabeled images are checked with image/template
+timestamps. `image doctor` returns nonzero when a selected bundled profile
+image is absent or stale. It also reads `container volume list --quiet` and the
+secret-free active-run markers to report inactive RunHaven state volumes for
+the selected profile. It prints repair guidance, but it does not build images,
+delete resources, mount workspaces, or reset state.
 
 ## Run Records
 

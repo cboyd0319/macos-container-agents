@@ -127,8 +127,10 @@ runhaven network list
 runhaven network prune --yes
 ```
 
-`image doctor` is a read-only check for missing local bundled image tags and
-prints rebuild, network, and state recovery hints. `image rebuild` rebuilds the
+`image doctor` is a read-only check for missing or stale local bundled images.
+It compares RunHaven source-digest labels when present, falls back to
+image/template timestamps for older unlabeled images, and reviews inactive
+RunHaven state volumes for the selected profile. `image rebuild` rebuilds the
 bundled image from the pinned local template. `state` commands manage RunHaven
 agent home volumes. `network` commands list or delete only RunHaven-managed
 Apple `container` network names, including volume-preparation, internal, and

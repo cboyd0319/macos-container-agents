@@ -332,14 +332,15 @@ runhaven network prune --yes
 ```
 
 Current state: `runhaven image doctor` checks local Apple `container` image
-metadata for missing bundled image tags and prints rebuild, network, and state
-recovery guidance without mutating resources. `runhaven image rebuild` reuses
-the pinned bundled image build plan with clearer repair intent. `state`
-commands list, reset, and prune RunHaven-owned agent home volumes. `network`
-commands list and prune only RunHaven-managed Apple `container` networks after
-explicit confirmation. Future work can add stale-image metadata comparison and
-deeper interrupted-preflight state inspection, but the current commands avoid
-deleting workspace files.
+metadata for missing or stale bundled images, compares RunHaven source-digest
+labels when present, uses timestamp fallback for older unlabeled images, and
+prints inactive state-volume review plus rebuild, network, and state recovery
+guidance without mutating resources. `runhaven image rebuild` reuses the
+pinned bundled image build plan with clearer repair intent. `state` commands
+list, reset, and prune RunHaven-owned agent home volumes. `network` commands
+list and prune only RunHaven-managed Apple `container` networks after explicit
+confirmation. Future work can make the state-volume review workspace-aware,
+but the current commands avoid deleting workspace files.
 
 ### Credential UX
 

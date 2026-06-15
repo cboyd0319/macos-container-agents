@@ -60,8 +60,9 @@ Apple `container` network names and do not delete arbitrary Apple-managed or
 user-created networks.
 
 `image doctor` is read-only. It lists local Apple `container` image metadata,
-checks for expected bundled RunHaven image tags, and does not build images,
-delete resources, mount workspaces, read credentials, or reset state.
+checks expected bundled RunHaven image tags, compares RunHaven image source
+metadata, reviews inactive RunHaven state volume names, and does not build
+images, delete resources, mount workspaces, read credentials, or reset state.
 
 ## Why Not Container Machine
 

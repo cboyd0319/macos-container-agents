@@ -49,8 +49,10 @@ Add image doctor and preflight recovery diagnostics.
   pinned build plan as `image build`, with clearer repair intent for stale or
   missing local images.
 - `runhaven image doctor [AGENT]` now checks local Apple `container` image
-  metadata for missing bundled RunHaven image tags and prints rebuild, network,
-  and state recovery guidance without mutating local resources.
+  metadata for missing or stale bundled RunHaven images, compares RunHaven
+  source-digest labels when present, uses timestamp fallback for older
+  unlabeled images, and reports inactive RunHaven state volumes for the
+  selected profile without mutating local resources.
 - `runhaven network list` now lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those networks and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -424,9 +426,10 @@ Add image doctor and preflight recovery diagnostics.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Next product slice: add stale-image metadata comparison and
-deeper interrupted-preflight state inspection so `runhaven image doctor` can
-distinguish missing tags from stale builds or partial setup leftovers.
+is available. Next product slice: make `image doctor` state-volume review
+workspace-aware enough to print exact reset commands when the user supplies a
+workspace, or continue with the next mined UX improvement from
+`docs/harness/ux-research-ideas.md`.
 
 ## Verification Evidence
 
@@ -1395,3 +1398,14 @@ distinguish missing tags from stale builds or partial setup leftovers.
   `PYTHONPATH=src python3 -m runhaven image doctor shell`,
   `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
   local Markdown link check, and `git diff --check` also passed.
+- 2026-06-15: Image doctor source-metadata and inactive-state red/green tests
+  first failed because `image doctor` did not report stale images or inspect
+  state volumes, then passed after adding build source-digest labels, stale
+  detection, and read-only state-volume review.
+- 2026-06-15: Full image doctor source-metadata verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests,
+  pin check, ruff, mypy, and build; focused adjacent image/state/active tests,
+  touched-file compileall, touched-file ruff, touched-source mypy,
+  `PYTHONPATH=src python3 -m runhaven image doctor shell`, and
+  `PYTHONPATH=src python3 -m runhaven image build shell --dry-run` also
+  passed.
