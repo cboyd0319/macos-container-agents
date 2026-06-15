@@ -50,6 +50,19 @@ from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
 GIT_STATUS_PATH_LIMIT = 100
 DEFAULT_ATTACH_COMMAND = ("/bin/bash",)
 DEFAULT_LOG_FOLLOW_LINES = 200
+ACTIVE_RUN_PUBLIC_FIELDS = (
+    "timestamp",
+    "run_id",
+    "profile",
+    "workspace",
+    "network",
+    "status",
+    "container_name",
+    "state_volume",
+    "network_name",
+    "host_pid",
+    "stop_requested_at",
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -170,6 +183,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="show currently active RunHaven runs",
     )
     runs_active_parser.add_argument("--json", action="store_true", help="print JSON output")
+    runs_status_parser = runs_subcommands.add_parser(
+        "status",
+        help="show sanitized status for an active RunHaven run",
+    )
+    runs_status_parser.add_argument("run_id", help="active run id to inspect")
+    runs_status_parser.add_argument("--json", action="store_true", help="print JSON output")
     runs_attach_parser = runs_subcommands.add_parser(
         "attach",
         help="open a shell or command in an active RunHaven run",
@@ -447,6 +466,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_diff(args.run_id)
     if args.runs_command == "active":
         return runs_active(json_output=args.json)
+    if args.runs_command == "status":
+        return runs_status(args.run_id, json_output=args.json)
     if args.runs_command == "attach":
         return runs_attach(
             args.run_id,
@@ -1203,6 +1224,153 @@ def runs_logs_follow(run_id: str, *, lines: int) -> int:
             container_name,
         )
     )
+
+
+def runs_status(run_id: str, *, json_output: bool) -> int:
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    require_container_cli()
+    result = subprocess.run(
+        ("container", "inspect", container_name),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(
+            f"runhaven: container inspect failed for run {run_id} ({container_name})",
+            file=sys.stderr,
+        )
+        return result.returncode
+
+    container = summarize_container_inspect(load_container_inspect(result.stdout))
+    payload = {
+        "active_run": public_active_run_record(record),
+        "container": container,
+    }
+    if json_output:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    print_runs_status(payload)
+    return 0
+
+
+def public_active_run_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: record[key] for key in ACTIVE_RUN_PUBLIC_FIELDS if key in record}
+
+
+def load_container_inspect(stdout: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("container inspect returned invalid JSON") from exc
+    if isinstance(payload, list):
+        if not payload:
+            raise ValueError("container inspect returned no records")
+        record = payload[0]
+    else:
+        record = payload
+    if not isinstance(record, dict):
+        raise ValueError("container inspect returned an invalid record")
+    return record
+
+
+def summarize_container_inspect(record: dict[str, Any]) -> dict[str, Any]:
+    configuration = record.get("configuration")
+    status = record.get("status")
+    container: dict[str, Any] = {"id": optional_string(record.get("id"))}
+    if isinstance(configuration, dict):
+        image = configuration.get("image")
+        resources = configuration.get("resources")
+        if isinstance(image, dict):
+            container["image"] = optional_string(image.get("reference"))
+        if isinstance(resources, dict):
+            container["resources"] = summarize_container_resources(resources)
+    if isinstance(status, dict):
+        container["state"] = optional_string(status.get("state"))
+        container["started_at"] = optional_string(status.get("startedDate"))
+        container["networks"] = summarize_container_networks(status.get("networks"))
+    return {
+        key: value
+        for key, value in container.items()
+        if value is not None and value != [] and value != {}
+    }
+
+
+def summarize_container_resources(resources: dict[str, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    cpus = resources.get("cpus")
+    memory = resources.get("memoryInBytes")
+    if isinstance(cpus, int | float):
+        summary["cpus"] = cpus
+    if isinstance(memory, int):
+        summary["memory_in_bytes"] = memory
+    return summary
+
+
+def summarize_container_networks(networks: Any) -> list[dict[str, str]]:
+    if not isinstance(networks, list):
+        return []
+    summaries: list[dict[str, str]] = []
+    for network in networks:
+        if not isinstance(network, dict):
+            continue
+        summary = {
+            output_key: value
+            for source_key, output_key in (
+                ("network", "network"),
+                ("hostname", "hostname"),
+                ("ipv4Address", "ipv4_address"),
+                ("ipv4Gateway", "ipv4_gateway"),
+                ("ipv6Address", "ipv6_address"),
+            )
+            if isinstance(value := network.get(source_key), str)
+        }
+        if summary:
+            summaries.append(summary)
+    return summaries
+
+
+def optional_string(value: Any) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def print_runs_status(payload: dict[str, Any]) -> None:
+    active_run = payload["active_run"]
+    container = payload["container"]
+    print(f"Run id: {active_run.get('run_id', '-')}")
+    print(f"Profile: {active_run.get('profile', 'unknown')}")
+    print(f"Workspace: {active_run.get('workspace', 'unknown')}")
+    print(f"Network: {active_run.get('network', 'unknown')}")
+    print(f"Marker status: {active_run.get('status', 'unknown')}")
+    print(f"Container: {active_run.get('container_name', '-')}")
+    print(f"Container state: {container.get('state', 'unknown')}")
+    print(f"Container started: {container.get('started_at', '-')}")
+    image = container.get("image")
+    if isinstance(image, str):
+        print(f"Container image: {image}")
+    networks = container.get("networks")
+    if isinstance(networks, list):
+        for network in networks:
+            if isinstance(network, dict):
+                print(f"Container network: {format_container_network(network)}")
+
+
+def format_container_network(network: dict[str, Any]) -> str:
+    parts = [str(network.get("network", "unknown"))]
+    for key, label in (
+        ("ipv4_address", "ipv4"),
+        ("ipv6_address", "ipv6"),
+        ("hostname", "hostname"),
+    ):
+        value = network.get(key)
+        if isinstance(value, str):
+            parts.append(f"{label}={value}")
+    return " ".join(parts)
 
 
 def validate_attach_workdir(workdir: str) -> None:

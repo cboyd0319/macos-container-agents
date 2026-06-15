@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs logs-follow RUN_ID` for active RunHaven run visibility.
+Implement `runhaven runs status RUN_ID` for active RunHaven run visibility.
 
 ## Files
 
@@ -55,6 +55,21 @@ Implement `runhaven runs logs-follow RUN_ID` for active RunHaven run visibility.
   reports plugin `container-attach` is not installed.
 - Local `container logs --help` shows
   `container logs [--boot] [--follow] [-n <n>] <container-id>`.
+- Local `container inspect --help` shows
+  `container inspect [--debug] <container-ids> ...`; local
+  `container inspect buildkit` confirmed JSON output with raw process
+  arguments, environment, and mounts.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_status_prints_sanitized_active_container_state tests.test_cli.CliTests.test_runs_status_json_is_sanitized tests.test_cli.CliTests.test_runs_status_refuses_unowned_container_name tests.test_cli.CliTests.test_runs_status_returns_container_inspect_failure`
+  first failed because `status` was not a valid `runs` subcommand, then passed
+  after adding sanitized Apple `container inspect` status output.
+- Focused `runs status` tests, full `PYTHONPATH=src python3 -m unittest discover -s tests`
+  with 136 tests, `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs status` smoke passed.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 136 unit
+  tests, pin check, ruff, mypy, and build after adding `runs status`.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_logs_follow_streams_recent_active_container_logs tests.test_cli.CliTests.test_runs_logs_follow_accepts_line_count_override tests.test_cli.CliTests.test_runs_logs_follow_refuses_invalid_line_count tests.test_cli.CliTests.test_runs_logs_follow_refuses_unowned_container_name`
   first failed because `logs-follow` was not a valid `runs` subcommand, then
   passed after adding guarded Apple `container logs --follow` routing.
@@ -595,6 +610,9 @@ Implement `runhaven runs logs-follow RUN_ID` for active RunHaven run visibility.
 - `runhaven runs logs-follow RUN_ID` now reads the active marker, verifies the
   container name is RunHaven-owned, and calls Apple `container logs --follow`
   with a configurable recent-line cap.
+- `runhaven runs status RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, calls Apple `container inspect`, and prints
+  only curated marker, state, image, resource, and network fields.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.

@@ -111,6 +111,9 @@ the RunHaven cache root. While a run is active, RunHaven also writes a
 temporary secret-free marker under `active-runs/` with run id, profile,
 workspace, network mode, state volume, host pid, and the RunHaven-owned
 container name. `runhaven runs active` lists current active markers.
+`runhaven runs status RUN_ID` reads one marker, calls Apple `container inspect`
+for the named container, and prints only curated state, image, resource, and
+network fields.
 `runhaven runs attach RUN_ID` reads one marker and calls Apple `container exec`
 to start a guarded shell or command in the active container. `runhaven runs
 logs-follow RUN_ID` reads one marker and calls Apple `container logs --follow`
@@ -130,7 +133,8 @@ git state and then prints a live `git diff`; it does not read or store patches
 from `runs.jsonl`. These commands intentionally omit diffs, file contents,
 prompts, the `container run` command, agent arguments, environment variable
 names, environment values, request bodies, and token values from persisted
-ledgers and active-run markers.
+ledgers and active-run markers. `runs status` also avoids printing raw
+`container inspect` arguments, environment, and mount fields.
 
 ## Auth Broker Model
 

@@ -40,6 +40,12 @@ Observed runtime command surface on 2026-06-15:
   `--interactive`, `--tty`, `--user`, and `--workdir`.
 - Local `container logs --help` shows the supported shape:
   `container logs [--boot] [--follow] [-n <n>] <container-id>`.
+- Local `container inspect --help` shows the supported shape:
+  `container inspect [--debug] <container-ids> ...`.
+- The pinned command reference states that `container inspect` displays detailed
+  container information in JSON. Local `container inspect buildkit` confirmed
+  JSON output and showed raw inspect data can include process arguments,
+  environment, and mounts.
 - Local `container attach --help` reports that plugin `container-attach` is not
   installed. RunHaven `runs attach` therefore uses guarded `container exec`
   against the active RunHaven-owned container name.

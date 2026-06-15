@@ -76,9 +76,18 @@ another terminal:
 
 ```bash
 runhaven runs active
+runhaven runs status <run-id>
 runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
+```
+
+`runs status` shows the active marker plus sanitized live Apple
+`container inspect` state without opening a shell:
+
+```bash
+runhaven runs status <run-id>
+runhaven runs status <run-id> --json
 ```
 
 `runs attach` starts a new process inside the active container with Apple
@@ -221,12 +230,14 @@ runhaven runs show <run-id>
 runhaven runs log <run-id>
 runhaven runs diff <run-id>
 runhaven runs active
+runhaven runs status <run-id>
 runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
+runhaven runs status <run-id> --json
 ```
 
 Run records are stored under RunHaven's cache directory in `runs.jsonl`. They
@@ -255,6 +266,11 @@ cannot be stopped.
 
 `runs active` lists those currently active markers in text or JSON without
 requiring Apple `container` access and skips invalid marker files.
+
+`runs status` uses the same active marker and RunHaven-owned container-name
+check before calling Apple `container inspect`. It prints a curated status
+summary and omits raw inspect fields that can include process arguments,
+environment values, and host mount paths.
 
 `runs attach` uses the same active marker and RunHaven-owned container-name
 check before calling Apple `container exec`. Root attach requires an explicit
