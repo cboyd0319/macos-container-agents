@@ -1,5 +1,5 @@
 {
-  "$schema": "docs/harness/feature-list.schema.json",
+  "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
   "last_updated": "2026-06-15",
   "rules": {

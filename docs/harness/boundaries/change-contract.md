@@ -98,4 +98,4 @@ macOS-only CI, or unsupported-platform guardrails.
 Before changing platform floors, interpreter versions, runner labels, Apple
 `container` assumptions, package pins, or image pins, record current
 primary-source evidence and the review date in `docs/RESEARCH.md` or
-`docs/harness/evidence-log.md`.
+`docs/harness/evidence/evidence-log.md`.

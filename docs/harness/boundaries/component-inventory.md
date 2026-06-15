@@ -39,8 +39,8 @@ Treat those changes as product changes with scope, verification, and rollback.
   `docs/CAPABILITIES.md`, `docs/SECURITY_MODEL.md`, `docs/ARCHITECTURE.md`,
   `docs/AUTH_BROKER.md`, `docs/PROVIDER_ENDPOINTS.md`, and `docs/PINNING.md`.
 - Product roadmap: `docs/ROADMAP.md`.
-- Harness roadmap and sensors: `docs/harness/roadmap.md` and
-  `docs/harness/sensor-registry.md`.
+- Harness roadmap and sensors: `docs/harness/state/roadmap.md` and
+  `docs/harness/feedback/sensor-registry.md`.
 
 ## Detected Components
 

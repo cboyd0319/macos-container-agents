@@ -27,4 +27,4 @@ machines. A release cannot rely on chat history or unstated local setup.
   release when a safety boundary, secret-handling path, or dependency pin is
   wrong.
 - Document affected versions, risk, recovery steps, and user impact in
-  `docs/harness/evidence-log.md` and `SECURITY.md` when applicable.
+  `docs/harness/evidence/evidence-log.md` and `SECURITY.md` when applicable.

@@ -26,5 +26,5 @@
     }
   ],
   "retireWhen": "Retire this example when real source records are added or a stronger source ledger replaces example records.",
-  "notes": "Project-owned source records are separate from docs/harness/research-sources.json."
+  "notes": "Project-owned source records are separate from any product-level public source ledger."
 }

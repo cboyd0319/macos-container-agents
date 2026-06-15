@@ -16,15 +16,20 @@ the effective agent. Treat those as product changes.
 Startup path:
 
 1. Confirm the working directory and inspect `git status --short --branch`.
-2. Read this file, `README.md`, and `docs/harness/README.md`.
-3. Read `feature_list.json`, `progress.md`, and `session-handoff.md`.
-4. Check `docs/harness/roadmap.md` before selecting, deferring, or reshaping
-   backlog, release-prep, or product-scope work.
-5. Check `docs/harness/component-inventory.md` before changing CLI modules,
-   image templates, verification routing, or harness files.
-6. If `docs/harness/first-agent-task.md` still exists and is not marked
+2. Read this file, `feature_list.json`, `progress.md`, and
+   `session-handoff.md`.
+3. Read `README.md` for product, install, usage, or public-doc changes.
+4. Read `docs/harness/README.md` and
+   `docs/harness/authoritative-facts.md` for harness-doc, generated-output,
+   scoring, report, or maintenance-policy changes.
+5. Check `docs/harness/state/roadmap.md` before selecting, deferring, or
+   reshaping backlog, release-prep, or product-scope work.
+6. Check `docs/harness/boundaries/component-inventory.md` before changing CLI
+   modules, image templates, verification routing, or harness files.
+7. For harness-maintenance work, use `.agents/skills/harness/SKILL.md`.
+8. If `docs/harness/state/first-agent-task.md` still exists and is not marked
    retired, complete or retire it before unrelated feature work.
-7. Pick one current objective before editing.
+9. Pick one current objective before editing.
 
 This repo is harnessed. Keep root instructions short and place durable detail
 in `docs/harness/`.
@@ -97,7 +102,7 @@ not commit machine-specific checkout paths for local tooling.
   for harness changes, and the next session can restart from the harness files.
 - End of Session: update `progress.md` and `session-handoff.md` with current
   state, verification evidence, blockers, touched files, and the recommended
-  next step. Use `docs/harness/clean-state-checklist.md` before claiming the
+  next step. Use `docs/harness/state/clean-state-checklist.md` before claiming the
   session is complete.
 
 ## Security considerations
@@ -117,6 +122,6 @@ not commit machine-specific checkout paths for local tooling.
   with version comments.
 - If a runtime, package, policy, CVE, release, or vendor claim affects a change,
   verify it from current primary sources and update `docs/RESEARCH.md` or
-  `docs/harness/sources.md`.
+  `docs/harness/research/sources.md`.
 - Do not commit secrets, credentials, private data, machine-specific paths, or
   long raw command output.

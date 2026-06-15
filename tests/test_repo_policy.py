@@ -15,9 +15,9 @@ class RepoPolicyTests(unittest.TestCase):
             ROOT / "SECURITY.md",
             ROOT / "CONTRIBUTING.md",
             ROOT / "docs/harness/README.md",
-            ROOT / "docs/harness/component-inventory.md",
+            ROOT / "docs/harness/boundaries/component-inventory.md",
             ROOT / "docs/harness/manifest.json",
-            ROOT / "docs/harness/verification-matrix.md",
+            ROOT / "docs/harness/feedback/verification-matrix.md",
             ROOT / "progress.md",
             ROOT / "session-handoff.md",
         )

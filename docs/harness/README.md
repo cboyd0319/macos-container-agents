@@ -29,7 +29,7 @@ one of these makes the harness incomplete.
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Does the agent see purpose, stack, startup commands, hard constraints, and links to detail? |
 | Tools | `init.sh`, local shell commands, advisory HarnessForge reports, CI | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
 | Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image templates, component inventory | Are versions, dependencies, setup facts, and reproducible environment choices self-describing? |
-| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/roadmap.md` | Can a new session see what is done, current, blocked, accepted, and next? |
+| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/state/roadmap.md` | Can a new session see what is done, current, blocked, accepted, and next? |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evidence-log.md`, local checks | Are verification commands explicit, runnable, and prioritized before broader process? |
 
 Feedback is the highest-return subsystem. When agent output is weak, first fix
@@ -52,9 +52,9 @@ rollback.
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Startup path, invariants, definition of done, and platform routing |
 | Tools | `init.sh`, `scripts/check_pins.py`, smoke scripts, advisory HarnessForge commands | Local macOS verification and review entrypoints |
 | Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image package locks, `component-inventory.md`, `dependency-change-policy.md` | Versions, package managers, setup facts, image boundaries, and pin policy |
-| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/roadmap.md` | Current objective, accepted roadmap, feature status, and evidence |
+| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/state/roadmap.md` | Current objective, accepted roadmap, feature status, and evidence |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evaluator-rubric.md`, `evidence-log.md` | Deterministic signals, ownership, and lifecycle before claiming completion |
-| Research | `docs/RESEARCH.md`, `sources.md`, `research-sources.json`, `source-record.schema.json`, `source-record-example.json` | Reviewed provenance, public source ledger, and project-owned source records |
+| Research | `docs/RESEARCH.md`, `docs/harness/research/sources.md`, `docs/harness/research/source-record.schema.json`, `docs/harness/research/source-record-example.json` | Reviewed provenance and project-owned source records |
 | Scope | `change-contract.md`, `security-boundary-map.md`, `feature-privacy-labels.json` | Problem, non-goals, acceptance, rollback, data, security, permission, and cost boundaries |
 | Lifecycle | `first-agent-task.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `entropy-control.md`, `modularization-plan.md` | Retired first-session harness review record, restart, release readiness, code-health sequencing, and recurring upkeep |
 
@@ -63,17 +63,18 @@ rollback.
 1. Start from `AGENTS.md`.
 2. Read `feature_list.json`, `progress.md`, `session-handoff.md`, and relevant
    project docs.
-3. If `first-agent-task.md` still exists and is not marked retired, complete
+3. Use `.agents/skills/harness/SKILL.md` for harness-maintenance work.
+4. If `docs/harness/state/first-agent-task.md` still exists and is not marked retired, complete
    or retire it before unrelated feature work.
-4. Check `docs/ROADMAP.md` for product direction and
-   `docs/harness/roadmap.md` for harness/backlog operating boundaries.
-5. Use `change-contract.md` for non-trivial work.
-6. Implement the smallest coherent slice.
-7. Run the relevant checks from `verification-matrix.md`.
-8. Review `sensor-registry.md` when adding, deleting, or promoting checks.
-9. Use `clean-state-checklist.md` before ending non-trivial sessions.
-10. Record evidence, blockers, skipped checks, and next steps.
-11. Update this harness when repeated failures show a missing guide or sensor.
+5. Check `docs/ROADMAP.md` for product direction and
+   `docs/harness/state/roadmap.md` for harness/backlog operating boundaries.
+6. Use `docs/harness/boundaries/change-contract.md` for non-trivial work.
+7. Implement the smallest coherent slice.
+8. Run the relevant checks from `docs/harness/feedback/verification-matrix.md`.
+9. Review `docs/harness/feedback/sensor-registry.md` when adding, deleting, or promoting checks.
+10. Use `docs/harness/state/clean-state-checklist.md` before ending non-trivial sessions.
+11. Record evidence, blockers, skipped checks, and next steps.
+12. Update this harness when repeated failures show a missing guide or sensor.
 
 Remote CI is a shared cost and trust boundary. Run local checks before push,
 and use remote CI to confirm reviewed changes rather than as a trial-and-error

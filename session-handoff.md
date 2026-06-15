@@ -78,15 +78,15 @@ Manually refresh all harness documentation and keep the repo harness accurate.
 - `docs/HARNESS_EVALUATION.md`
 - `docs/assets/logo.png`
 - `docs/harness/`
-- `docs/harness/component-inventory.md`
-- `docs/harness/evidence-log.md`
-- `docs/harness/first-agent-task.md`
+- `docs/harness/boundaries/component-inventory.md`
+- `docs/harness/evidence/evidence-log.md`
+- `docs/harness/state/first-agent-task.md`
 - `docs/harness/manifest.json`
-- `docs/harness/modularization-plan.md`
-- `docs/harness/security-boundary-map.md`
-- `docs/harness/source-mined-ideas.md`
-- `docs/harness/external-project-ideas.md`
-- `docs/harness/ux-research-ideas.md`
+- `docs/harness/state/modularization-plan.md`
+- `docs/harness/boundaries/security-boundary-map.md`
+- `docs/harness/research/source-mined-ideas.md`
+- `docs/harness/research/external-project-ideas.md`
+- `docs/harness/research/ux-research-ideas.md`
 
 ## Blockers
 
@@ -233,7 +233,7 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   `src/runhaven/active_commands.py` now measures 342 lines, down from
   569 lines.
 - Reviewed "Development On Apple Silicon with Apple Container Machine" and
-  recorded UX backlog items in `docs/harness/ux-research-ideas.md`: explain
+  recorded UX backlog items in `docs/harness/research/ux-research-ideas.md`: explain
   why RunHaven avoids `container machine` defaults, add future host-service/DNS
   diagnostics, treat remote-editor and persistent-dev-environment workflows as
   explicit advanced modes, and support inspect-before-run bootstrap
@@ -857,8 +857,8 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   source-mined recommendations.
 - `python3 scripts/check_pins.py` passed after recording the source-mined
   recommendations.
-- Local Markdown link check passed for `docs/harness/source-mined-ideas.md`,
-  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+- Local Markdown link check passed for `docs/harness/research/source-mined-ideas.md`,
+  `docs/harness/research/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
   `session-handoff.md`.
 - `git diff --check` passed after recording the external open source research
   pass.
@@ -866,9 +866,9 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   open source research pass.
 - `python3 scripts/check_pins.py` passed after recording the external open
   source research pass.
-- Local Markdown link check passed for `docs/harness/source-mined-ideas.md`,
-  `docs/harness/external-project-ideas.md`,
-  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+- Local Markdown link check passed for `docs/harness/research/source-mined-ideas.md`,
+  `docs/harness/research/external-project-ideas.md`,
+  `docs/harness/research/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
   `session-handoff.md`.
 - macOS-only boundary text check confirmed the edited docs still exclude
   Windows and Linux runtime support.
@@ -876,10 +876,10 @@ Manually refresh all harness documentation and keep the repo harness accurate.
 - `python3 -m json.tool feature_list.json` passed after recording the UX
   research pass.
 - `python3 scripts/check_pins.py` passed after recording the UX research pass.
-- Local Markdown link check passed for `docs/harness/source-mined-ideas.md`,
-  `docs/harness/external-project-ideas.md`,
-  `docs/harness/ux-research-ideas.md`,
-  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+- Local Markdown link check passed for `docs/harness/research/source-mined-ideas.md`,
+  `docs/harness/research/external-project-ideas.md`,
+  `docs/harness/research/ux-research-ideas.md`,
+  `docs/harness/research/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
   `session-handoff.md`.
 - Platform boundary text check confirmed the edited docs still state macOS 26+
   only, Apple `container` only, and no Windows/Linux runtime support.
@@ -1253,7 +1253,7 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   the decision not to use `container machine` defaults for beginner-safe agent
   runs.
 - Manual source mining of sibling repos `awman`, `aspec`, and `maki` is
-  recorded in `docs/harness/source-mined-ideas.md`. AGY/Antigravity was not
+  recorded in `docs/harness/research/source-mined-ideas.md`. AGY/Antigravity was not
   used for this pass.
 - The roadmap now preserves the larger product direction from that review:
   provider endpoint matrix, provider proxy DNS/private-address guard, workspace
@@ -1261,12 +1261,12 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   strict workflows, context overlays, generated docs checks, JSON output, and
   deny-by-default MCP or extension boundaries.
 - Manual external open source research is recorded in
-  `docs/harness/external-project-ideas.md`. The promoted backlog now also
+  `docs/harness/research/external-project-ideas.md`. The promoted backlog now also
   includes `runhaven why`, provider proxy policy logs, empty-allowlist
   regression tests, host-side provider credential brokering, agent profile
   investigations, devcontainer metadata import, warm reusable sessions, and
   extension/MCP boundary policy.
-- UX-focused research is recorded in `docs/harness/ux-research-ideas.md`. The
+- UX-focused research is recorded in `docs/harness/research/ux-research-ideas.md`. The
   promoted backlog now also includes guided `runhaven setup`, goal-based
   network selection, grouped blocked-host review, run dashboard commands,
   worktree review flows, repair commands, `auth status`, and task-language docs
@@ -1274,7 +1274,7 @@ Manually refresh all harness documentation and keep the repo harness accurate.
 - The pre-release backlog now includes considering a major large-file refactor
   and modularization pass, especially around the CLI and broad test modules,
   before release.
-- `docs/harness/modularization-plan.md` now tracks the pre-release large-file
+- `docs/harness/state/modularization-plan.md` now tracks the pre-release large-file
   refactor sequence. The first behavior-preserving extraction moved setup
   guide output, active-run marker persistence, cache paths, and shared
   validators out of `src/runhaven/cli.py`.
@@ -1371,20 +1371,20 @@ Manually refresh all harness documentation and keep the repo harness accurate.
 
 1. Read `AGENTS.md`, `feature_list.json`, and `progress.md`.
 2. Check `git status --short --branch`.
-3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
+3. Use `docs/harness/feedback/verification-matrix.md` to choose checks for the requested
    change.
-4. Treat `docs/harness/first-agent-task.md` as retired unless a maintainer
+4. Treat `docs/harness/state/first-agent-task.md` as retired unless a maintainer
    resets its status.
-5. Read `docs/harness/source-mined-ideas.md` and
-   `docs/harness/external-project-ideas.md` and
-   `docs/harness/ux-research-ideas.md` before choosing the next product
+5. Read `docs/harness/research/source-mined-ideas.md` and
+   `docs/harness/research/external-project-ideas.md` and
+   `docs/harness/research/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 6. Consider release evidence automation or the remaining docs drift checks
    before adding new harness process.
 7. Run the Codex broker smoke with a disposable OpenAI API key when available.
 8. Make `image doctor` state-volume review workspace-aware enough to print
    exact reset commands when the user supplies a workspace, or continue with
-   the next mined UX improvement from `docs/harness/ux-research-ideas.md`.
+   the next mined UX improvement from `docs/harness/research/ux-research-ideas.md`.
 9. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

@@ -188,7 +188,7 @@ Full local harness verification:
 ```
 
 Docs-only changes should use the docs checks from
-[the verification matrix](docs/harness/verification-matrix.md). Runtime,
+[the verification matrix](docs/harness/feedback/verification-matrix.md). Runtime,
 security boundary, image, or install-flow changes need focused tests plus the
 relevant Apple `container` smokes.
 

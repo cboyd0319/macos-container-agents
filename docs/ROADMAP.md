@@ -2,7 +2,7 @@
 
 This roadmap records both completed foundation slices and remaining product
 direction. The live feature status and verification evidence are tracked in
-`feature_list.json`, `progress.md`, and `docs/harness/evidence-log.md`.
+`feature_list.json`, `progress.md`, and `docs/harness/evidence/evidence-log.md`.
 
 ## Phase 1: Safe Local Baseline
 

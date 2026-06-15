@@ -171,8 +171,8 @@ Manually refresh all harness documentation and keep the repo harness accurate.
 - Sibling repos `awman`, `aspec`, and `maki` were manually mined for
   transferable ideas. AGY/Antigravity was intentionally not used for this pass.
 - The complete source-mined recommendation set is recorded in
-  `docs/harness/source-mined-ideas.md` and summarized in
-  `docs/harness/research-inbox.md`.
+  `docs/harness/research/source-mined-ideas.md` and summarized in
+  `docs/harness/research/research-inbox.md`.
 - High-value promoted candidates include provider endpoint matrix, provider
   proxy DNS/private-address guard, worktree isolation, workspace scope
   selection, run observability, typed run options, strict workflow files,
@@ -185,14 +185,14 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   `container machine` default.
 - Current external open source projects were manually researched for adjacent
   ideas. The full result is recorded in
-  `docs/harness/external-project-ideas.md`.
+  `docs/harness/research/external-project-ideas.md`.
 - External source-backed candidates now in the backlog include `runhaven why`
   diagnostics, provider proxy policy logs, empty-allowlist regression tests,
   host-side provider credential brokering, agent profile investigation docs,
   devcontainer metadata import for image planning, warm reusable project
   sessions, and explicit extension/MCP boundary policy.
 - A UX-focused research pass is recorded in
-  `docs/harness/ux-research-ideas.md`.
+  `docs/harness/research/ux-research-ideas.md`.
 - UX candidates now in the backlog include guided `runhaven setup`, goal-based
   network selection, `runhaven why`, provider policy logs, grouped
   blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
@@ -207,7 +207,7 @@ Manually refresh all harness documentation and keep the repo harness accurate.
   and modularization pass, especially around the CLI and broad test modules,
   before release.
 - The pre-release modularization plan is now tracked in
-  `docs/harness/modularization-plan.md`. The first behavior-preserving
+  `docs/harness/state/modularization-plan.md`. The first behavior-preserving
   extraction moved setup guide output, active-run marker persistence, cache
   paths, and shared validators out of `src/runhaven/cli.py`.
 - The second behavior-preserving modularization extraction moved run-record
@@ -444,7 +444,7 @@ Run the optional Codex broker smoke with a disposable OpenAI API key when one
 is available. Next product slice: make `image doctor` state-volume review
 workspace-aware enough to print exact reset commands when the user supplies a
 workspace, or continue with the next mined UX improvement from
-`docs/harness/ux-research-ideas.md`.
+`docs/harness/research/ux-research-ideas.md`.
 
 ## Verification Evidence
 
@@ -1049,7 +1049,7 @@ workspace, or continue with the next mined UX improvement from
 - 2026-06-15: `python3 scripts/check_pins.py` passed after recording the
   source-mined recommendations.
 - 2026-06-15: local Markdown link check passed for
-  `docs/harness/source-mined-ideas.md`, `docs/harness/research-inbox.md`,
+  `docs/harness/research/source-mined-ideas.md`, `docs/harness/research/research-inbox.md`,
   `docs/ROADMAP.md`, `progress.md`, and `session-handoff.md`.
 - 2026-06-15: `git diff --check` passed after recording the external open
   source research pass.
@@ -1058,9 +1058,9 @@ workspace, or continue with the next mined UX improvement from
 - 2026-06-15: `python3 scripts/check_pins.py` passed after recording the
   external open source research pass.
 - 2026-06-15: local Markdown link check passed for
-  `docs/harness/source-mined-ideas.md`,
-  `docs/harness/external-project-ideas.md`,
-  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+  `docs/harness/research/source-mined-ideas.md`,
+  `docs/harness/research/external-project-ideas.md`,
+  `docs/harness/research/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
   `session-handoff.md`.
 - 2026-06-15: macOS-only boundary text check confirmed the edited docs still
   exclude Windows and Linux runtime support.
@@ -1070,10 +1070,10 @@ workspace, or continue with the next mined UX improvement from
 - 2026-06-15: `python3 scripts/check_pins.py` passed after recording the UX
   research pass.
 - 2026-06-15: local Markdown link check passed for
-  `docs/harness/source-mined-ideas.md`,
-  `docs/harness/external-project-ideas.md`,
-  `docs/harness/ux-research-ideas.md`,
-  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+  `docs/harness/research/source-mined-ideas.md`,
+  `docs/harness/research/external-project-ideas.md`,
+  `docs/harness/research/ux-research-ideas.md`,
+  `docs/harness/research/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
   `session-handoff.md`.
 - 2026-06-15: platform boundary text check confirmed the edited docs still
   state macOS 26+ only, Apple `container` only, and no Windows/Linux runtime

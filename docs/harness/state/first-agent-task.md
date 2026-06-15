@@ -7,11 +7,11 @@ Keep this file as a lifecycle record for HarnessForge audit compatibility. Do
 not treat it as an active task unless a maintainer resets this status.
 
 The accepted harness state now lives in `AGENTS.md`, `docs/harness/README.md`,
-`docs/harness/component-inventory.md`, `docs/harness/verification-matrix.md`,
-`docs/harness/sensor-registry.md`, `docs/harness/evidence-log.md`,
-`docs/harness/roadmap.md`, `feature_list.json`, `progress.md`, and
+`docs/harness/boundaries/component-inventory.md`, `docs/harness/feedback/verification-matrix.md`,
+`docs/harness/feedback/sensor-registry.md`, `docs/harness/evidence/evidence-log.md`,
+`docs/harness/state/roadmap.md`, `feature_list.json`, `progress.md`, and
 `session-handoff.md`. Remaining product and harness work is tracked in
-`docs/ROADMAP.md`, `docs/harness/roadmap.md`, and the handoff files.
+`docs/ROADMAP.md`, `docs/harness/state/roadmap.md`, and the handoff files.
 
 ## Goal
 
@@ -23,13 +23,13 @@ improve guidance, readiness signals, checks, ownership, and review boundaries.
 
 - `AGENTS.md`
 - `docs/harness/README.md`
-- `docs/harness/component-inventory.md`
-- `docs/harness/change-contract.md`
-- `docs/harness/verification-matrix.md`
-- `docs/harness/sensor-registry.md`
-- `docs/harness/evidence-log.md`
-- `docs/harness/security-boundary-map.md`
-- `docs/harness/roadmap.md`
+- `docs/harness/boundaries/component-inventory.md`
+- `docs/harness/boundaries/change-contract.md`
+- `docs/harness/feedback/verification-matrix.md`
+- `docs/harness/feedback/sensor-registry.md`
+- `docs/harness/evidence/evidence-log.md`
+- `docs/harness/boundaries/security-boundary-map.md`
+- `docs/harness/state/roadmap.md`
 - `feature_list.json`
 - `progress.md`
 - `session-handoff.md`
@@ -84,17 +84,17 @@ improve guidance, readiness signals, checks, ownership, and review boundaries.
 
 - Root instructions still stay compact and route durable detail into
   `docs/harness/`.
-- `docs/harness/component-inventory.md` names the important project boundaries
+- `docs/harness/boundaries/component-inventory.md` names the important project boundaries
   known after review.
 - The fresh-session test has an answer source for project purpose,
   organization, startup, verification, and current work.
-- `docs/harness/verification-matrix.md` identifies the smallest reliable
+- `docs/harness/feedback/verification-matrix.md` identifies the smallest reliable
   checks for common change types.
-- `docs/harness/sensor-registry.md` records project-relevant checks with owner,
+- `docs/harness/feedback/sensor-registry.md` records project-relevant checks with owner,
   source, purpose, and retirement condition.
 - Important sensor or validation failures include actionable repair guidance:
   what failed, why the boundary matters, and where to repair.
-- `docs/harness/evidence-log.md` records what was reviewed, what changed, what
+- `docs/harness/evidence/evidence-log.md` records what was reviewed, what changed, what
   checks ran, and what still needs maintainer review.
 - `progress.md` and `session-handoff.md` capture the current objective,
   blockers, verification evidence, and recommended next step.

@@ -46,7 +46,7 @@ security wins and the tool must explain the safe next step.
   that fixture risk.
 - Keep an AI/RAG/agent threat model evidence loop: when a change touches agent
   prompts, retrieval, tools, runtime boundaries, or data flows, update the
-  threat model and record verification evidence in `docs/harness/evidence-log.md`.
+  threat model and record verification evidence in `docs/harness/evidence/evidence-log.md`.
 
 ## Required Checks
 

@@ -51,7 +51,7 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Use targetRelativePath for repo-local sources. Do not store machine-local absolute paths. Public source ledgers such as docs/harness/research-sources.json remain separate from project-owned records.",
+      "description": "Use targetRelativePath for repo-local sources. Do not store machine-local absolute paths. Keep product-level public source ledgers separate from project-owned records.",
       "properties": {
         "targetRelativePath": {
           "type": "string",

@@ -17,7 +17,7 @@ practice change over time.
 - AGENTS.md open format:
   <https://agents.md/>
 - Project research ledger:
-  [`../RESEARCH.md`](../RESEARCH.md)
+  [`../../RESEARCH.md`](../../RESEARCH.md)
 
 Do not add unreviewed secondary links here. Put candidates in
 `research-inbox.md` until they are checked and relevant.

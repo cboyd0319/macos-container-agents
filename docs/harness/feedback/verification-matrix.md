@@ -24,7 +24,7 @@ readiness, runtime boundaries, or multiple components.
 | Worktree run isolation and lifecycle | Focused standard-run and worktree-lifecycle tests for `--worktree`, dirty-source guidance, clean-source enforcement, isolated mounts, recovery metadata, project check suggestions, `runs keep`, `runs recover`, `runs merge`, and `runs discard` |
 | Image templates | Pin check, focused image tests, `runhaven image build PROFILE --dry-run`, and a real image build/version smoke for changed profiles when Apple `container` is available |
 | Pin, dependency, runner, or workflow changes | `python3 scripts/check_pins.py`, primary-source version evidence, affected tests, and `.github/workflows/ci.yml` review for macOS 26+ only support |
-| Security, auth, secrets, data loss, or billing | Focused tests, human review, rollback path, least-privilege check, and evidence in `docs/harness/evidence-log.md` |
+| Security, auth, secrets, data loss, or billing | Focused tests, human review, rollback path, least-privilege check, and evidence in `docs/harness/evidence/evidence-log.md` |
 | Release prep | `./init.sh`, harness report/audit, `runhaven doctor`, relevant Apple `container` smokes, dirty-tree check, pin/source review, SBOM/provenance review when packaging exists |
 
 ## Detected Commands

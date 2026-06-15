@@ -19,7 +19,7 @@ repo and link to primary sources instead.
 - 2026-06-15: Completed a manual source-mining pass across sibling local
   checkouts `awman`, `aspec`, and `maki`. AGY/Antigravity was not used.
 - The full recommendation set is recorded in
-  `docs/harness/source-mined-ideas.md`.
+  `docs/harness/research/source-mined-ideas.md`.
 - High-value candidates promoted from the pass: provider endpoint matrix,
   provider proxy DNS/private-address guard, worktree isolation, workspace scope
   selection, run observability, strict workflow files, context overlays, MCP
@@ -29,7 +29,7 @@ repo and link to primary sources instead.
   `container machine` defaults, and unreviewed host-side dynamic provider
   scripts.
 - 2026-06-15: Completed a manual external open source research pass. The full
-  set is recorded in `docs/harness/external-project-ideas.md`.
+  set is recorded in `docs/harness/research/external-project-ideas.md`.
 - Additional external-project candidates promoted from that pass: `runhaven
   why` diagnostics, provider proxy policy logs, empty-allowlist regression
   tests, host-side provider credential brokering, agent profile investigation
@@ -38,7 +38,7 @@ repo and link to primary sources instead.
 - 2026-06-15: Completed a UX-focused research pass around easier setup,
   clearer blocked-action explanations, recovery, and lower-friction safe
   autonomy. The full result is recorded in
-  `docs/harness/ux-research-ideas.md`.
+  `docs/harness/research/ux-research-ideas.md`.
 - UX candidates promoted from that pass: guided `runhaven setup`, goal-based
   network selection, `runhaven why`, provider policy logs, grouped
   blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
@@ -129,7 +129,7 @@ repo and link to primary sources instead.
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.
 - 2026-06-15: Started the pre-release modularization pass. Added
-  `docs/harness/modularization-plan.md` and extracted setup guide output,
+  `docs/harness/state/modularization-plan.md` and extracted setup guide output,
   active-run marker persistence, cache path helpers, and shared validators from
   `src/runhaven/cli.py`.
 - 2026-06-15: Continued the pre-release modularization pass by extracting
@@ -165,7 +165,7 @@ repo and link to primary sources instead.
   validation.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
-  `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids
+  `docs/harness/research/ux-research-ideas.md`: explain why RunHaven avoids
   `container machine` defaults, add future host-service/DNS diagnostics,
   treat remote-editor and persistent-dev-environment workflows as explicit
   advanced modes, and support inspect-before-run bootstrap recommendations.

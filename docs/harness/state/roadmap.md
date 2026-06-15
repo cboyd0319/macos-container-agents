@@ -109,9 +109,9 @@ Use this when reviewing whether the harness is actually useful to a new agent.
 | Question | Current Answer Source | Gap Or Action |
 | --- | --- | --- |
 | What is this system or package? | `README.md`, `AGENTS.md`, `docs/CAPABILITIES.md` | Keep product status and macOS 26+ boundary current |
-| How is the repo organized? | `docs/ARCHITECTURE.md`, `docs/harness/component-inventory.md`, `docs/harness/modularization-plan.md` | Update after module extractions or new image/profile surfaces |
+| How is the repo organized? | `docs/ARCHITECTURE.md`, `docs/harness/boundaries/component-inventory.md`, `docs/harness/state/modularization-plan.md` | Update after module extractions or new image/profile surfaces |
 | How does it start? | `docs/INSTALLATION.md`, `README.md`, `runhaven setup`, `init.sh` | Keep first-run setup and development setup aligned |
-| How is it verified? | `docs/harness/verification-matrix.md`, `docs/harness/sensor-registry.md`, `.github/workflows/ci.yml` | Add release evidence automation before shipping |
+| How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `.github/workflows/ci.yml` | Add release evidence automation before shipping |
 | What work is current? | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, this roadmap | Keep objective and next-session guidance synchronized |
 
 ## Instruction Rule Lifecycle
