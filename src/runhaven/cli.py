@@ -151,6 +151,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     runs_log_parser.add_argument("run_id", help="run id to show")
     runs_log_parser.add_argument("--json", action="store_true", help="print JSON output")
+    runs_diff_parser = runs_subcommands.add_parser(
+        "diff",
+        help="show live git diff for one RunHaven run",
+    )
+    runs_diff_parser.add_argument("run_id", help="run id to diff")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -373,6 +378,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_show(args.run_id, json_output=args.json)
     if args.runs_command == "log":
         return runs_log(args.run_id, json_output=args.json)
+    if args.runs_command == "diff":
+        return runs_diff(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -461,6 +468,12 @@ def run_preflight(command: tuple[str, ...]) -> None:
 class InternalNetworkInfo:
     ipv4_gateway: str
     ipv4_subnet: str
+
+
+@dataclass(frozen=True)
+class GitStatusEntry:
+    path: str
+    status: str
 
 
 def run_provider_agent(plan: AgentRunPlan) -> int:
@@ -703,18 +716,15 @@ def capture_git_snapshot(workspace: Path) -> dict[str, object]:
         return {"available": False, "reason": unavailable_reason}
 
     head = git_head(repo_root)
-    resolved_workspace = str(workspace.resolve())
-    status_result = run_git_for_metadata(
-        ("git", "-C", repo_root, "status", "--porcelain=v1", "-z", "--", resolved_workspace),
-    )
-    if status_result is None or status_result.returncode != 0:
+    entries = read_git_status_entries(repo_root, workspace)
+    if entries is None:
         return {
             "available": False,
             "reason": "git-status-failed",
             "repo_root": repo_root,
         }
 
-    paths = parse_git_status_paths(status_result.stdout)
+    paths = tuple(entry.path for entry in entries)
     shown_paths = list(paths[:GIT_STATUS_PATH_LIMIT])
     return {
         "available": True,
@@ -725,6 +735,16 @@ def capture_git_snapshot(workspace: Path) -> dict[str, object]:
         "paths": shown_paths,
         "truncated": len(paths) > GIT_STATUS_PATH_LIMIT,
     }
+
+
+def read_git_status_entries(repo_root: str, workspace: Path) -> tuple[GitStatusEntry, ...] | None:
+    resolved_workspace = str(workspace.resolve())
+    status_result = run_git_for_metadata(
+        ("git", "-C", repo_root, "status", "--porcelain=v1", "-z", "--", resolved_workspace),
+    )
+    if status_result is None or status_result.returncode != 0:
+        return None
+    return parse_git_status_entries(status_result.stdout)
 
 
 def git_repo_root(workspace: Path) -> tuple[str | None, str]:
@@ -770,18 +790,23 @@ def run_git_for_metadata(
 
 
 def parse_git_status_paths(output: bytes) -> tuple[str, ...]:
+    return tuple(entry.path for entry in parse_git_status_entries(output))
+
+
+def parse_git_status_entries(output: bytes) -> tuple[GitStatusEntry, ...]:
     entries = [entry for entry in output.split(b"\0") if entry]
-    paths: list[str] = []
+    parsed: dict[str, GitStatusEntry] = {}
     index = 0
     while index < len(entries):
         entry = entries[index]
         if len(entry) >= 4:
             status = entry[:2]
-            paths.append(os.fsdecode(entry[3:]))
+            path = os.fsdecode(entry[3:])
+            parsed[path] = GitStatusEntry(path=path, status=os.fsdecode(status))
             if b"R" in status or b"C" in status:
                 index += 1
         index += 1
-    return tuple(sorted(dict.fromkeys(paths)))
+    return tuple(parsed[path] for path in sorted(parsed))
 
 
 def summarize_git_change(
@@ -991,6 +1016,212 @@ def short_git_head(head: object) -> str:
     if not isinstance(head, str) or not head:
         return "-"
     return head[:7]
+
+
+def runs_diff(run_id: str) -> int:
+    record = find_run_record(run_id)
+    git = require_available_git_metadata(record, run_id)
+    before = require_git_snapshot(git.get("before"), "before")
+    after = require_git_snapshot(git.get("after"), "after")
+    repo_root = require_string(git.get("repo_root"), "run git metadata is missing repo root")
+    workspace = require_string(record.get("workspace"), "run record is missing workspace")
+    before_head = require_string(
+        before.get("head"),
+        "run git metadata is missing a base HEAD; refusing live diff",
+    )
+    after_head = require_string(
+        after.get("head"),
+        "run git metadata is missing recorded HEAD; refusing live diff",
+    )
+    after_dirty = after.get("dirty") is True
+    after_paths = git_snapshot_paths(after)
+
+    if after.get("truncated") is True:
+        raise ValueError("run git path list is truncated; refusing live diff")
+    if not Path(repo_root).is_dir():
+        raise ValueError("recorded git repo no longer exists; refusing live diff")
+    if not Path(workspace).exists():
+        raise ValueError("recorded workspace no longer exists; refusing live diff")
+
+    current = capture_git_snapshot(Path(workspace))
+    if current.get("available") is not True:
+        raise ValueError("recorded workspace is no longer a git worktree; refusing live diff")
+    if current.get("repo_root") != repo_root:
+        raise ValueError(
+            "workspace git repo no longer matches the recorded run; refusing live diff"
+        )
+    if current.get("head") != after_head:
+        raise ValueError("git HEAD changed since the recorded run; refusing live diff")
+    if not git_snapshot_matches(after, current):
+        raise ValueError("git working tree changed since the recorded run; refusing live diff")
+
+    if not after_dirty and before_head == after_head:
+        print("No git changes recorded for this run.")
+        return 0
+
+    if after_dirty:
+        print(
+            "runhaven: showing a live working tree diff; RunHaven verified "
+            "the recorded HEAD and path set, not file contents since the run.",
+            file=sys.stderr,
+        )
+
+    diff_parts: list[str] = []
+    if after_dirty:
+        if before_head != after_head:
+            diff_parts.append(
+                run_git_diff(
+                    (
+                        "git",
+                        "-C",
+                        repo_root,
+                        "diff",
+                        "--no-ext-diff",
+                        "--no-color",
+                        before_head,
+                        after_head,
+                    ),
+                )
+            )
+        entries = read_git_status_entries(repo_root, Path(workspace))
+        if entries is None:
+            raise ValueError("could not read current git status; refusing live diff")
+        untracked_paths = {
+            entry.path for entry in entries if entry.status == "??" and entry.path in after_paths
+        }
+        tracked_paths = [path for path in after_paths if path not in untracked_paths]
+        if tracked_paths:
+            diff_parts.append(
+                run_git_diff(
+                    (
+                        "git",
+                        "-C",
+                        repo_root,
+                        "diff",
+                        "--no-ext-diff",
+                        "--no-color",
+                        after_head,
+                        "--",
+                        *tracked_paths,
+                    ),
+                )
+            )
+        for path in sorted(untracked_paths):
+            diff_parts.append(run_untracked_git_diff(repo_root, path))
+    else:
+        diff_parts.append(
+            run_git_diff(
+                (
+                    "git",
+                    "-C",
+                    repo_root,
+                    "diff",
+                    "--no-ext-diff",
+                    "--no-color",
+                    before_head,
+                    after_head,
+                ),
+            )
+        )
+
+    printed = False
+    for diff in diff_parts:
+        if not diff:
+            continue
+        print(diff, end="" if diff.endswith("\n") else "\n")
+        printed = True
+    if not printed:
+        print("No git diff output for recorded changes.")
+    return 0
+
+
+def require_available_git_metadata(record: dict[str, Any], run_id: str) -> dict[str, Any]:
+    git = record.get("git")
+    if not isinstance(git, dict):
+        raise ValueError(f"git metadata is unavailable for run {run_id}")
+    if git.get("available") is not True:
+        reason = git.get("reason")
+        reason_text = f": {reason}" if isinstance(reason, str) and reason else ""
+        raise ValueError(f"git metadata is unavailable for run {run_id}{reason_text}")
+    return git
+
+
+def require_git_snapshot(value: object, name: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"run git metadata is missing {name} snapshot")
+    return value
+
+
+def require_string(value: object, message: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(message)
+    return value
+
+
+def git_snapshot_paths(snapshot: dict[str, Any]) -> tuple[str, ...]:
+    paths = snapshot.get("paths")
+    if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+        raise ValueError("run git metadata has invalid path list")
+    return tuple(sorted(paths))
+
+
+def git_snapshot_matches(recorded: dict[str, Any], current: dict[str, object]) -> bool:
+    current_paths = current.get("paths")
+    if not isinstance(current_paths, list) or not all(
+        isinstance(path, str) for path in current_paths
+    ):
+        return False
+    return (
+        recorded.get("dirty") is (current.get("dirty") is True)
+        and recorded.get("changed_count", 0) == current.get("changed_count", 0)
+        and git_snapshot_paths(recorded) == tuple(sorted(current_paths))
+        and recorded.get("truncated") is (current.get("truncated") is True)
+    )
+
+
+def run_git_diff(command: tuple[str, ...]) -> str:
+    result = run_git_for_metadata(command, text=True)
+    if result is None:
+        raise ValueError("git diff is unavailable")
+    if result.returncode != 0:
+        detail = result.stderr.strip() if isinstance(result.stderr, str) else ""
+        raise ValueError(f"git diff failed: {detail or result.returncode}")
+    return result.stdout if isinstance(result.stdout, str) else ""
+
+
+def run_untracked_git_diff(repo_root: str, path: str) -> str:
+    full_path = safe_repo_path(repo_root, path)
+    result = run_git_for_metadata(
+        (
+            "git",
+            "-C",
+            repo_root,
+            "diff",
+            "--no-ext-diff",
+            "--no-color",
+            "--no-index",
+            "--",
+            "/dev/null",
+            str(full_path),
+        ),
+        text=True,
+    )
+    if result is None:
+        raise ValueError("git diff is unavailable")
+    if result.returncode not in (0, 1):
+        detail = result.stderr.strip() if isinstance(result.stderr, str) else ""
+        raise ValueError(f"git diff failed: {detail or result.returncode}")
+    return result.stdout if isinstance(result.stdout, str) else ""
+
+
+def safe_repo_path(repo_root: str, path: str) -> Path:
+    root = Path(repo_root).resolve()
+    full_path = (root / path).resolve()
+    try:
+        full_path.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("git path escapes the recorded repository; refusing live diff") from exc
+    return full_path
 
 
 def runs_log(run_id: str, *, json_output: bool) -> int:

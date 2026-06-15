@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
+Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
 
 ## Current State
 
@@ -207,6 +207,15 @@ Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
   git unavailable.
 - `runhaven runs show RUN_ID` and `runhaven runs log RUN_ID` now print a
   compact git summary line when metadata is present.
+- `runhaven runs diff RUN_ID` now validates recorded git metadata against the
+  live workspace and prints a live git diff for committed changes or dirty
+  workspace changes.
+- `runhaven runs diff RUN_ID` refuses when git metadata is unavailable, the
+  recorded repo or workspace is gone, `HEAD` no longer matches the recorded
+  run, the recorded path list was truncated, or the current dirty path set
+  differs from the run record.
+- Dirty working-tree diffs print a warning because RunHaven can verify the
+  recorded `HEAD` and path set, but not exact file contents since the run.
 - Run records omit diffs, file contents, prompts, command lines, agent
   arguments, environment variable names, environment values, request bodies,
   and token values.
@@ -226,13 +235,34 @@ Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
 
 ## Recommended Next Step
 
-Implement `runhaven runs diff RUN_ID` from recorded metadata and live git,
-refusing when git metadata is unavailable, the repo or recorded head cannot be
-verified, or producing output would require storing patches. Run the optional
-Codex broker smoke with a disposable OpenAI API key when one is available.
+Add the next recovery command from the backlog, likely `runhaven runs stop` or
+`runhaven runs attach`, after choosing the smallest useful active-run control
+surface. Run the optional Codex broker smoke with a disposable OpenAI API key
+when one is available.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_diff_prints_live_committed_git_diff tests.test_cli.CliTests.test_runs_diff_prints_live_dirty_git_diff_with_warning tests.test_cli.CliTests.test_runs_diff_prints_live_untracked_git_diff tests.test_cli.CliTests.test_runs_diff_includes_committed_and_dirty_changes tests.test_cli.CliTests.test_runs_diff_refuses_unavailable_git_metadata tests.test_cli.CliTests.test_runs_diff_refuses_when_recorded_head_is_stale tests.test_cli.CliTests.test_runs_diff_refuses_when_dirty_path_set_changed`
+  first failed because `runs diff` was not a valid subcommand. The mixed
+  committed-and-dirty regression then failed until dirty diff assembly included
+  committed changes. The focused set passed after adding live git diff,
+  untracked-file diff, and refusal checks.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 49 tests
+  and passed after adding `runs diff`.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py tests/test_cli.py`
+  and `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py` passed after adding
+  `runs diff`.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 115 tests,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding `runs diff`.
+- 2026-06-15: Manual `runs diff` smoke passed for a committed git metadata run
+  record.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 115 unit tests, pin check, ruff, mypy, and build after adding
+  `runs diff`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_standard_run_records_git_change_metadata_without_file_contents tests.test_cli.CliTests.test_runs_show_prints_git_metadata_summary`
   first failed because run records had no git object and text output had no git
   summary, then passed after adding git metadata capture and display.

@@ -192,6 +192,7 @@ After an actual agent run, inspect the secret-free run ledger:
 runhaven runs list --limit 20
 runhaven runs show <run-id>
 runhaven runs log <run-id>
+runhaven runs diff <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 ```
@@ -206,6 +207,13 @@ file contents. Run records also omit command lines, agent arguments,
 environment variable names, environment values, request bodies, prompts, and
 token values. `runs log` joins the run record with matching provider policy and
 auth broker entries for the same run id.
+
+`runs diff` prints an on-demand live git diff from the recorded metadata. It
+refuses when git metadata is unavailable, the recorded repository or workspace
+is gone, `HEAD` no longer matches the recorded run, the recorded path list was
+truncated, or the current dirty path set differs from the run record. For dirty
+working-tree diffs, RunHaven warns that it verified the recorded `HEAD` and
+path set, not the exact file contents since the run.
 
 ## Provider Egress Smoke
 

@@ -108,16 +108,19 @@ Internet mode remains unrestricted egress.
 
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
 the RunHaven cache root. `runhaven runs list`, `runhaven runs show RUN_ID`, and
-`runhaven runs log RUN_ID` read this ledger. Records include run id, timestamps,
-profile, workspace, network mode, return code, provider policy summary, auth
-broker summary, cleanup outcome, and git change metadata when the workspace is
-inside a git repository. Git metadata records repo root, before and after
-`HEAD`, dirty state, changed file count, and a capped list of relative paths
-scoped to the selected workspace. `runs log` joins the run record with matching
-`egress-policy.jsonl` and `auth-broker.jsonl` entries for the same run id.
-These commands intentionally omit diffs, file contents, prompts, the
-`container run` command, agent arguments, environment variable names,
-environment values, request bodies, and token values.
+`runhaven runs log RUN_ID` read this ledger. Records include run id,
+timestamps, profile, workspace, network mode, return code, provider policy
+summary, auth broker summary, cleanup outcome, and git change metadata when
+the workspace is inside a git repository. Git metadata records repo root,
+before and after `HEAD`, dirty state, changed file count, and a capped list of
+relative paths scoped to the selected workspace. `runs log` joins the run
+record with matching `egress-policy.jsonl` and `auth-broker.jsonl` entries for
+the same run id. `runs diff` validates the recorded git metadata against live
+git state and then prints a live `git diff`; it does not read or store patches
+from `runs.jsonl`. These commands intentionally omit diffs, file contents,
+prompts, the `container run` command, agent arguments, environment variable
+names, environment values, request bodies, and token values from persisted
+ledgers.
 
 ## Auth Broker Model
 

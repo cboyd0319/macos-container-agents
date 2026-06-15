@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
+Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
 
 ## Files
 
@@ -50,6 +50,25 @@ Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_diff_prints_live_committed_git_diff tests.test_cli.CliTests.test_runs_diff_prints_live_dirty_git_diff_with_warning tests.test_cli.CliTests.test_runs_diff_prints_live_untracked_git_diff tests.test_cli.CliTests.test_runs_diff_includes_committed_and_dirty_changes tests.test_cli.CliTests.test_runs_diff_refuses_unavailable_git_metadata tests.test_cli.CliTests.test_runs_diff_refuses_when_recorded_head_is_stale tests.test_cli.CliTests.test_runs_diff_refuses_when_dirty_path_set_changed`
+  first failed because `runs diff` was not a valid subcommand. The mixed
+  committed-and-dirty regression then failed until dirty diff assembly included
+  committed changes. The focused set passed after adding live git diff,
+  untracked-file diff, and refusal checks.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 49 tests and passed
+  after adding `runs diff`.
+- `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py tests/test_cli.py`
+  and `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py` passed after adding
+  `runs diff`.
+- `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 115 tests,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding `runs diff`.
+- Manual `runs diff` smoke passed for a committed git metadata run record.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 115 unit
+  tests, pin check, ruff, mypy, and build after adding `runs diff`.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_standard_run_records_git_change_metadata_without_file_contents tests.test_cli.CliTests.test_runs_show_prints_git_metadata_summary`
   first failed because run records had no git object and text output had no git
   summary, then passed after adding git metadata capture and display.
@@ -486,6 +505,12 @@ Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
   `egress-policy.jsonl` and `auth-broker.jsonl` entries for the same run id.
   Text and JSON output remain secret-free and include the git summary from the
   run record when present.
+- `runhaven runs diff RUN_ID` now prints a live git diff after validating the
+  recorded repo root, `HEAD`, dirty state, changed count, and path set against
+  the current workspace. It refuses unavailable metadata, stale `HEAD`, stale
+  dirty path sets, truncated path lists, and missing repo/workspace state.
+- Dirty working-tree diffs warn that RunHaven verified the recorded `HEAD` and
+  path set, not exact file contents since the run.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -528,9 +553,8 @@ Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Implement `runhaven runs diff RUN_ID` from recorded metadata and live git,
-   refusing when git metadata is unavailable, the repo or recorded head cannot
-   be verified, or producing output would require stored patches. Run
+5. Choose the next smallest recovery command from the backlog, likely
+   `runhaven runs stop` or `runhaven runs attach`. Run
    `scripts/codex_broker_smoke.py --require-api-key` with a disposable OpenAI
    API key when available.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by

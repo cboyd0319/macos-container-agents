@@ -48,6 +48,9 @@ repo and link to primary sources instead.
   runs now record before and after `HEAD`, dirty state, changed count, and
   capped relative paths for git workspaces without storing diffs, file
   contents, prompts, commands, or secrets.
+- 2026-06-15: Implemented `runhaven runs diff RUN_ID` from the promoted run
+  dashboard backlog. The command prints live git output only after recorded
+  repo, `HEAD`, and path metadata still match the current workspace.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.
