@@ -67,6 +67,9 @@ repo and link to primary sources instead.
   visibility backlog. The command uses Apple `container inspect` but prints
   only curated state so raw inspect arguments, environment, and mounts are not
   exposed.
+- 2026-06-15: Implemented `runhaven runs kill RUN_ID` from the promoted run
+  recovery backlog. The command uses Apple `container kill` after the same
+  active-marker and RunHaven-owned container-name checks.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

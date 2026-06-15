@@ -734,6 +734,48 @@ class CliTests(unittest.TestCase):
         self.assertEqual(records[0]["return_code"], 143)
         self.assertEqual(list((cache / "active-runs").glob("*.json")), [])
 
+    def test_standard_run_records_killed_status_when_kill_requested(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory) / "cache"
+
+            def fake_container_run(command: tuple[str, ...]) -> int:
+                active_files = list((cache / "active-runs").glob("*.json"))
+                self.assertEqual(len(active_files), 1)
+                payload = json.loads(active_files[0].read_text(encoding="utf-8"))
+                payload["status"] = "kill-requested"
+                payload["kill_requested_at"] = "2026-06-15T00:00:01Z"
+                active_files[0].write_text(json.dumps(payload) + "\n", encoding="utf-8")
+                return 137
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.subprocess.call", side_effect=fake_container_run),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        directory,
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            records = [
+                json.loads(line)
+                for line in (cache / "runs.jsonl").read_text(encoding="utf-8").splitlines()
+            ]
+
+        self.assertEqual(code, 137)
+        self.assertEqual(records[0]["status"], "killed")
+        self.assertEqual(records[0]["return_code"], 137)
+        self.assertEqual(list((cache / "active-runs").glob("*.json")), [])
+
     def test_standard_run_records_git_change_metadata_without_file_contents(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace"
@@ -960,6 +1002,82 @@ class CliTests(unittest.TestCase):
             updated = json.loads(active_path.read_text(encoding="utf-8"))
             self.assertEqual(updated["status"], "stop-requested")
             self.assertIn("stop_requested_at", updated)
+
+    def test_runs_kill_kills_active_run_container(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stdout(output),
+            ):
+                run.return_value = Mock(returncode=0)
+                code = main(["runs", "kill", "run-active"])
+
+            self.assertEqual(code, 0)
+            run.assert_called_once_with(
+                ("container", "kill", "runhaven-shell-abc-run"),
+                check=False,
+            )
+            text = output.getvalue()
+            self.assertIn("Kill requested", text)
+            updated = json.loads(active_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["status"], "kill-requested")
+            self.assertIn("kill_requested_at", updated)
+
+    def test_runs_kill_rolls_back_marker_when_container_kill_fails(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+            ):
+                run.return_value = Mock(returncode=7)
+                code = main(["runs", "kill", "run-active"])
+
+            self.assertEqual(code, 7)
+            updated = json.loads(active_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["status"], "running")
+            self.assertNotIn("kill_requested_at", updated)
 
     def test_runs_active_prints_active_run_markers(self) -> None:
         with TemporaryDirectory() as directory:
@@ -1689,6 +1807,41 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 2)
         require_container.assert_not_called()
+        self.assertIn("not a RunHaven-owned container", error_output.getvalue())
+
+    def test_runs_kill_refuses_unowned_container_name(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            (active_dir / "run-active.json").write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "other-container",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "kill", "run-active"])
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        run.assert_not_called()
         self.assertIn("not a RunHaven-owned container", error_output.getvalue())
 
     def test_provider_run_with_codex_api_key_broker_requires_host_env_first(self) -> None:

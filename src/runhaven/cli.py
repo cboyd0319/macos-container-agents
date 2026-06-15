@@ -62,6 +62,7 @@ ACTIVE_RUN_PUBLIC_FIELDS = (
     "network_name",
     "host_pid",
     "stop_requested_at",
+    "kill_requested_at",
 )
 
 
@@ -233,6 +234,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="stop an active RunHaven run",
     )
     runs_stop_parser.add_argument("run_id", help="active run id to stop")
+    runs_kill_parser = runs_subcommands.add_parser(
+        "kill",
+        help="hard-stop an active RunHaven run",
+    )
+    runs_kill_parser.add_argument("run_id", help="active run id to kill")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -414,7 +420,7 @@ def run_agent(args: argparse.Namespace) -> int:
         try:
             return_code = subprocess.call(plan.command)
         finally:
-            stop_requested = active_run_stop_requested(run_id)
+            terminal_status = active_run_terminal_status(run_id)
             remove_active_run_record(run_id)
         finished_at = utc_timestamp()
         git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
@@ -424,7 +430,7 @@ def run_agent(args: argparse.Namespace) -> int:
             started_at=started_at,
             finished_at=finished_at,
             return_code=return_code,
-            status="stopped" if stop_requested else None,
+            status=terminal_status,
             provider_decisions=(),
             auth_decisions=None,
             cleanup={"provider_network": "not-applicable"},
@@ -481,6 +487,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_logs_follow(args.run_id, lines=args.lines)
     if args.runs_command == "stop":
         return runs_stop(args.run_id)
+    if args.runs_command == "kill":
+        return runs_kill(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -596,7 +604,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
     provider_decisions: tuple[ProxyDecision, ...] = ()
     auth_decisions: tuple[BrokerDecision, ...] | None = None
     git: dict[str, object] | None = None
-    stop_requested = False
+    terminal_status: str | None = None
     active_run_recorded = False
     cleanup: dict[str, object] = {
         "provider_network": "not-created",
@@ -644,7 +652,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         try:
             return_code = subprocess.call(command)
         finally:
-            stop_requested = active_run_stop_requested(run_id)
+            terminal_status = active_run_terminal_status(run_id)
         finished_at = utc_timestamp()
         git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         provider_decisions = tuple(proxy.policy_decisions())
@@ -681,7 +689,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
                 started_at=started_at,
                 finished_at=finished_at,
                 return_code=return_code,
-                status="stopped" if stop_requested else None,
+                status=terminal_status,
                 provider_decisions=provider_decisions,
                 auth_decisions=auth_decisions,
                 cleanup=cleanup,
@@ -1085,12 +1093,30 @@ def clear_active_run_stop_requested(run_id: str, record: dict[str, Any]) -> None
     write_active_run_payload(run_id, updated)
 
 
-def active_run_stop_requested(run_id: str) -> bool:
+def mark_active_run_kill_requested(run_id: str, record: dict[str, Any]) -> None:
+    updated = dict(record)
+    updated["status"] = "kill-requested"
+    updated["kill_requested_at"] = utc_timestamp()
+    write_active_run_payload(run_id, updated)
+
+
+def clear_active_run_kill_requested(run_id: str, record: dict[str, Any]) -> None:
+    updated = dict(record)
+    updated["status"] = "running"
+    updated.pop("kill_requested_at", None)
+    write_active_run_payload(run_id, updated)
+
+
+def active_run_terminal_status(run_id: str) -> str | None:
     try:
         record = find_active_run_record(run_id)
     except ValueError:
-        return False
-    return isinstance(record.get("stop_requested_at"), str)
+        return None
+    if isinstance(record.get("kill_requested_at"), str):
+        return "killed"
+    if isinstance(record.get("stop_requested_at"), str):
+        return "stopped"
+    return None
 
 
 def remove_active_run_record(run_id: str) -> None:
@@ -1404,6 +1430,26 @@ def runs_stop(run_id: str) -> int:
             pass
         return result.returncode
     print(f"Stop requested for run {run_id} ({container_name}).")
+    return 0
+
+
+def runs_kill(run_id: str) -> int:
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    require_container_cli()
+    mark_active_run_kill_requested(run_id, record)
+    result = subprocess.run(("container", "kill", container_name), check=False)
+    if result.returncode != 0:
+        try:
+            clear_active_run_kill_requested(run_id, record)
+        except ValueError:
+            pass
+        return result.returncode
+    print(f"Kill requested for run {run_id} ({container_name}).")
     return 0
 
 

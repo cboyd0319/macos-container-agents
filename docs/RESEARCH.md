@@ -40,6 +40,9 @@ Observed runtime command surface on 2026-06-15:
   `--interactive`, `--tty`, `--user`, and `--workdir`.
 - Local `container logs --help` shows the supported shape:
   `container logs [--boot] [--follow] [-n <n>] <container-id>`.
+- Local `container kill --help` shows the supported shape:
+  `container kill [--all] [--signal <signal>] [--debug] [<container-ids> ...]`;
+  the default signal is `KILL`.
 - Local `container inspect --help` shows the supported shape:
   `container inspect [--debug] <container-ids> ...`.
 - The pinned command reference states that `container inspect` displays detailed

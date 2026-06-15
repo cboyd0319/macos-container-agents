@@ -118,8 +118,9 @@ network fields.
 to start a guarded shell or command in the active container. `runhaven runs
 logs-follow RUN_ID` reads one marker and calls Apple `container logs --follow`
 for recent and live container output. `runhaven runs stop RUN_ID` reads one
-marker and calls Apple `container stop` for the named container. The marker is
-removed when the run finishes.
+marker and calls Apple `container stop` for the named container. `runhaven runs
+kill RUN_ID` reads one marker and calls Apple `container kill` for explicit
+hard-stop recovery. The marker is removed when the run finishes.
 `runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven runs log
 RUN_ID` read the completed-run ledger. Records include run id,
 timestamps, profile, workspace, network mode, return code, provider policy

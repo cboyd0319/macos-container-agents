@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs status RUN_ID` for active RunHaven run visibility.
+Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
 
 ## Current State
 
@@ -239,8 +239,12 @@ Implement `runhaven runs status RUN_ID` for active RunHaven run visibility.
 - `runhaven runs status RUN_ID` now reads the active marker, verifies the
   container name is RunHaven-owned, calls Apple `container inspect`, and prints
   only curated marker, state, image, resource, and network fields.
+- `runhaven runs kill RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, marks kill requested, calls Apple
+  `container kill`, rolls the marker back if the kill command fails, and
+  records killed runs as `killed`.
 - Active markers are removed after run completion. If a run exits after a stop
-  request, the completed run record is marked `stopped`.
+  or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
   arguments, environment variable names, environment values, request bodies,
   and token values.
@@ -260,8 +264,8 @@ Implement `runhaven runs status RUN_ID` for active RunHaven run visibility.
 
 ## Recommended Next Step
 
-Add a guarded `runhaven runs kill RUN_ID` hard-stop command for explicit
-recovery when graceful `runs stop` fails or hangs. Run the optional Codex
+Add a guarded active-run repair command that can remove stale active markers
+after confirming the Apple container no longer exists. Run the optional Codex
 broker smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
@@ -276,6 +280,23 @@ broker smoke with a disposable OpenAI API key when one is available.
   `container inspect [--debug] <container-ids> ...`; local
   `container inspect buildkit` confirmed JSON output with raw process
   arguments, environment, and mounts.
+- 2026-06-15: Local `container kill --help` shows
+  `container kill [--all] [--signal <signal>] [--debug] [<container-ids> ...]`;
+  the default signal is `KILL`.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_records_killed_status_when_kill_requested tests.test_cli.CliTests.test_runs_kill_kills_active_run_container tests.test_cli.CliTests.test_runs_kill_rolls_back_marker_when_container_kill_fails tests.test_cli.CliTests.test_runs_kill_refuses_unowned_container_name`
+  first failed because `kill` was not a valid `runs` subcommand and
+  kill-requested runs recorded as `failed`, then passed after adding guarded
+  Apple `container kill` routing and killed run records.
+- 2026-06-15: Focused `runs kill` tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 140 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs kill` smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 140 unit tests, pin check, ruff, mypy, and build after adding
+  `runs kill`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_status_prints_sanitized_active_container_state tests.test_cli.CliTests.test_runs_status_json_is_sanitized tests.test_cli.CliTests.test_runs_status_refuses_unowned_container_name tests.test_cli.CliTests.test_runs_status_returns_container_inspect_failure`
   first failed because `status` was not a valid `runs` subcommand, then passed
   after adding sanitized Apple `container inspect` status output.

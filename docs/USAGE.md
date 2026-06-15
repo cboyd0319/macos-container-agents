@@ -80,6 +80,7 @@ runhaven runs status <run-id>
 runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
+runhaven runs kill <run-id>
 ```
 
 `runs status` shows the active marker plus sanitized live Apple
@@ -234,6 +235,7 @@ runhaven runs status <run-id>
 runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
+runhaven runs kill <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
@@ -263,6 +265,10 @@ secret-free active-run marker from the RunHaven cache root, verifies the marker
 contains a RunHaven-owned container name, and calls Apple `container stop`.
 Finished runs remain inspectable through `runs list/show/log/diff`, but they
 cannot be stopped.
+
+`runs kill` uses the same active marker and RunHaven-owned container-name
+check before calling Apple `container kill`. It is the hard-stop recovery path
+for cases where graceful `runs stop` fails or hangs.
 
 `runs active` lists those currently active markers in text or JSON without
 requiring Apple `container` access and skips invalid marker files.
