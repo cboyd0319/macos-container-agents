@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs active` for active RunHaven run discovery.
+Implement `runhaven runs attach RUN_ID` for active RunHaven run intervention.
 
 ## Current State
 
@@ -229,6 +229,10 @@ Implement `runhaven runs active` for active RunHaven run discovery.
 - `runhaven runs active` now lists current active-run markers in text or JSON
   without requiring Apple `container` access. It skips invalid or
   non-actionable marker files.
+- `runhaven runs attach RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, rejects root attach without
+  `--allow-root-user`, and calls Apple `container exec` to start a guarded
+  shell or command in the active container.
 - Active markers are removed after run completion. If a run exits after a stop
   request, the completed run record is marked `stopped`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -250,12 +254,30 @@ Implement `runhaven runs active` for active RunHaven run discovery.
 
 ## Recommended Next Step
 
-Add `runhaven runs attach RUN_ID` for visibility and direct intervention in
-active runs. Run the optional Codex broker smoke with a disposable OpenAI API
-key when one is available.
+Add `runhaven runs logs-follow RUN_ID` or another live visibility command if
+live agent output remains hard to inspect. Run the optional Codex broker smoke
+with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
+- 2026-06-15: `container --help`, `container exec --help`, and
+  `container attach --help` were checked. The pinned local Apple `container`
+  CLI exposes `exec`; `attach` reports plugin `container-attach` is not
+  installed.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_attach_execs_shell_in_active_container tests.test_cli.CliTests.test_runs_attach_uses_custom_command_without_tty_when_requested tests.test_cli.CliTests.test_runs_attach_refuses_unowned_container_name tests.test_cli.CliTests.test_runs_attach_refuses_root_user_without_override tests.test_cli.CliTests.test_runs_attach_allows_root_user_with_override`
+  first failed because `attach` was not a valid `runs` subcommand, then passed
+  after adding guarded `container exec` attach.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 128 tests,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding `runs attach`.
+- 2026-06-15: Local Markdown link check, macOS-only platform boundary scan,
+  and manual `runs attach` command-construction smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 128 unit tests, pin check, ruff, mypy, and build after adding
+  `runs attach`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_active_prints_active_run_markers tests.test_cli.CliTests.test_runs_active_json_prints_active_run_markers tests.test_cli.CliTests.test_runs_active_prints_empty_message`
   first failed because `active` was not a valid `runs` subcommand, then passed
   after adding text and JSON active-marker listing.

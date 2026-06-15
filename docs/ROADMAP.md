@@ -65,8 +65,7 @@
 - optional git worktree isolation for agent runs
 - merge, keep, discard, and conflict-recovery flows
 - run records with `runs list`, `runs show`, `runs log`, `runs diff`,
-  `runs active`, `runs stop`, and git change metadata
-- `runs attach` for visibility and direct intervention
+  `runs active`, `runs attach`, `runs stop`, and git change metadata
 - structured blocked-host and cleanup event records
 - stable JSON output for read-only and run-status commands
 - warm reusable project sessions with explicit reset and prune UX

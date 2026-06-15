@@ -36,11 +36,19 @@ from .egress import (
     normalize_host,
 )
 from .images import build_image_plan
-from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_plan
+from .plans import (
+    SUPPORTED_NETWORK_MODES,
+    AgentRunPlan,
+    RunOptions,
+    build_run_plan,
+    uses_root_identity,
+    validate_resource_options,
+)
 from .profiles import PROFILES, get_profile
 from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
 
 GIT_STATUS_PATH_LIMIT = 100
+DEFAULT_ATTACH_COMMAND = ("/bin/bash",)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -161,6 +169,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="show currently active RunHaven runs",
     )
     runs_active_parser.add_argument("--json", action="store_true", help="print JSON output")
+    runs_attach_parser = runs_subcommands.add_parser(
+        "attach",
+        help="open a shell or command in an active RunHaven run",
+        epilog="Use -- before a custom command, for example: runhaven runs attach RUN_ID -- pwd",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    runs_attach_parser.add_argument("run_id", help="active run id to attach to")
+    runs_attach_parser.add_argument(
+        "--user",
+        default="agent",
+        help="container user for the attached process; defaults to non-root agent",
+    )
+    runs_attach_parser.add_argument(
+        "--allow-root-user",
+        action="store_true",
+        help="allow attaching as root inside the active container",
+    )
+    runs_attach_parser.add_argument(
+        "--workdir",
+        default="/workspace",
+        help="container working directory for the attached process",
+    )
+    runs_attach_parser.add_argument(
+        "--tty",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="allocate a TTY for the attached process; auto follows the current terminal",
+    )
     runs_stop_parser = runs_subcommands.add_parser(
         "stop",
         help="stop an active RunHaven run",
@@ -399,6 +435,15 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_diff(args.run_id)
     if args.runs_command == "active":
         return runs_active(json_output=args.json)
+    if args.runs_command == "attach":
+        return runs_attach(
+            args.run_id,
+            user=args.user,
+            workdir=args.workdir,
+            tty_mode=args.tty,
+            allow_root_user=args.allow_root_user,
+            command_args=tuple(args.agent_args),
+        )
     if args.runs_command == "stop":
         return runs_stop(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
@@ -1089,6 +1134,53 @@ def runs_active(*, json_output: bool) -> int:
             f"container={record.get('container_name', '-')}"
         )
     return 0
+
+
+def runs_attach(
+    run_id: str,
+    *,
+    user: str,
+    workdir: str,
+    tty_mode: str,
+    allow_root_user: bool,
+    command_args: tuple[str, ...],
+) -> int:
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    validate_resource_options("1", "1g", user)
+    if uses_root_identity(user) and not allow_root_user:
+        raise ValueError("root user or group requires --allow-root-user")
+    validate_attach_workdir(workdir)
+    command = command_args or DEFAULT_ATTACH_COMMAND
+    validate_attach_command(command)
+    require_container_cli()
+
+    attach_command = ["container", "exec", "--interactive"]
+    if tty_mode == "always" or (
+        tty_mode == "auto" and sys.stdin.isatty() and sys.stdout.isatty()
+    ):
+        attach_command.append("--tty")
+    attach_command.extend(("--user", user, "--workdir", workdir, container_name))
+    attach_command.extend(command)
+    return subprocess.call(tuple(attach_command))
+
+
+def validate_attach_workdir(workdir: str) -> None:
+    if not workdir or not workdir.startswith("/"):
+        raise ValueError(f"invalid attach workdir: {workdir!r}")
+    if any(character in "\x00\r\n" for character in workdir):
+        raise ValueError(f"invalid attach workdir: {workdir!r}")
+
+
+def validate_attach_command(command: tuple[str, ...]) -> None:
+    if not command:
+        raise ValueError("attach command is empty")
+    if any(argument == "" or "\x00" in argument for argument in command):
+        raise ValueError("attach command arguments cannot be empty")
 
 
 def runs_stop(run_id: str) -> int:

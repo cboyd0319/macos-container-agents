@@ -31,6 +31,17 @@ Observed runtime evidence on 2026-06-14:
 - Installed kernel SHA-256:
   `2fe4a58d2885d623bcb4d705900ac8c1d4f02371152da8126b3b00c8c47fc3a1`.
 
+Observed runtime command surface on 2026-06-15:
+
+- Local `container --help` lists `exec`, `logs`, `stop`, `kill`, and other
+  container lifecycle commands.
+- Local `container exec --help` shows the supported shape:
+  `container exec [<options>] <container-id> <arguments> ...`, including
+  `--interactive`, `--tty`, `--user`, and `--workdir`.
+- Local `container attach --help` reports that plugin `container-attach` is not
+  installed. RunHaven `runs attach` therefore uses guarded `container exec`
+  against the active RunHaven-owned container name.
+
 Important distinction:
 
 - Runtime pins follow the installed, signed Apple `container` 1.0.0 release and

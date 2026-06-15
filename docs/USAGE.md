@@ -71,11 +71,22 @@ already using the same isolated home volume, `runhaven` fails before starting Ap
 `container` and tells you to wait or use a different workspace/profile.
 When a run starts, RunHaven prints a run id to stderr. From another terminal,
 use that id to request a graceful stop. If the id scrolls away, list active
-runs first:
+runs first. To inspect or intervene while the run is active, attach from
+another terminal:
 
 ```bash
 runhaven runs active
+runhaven runs attach <run-id>
 runhaven runs stop <run-id>
+```
+
+`runs attach` starts a new process inside the active container with Apple
+`container exec`; it does not attach to the original agent process stream. By
+default it opens `/bin/bash` as the non-root `agent` user in `/workspace`.
+Pass a custom command after `--` when needed:
+
+```bash
+runhaven runs attach <run-id> -- pwd
 ```
 
 RunHaven allocates an interactive TTY when attached to a terminal. Use
@@ -202,6 +213,7 @@ runhaven runs show <run-id>
 runhaven runs log <run-id>
 runhaven runs diff <run-id>
 runhaven runs active
+runhaven runs attach <run-id>
 runhaven runs stop <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
@@ -231,8 +243,13 @@ secret-free active-run marker from the RunHaven cache root, verifies the marker
 contains a RunHaven-owned container name, and calls Apple `container stop`.
 Finished runs remain inspectable through `runs list/show/log/diff`, but they
 cannot be stopped.
+
 `runs active` lists those currently active markers in text or JSON without
 requiring Apple `container` access and skips invalid marker files.
+
+`runs attach` uses the same active marker and RunHaven-owned container-name
+check before calling Apple `container exec`. Root attach requires an explicit
+`--allow-root-user` override.
 
 ## Provider Egress Smoke
 
