@@ -211,6 +211,11 @@ Start pre-release large-file modularization.
   status parsing, run metadata summaries, and live diff helpers from
   `src/runhaven/run_history.py` into `src/runhaven/git_metadata.py`.
   `src/runhaven/run_history.py` now measures 383 lines, down from 604 lines.
+- The eleventh behavior-preserving modularization extraction moved
+  stale-marker repair, repair JSON payloads, exit-code rules, and
+  inspect-missing validation from `src/runhaven/active_commands.py` into
+  `src/runhaven/active_repair.py`. `src/runhaven/active_commands.py` now
+  measures 342 lines, down from 569 lines.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -345,11 +350,11 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by reviewing `src/runhaven/active_commands.py`,
-`scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
-`src/runhaven/provider_runtime.py` for complexity-only refactors. Keep cohesive
-files intact if a split would only move code. Run the optional Codex broker
-smoke with a disposable OpenAI API key when one is available.
+Continue the cleanup pass by reviewing `scripts/check_pins.py`,
+`src/runhaven/auth_broker.py`, and `src/runhaven/provider_runtime.py` for
+complexity-only refactors. Keep cohesive files intact if a split would only
+move code. Run the optional Codex broker smoke with a disposable OpenAI API key
+when one is available.
 
 ## Verification Evidence
 
@@ -387,6 +392,21 @@ smoke with a disposable OpenAI API key when one is available.
   `uvx --from ruff==0.15.17 ruff check` on those files;
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
   with 90 tests; and `uvx --from mypy==2.1.0 mypy src`.
+- 2026-06-15: Focused active-repair extraction checks passed:
+  `python3 -m compileall` on `src/runhaven/active_commands.py`,
+  `src/runhaven/active_repair.py`, and `src/runhaven/cli.py`;
+  `uvx --from ruff==0.15.17 ruff check` on those files;
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_active*.py'`
+  with 33 tests; and `uvx --from mypy==2.1.0 mypy src`.
+- 2026-06-15: Full verification passed after the active-repair extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the git-metadata extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,

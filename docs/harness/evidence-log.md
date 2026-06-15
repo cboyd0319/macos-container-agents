@@ -55,6 +55,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-15 | Run-history CLI test split | structural review, focused run-history CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 12 run-history CLI tests from `tests/test_cli_run_history.py` into focused list/show, diff, and log test files. |
 | 2026-06-15 | Provider-runtime CLI test split | structural review, focused provider-runtime CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 12 provider-runtime CLI tests from `tests/test_cli_provider_runtime.py` into focused proxy, Codex broker, and internal-network test files. |
 | 2026-06-15 | Git-metadata extraction | structural review, focused CLI tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/git_metadata.py` for git discovery, status parsing, run git summaries, and live diff helpers; `src/runhaven/run_history.py` is now 383 lines. |
+| 2026-06-15 | Active-repair extraction | structural review, focused active-command CLI tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/active_repair.py` for stale-marker repair, JSON payloads, exit-code rules, and inspect-missing validation; `src/runhaven/active_commands.py` is now 342 lines. |
 
 Rules:
 

@@ -7,12 +7,11 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the git metadata extraction:
+Measured on 2026-06-15 after the active repair extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 766 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
 | `src/runhaven/provider_runtime.py` | 501 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
@@ -22,10 +21,12 @@ Measured on 2026-06-15 after the git metadata extraction:
 | `src/runhaven/run_history.py` | 383 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
+| `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
+| `src/runhaven/active_repair.py` | 243 | Owns stale active-marker repair, JSON payloads, and inspect-missing validation. |
 | `tests/test_cli_provider_proxy.py` | 242 | Owns provider plan, proxy injection, blocked-host summary, and policy-log coverage. |
 | `src/runhaven/git_metadata.py` | 235 | Owns git discovery, status parsing, run git summary construction, and live diff helpers. |
 | `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
@@ -179,16 +180,29 @@ This removes git subprocess and parsing details from `run_history.py` while
 preserving run metadata capture, live diff refusal behavior, and existing CLI
 test coverage.
 
+## Active-Repair Extraction Completed
+
+- `src/runhaven/active_repair.py`: `runs repair`, `runs repair --all`, repair
+  result payloads, exit-code rules, RunHaven-owned container validation, and
+  confirmed-missing inspect checks.
+- `src/runhaven/active_commands.py`: `runs active/status/attach/logs-follow`,
+  `runs stop`, and `runs kill`, plus sanitized status output and attach/log
+  command validation.
+
+This removes stale-marker repair internals from `active_commands.py` while
+preserving the existing CLI import surface, active-run ownership checks,
+fail-closed repair behavior, and active-command test coverage.
+
 ## Recommended Sequence
 
-1. Review `src/runhaven/active_commands.py` for complexity-only refactors.
-   Keep it intact if a split would only move code without improving
-   reviewability.
-
-2. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
+1. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
    `src/runhaven/provider_runtime.py` for the same kind of complexity-only
    refactor. The next pass should be willing to stop at "no split needed" if
    the modules are cohesive.
+
+2. Consider splitting `tests/test_cli_active_repair.py` only if test
+   readability becomes a blocker. The test file is large but currently maps to
+   one focused command surface.
 
 ## Acceptance Criteria
 

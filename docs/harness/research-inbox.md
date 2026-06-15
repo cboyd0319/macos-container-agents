@@ -128,6 +128,10 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued the pre-release modularization pass by extracting
   `src/runhaven/git_metadata.py` from `src/runhaven/run_history.py` for git
   discovery, status parsing, run metadata summaries, and live diff helpers.
+- 2026-06-15: Continued the pre-release modularization pass by extracting
+  `src/runhaven/active_repair.py` from `src/runhaven/active_commands.py` for
+  stale-marker repair, JSON payloads, exit-code rules, and inspect-missing
+  validation.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
   `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids
