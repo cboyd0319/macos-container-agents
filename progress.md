@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add secret-free joined run logs with `runhaven runs log RUN_ID`.
+Add git-aware run change metadata for future `runhaven runs diff RUN_ID`.
 
 ## Current State
 
@@ -201,8 +201,15 @@ Add secret-free joined run logs with `runhaven runs log RUN_ID`.
 - `runhaven runs log RUN_ID` and `runhaven runs log RUN_ID --json` now join the
   selected run record with matching provider policy and auth broker entries for
   the same run id.
-- Run records omit command lines, agent arguments, environment variable names,
-  environment values, request bodies, and token values.
+- Git workspaces now add a run metadata summary with repo root, before and
+  after `HEAD`, dirty state, changed file count, and a capped list of relative
+  paths scoped to the selected workspace. Non-git workspaces are recorded as
+  git unavailable.
+- `runhaven runs show RUN_ID` and `runhaven runs log RUN_ID` now print a
+  compact git summary line when metadata is present.
+- Run records omit diffs, file contents, prompts, command lines, agent
+  arguments, environment variable names, environment values, request bodies,
+  and token values.
 - Empty provider allowlist behavior is now covered at both the planner and
   proxy-policy layers.
 - `internet` mode is regression-tested as no provider allowlist and
@@ -219,12 +226,30 @@ Add secret-free joined run logs with `runhaven runs log RUN_ID`.
 
 ## Recommended Next Step
 
-Run the optional Codex broker smoke with a disposable OpenAI API key when one is
-available, then add git-aware change capture for future `runhaven runs diff
-RUN_ID` without storing command lines, prompts, or secrets.
+Implement `runhaven runs diff RUN_ID` from recorded metadata and live git,
+refusing when git metadata is unavailable, the repo or recorded head cannot be
+verified, or producing output would require storing patches. Run the optional
+Codex broker smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_standard_run_records_git_change_metadata_without_file_contents tests.test_cli.CliTests.test_runs_show_prints_git_metadata_summary`
+  first failed because run records had no git object and text output had no git
+  summary, then passed after adding git metadata capture and display.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 42 tests
+  and passed after adding git run metadata.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 108 tests,
+  `python3 scripts/check_pins.py`, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  and `git diff --check` passed after adding git run metadata.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 108 unit tests, pin check, ruff, mypy, and build after adding git
+  run metadata.
+- 2026-06-15: Manual `runs show` and `runs log --json` reader smoke passed for
+  a git metadata run record.
+- 2026-06-15: Local Markdown link check, platform-boundary text scan, and
+  generated-artifact cleanup scan passed after the git metadata docs update.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_log_prints_joined_secret_free_run_events tests.test_cli.CliTests.test_runs_log_json_is_secret_free`
   first failed because `runs log` was not a valid subcommand, then passed after
   joining run, provider policy, and auth broker entries by run id.

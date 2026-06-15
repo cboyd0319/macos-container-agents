@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -22,6 +23,26 @@ from runhaven.cli import (
 )
 from runhaven.doctor import Check
 from runhaven.egress import ProxyDecision
+
+
+def run_git(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ("git", "-C", str(repo), *args),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def init_git_repo(repo: Path) -> str:
+    subprocess.run(("git", "init"), cwd=repo, check=True, capture_output=True, text=True)
+    run_git(repo, "config", "user.email", "runhaven@example.invalid")
+    run_git(repo, "config", "user.name", "RunHaven Tests")
+    (repo / "tracked.txt").write_text("initial\n", encoding="utf-8")
+    run_git(repo, "add", "tracked.txt")
+    run_git(repo, "commit", "-m", "initial")
+    return run_git(repo, "rev-parse", "HEAD")
 
 
 class CliTests(unittest.TestCase):
@@ -558,9 +579,84 @@ class CliTests(unittest.TestCase):
         self.assertEqual(record["provider_policy"]["entries"], 0)
         self.assertIsNone(record["auth_broker"]["broker"])
         self.assertEqual(record["cleanup"]["provider_network"], "not-applicable")
+        self.assertFalse(record["git"]["available"])
+        self.assertEqual(record["git"]["reason"], "not-a-git-worktree")
         self.assertNotIn("fake-openai-api-key-value", json.dumps(records))
         self.assertNotIn("OPENAI_API_KEY", json.dumps(records))
         self.assertNotIn("/bin/true", json.dumps(records))
+
+    def test_standard_run_records_git_change_metadata_without_file_contents(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            cache = Path(directory) / "cache"
+            workspace.mkdir()
+            head = init_git_repo(workspace)
+
+            def fake_container_run(command: tuple[str, ...]) -> int:
+                self.assertIn("/bin/true", command)
+                (workspace / "tracked.txt").write_text(
+                    "SECRET_FROM_FILE\n",
+                    encoding="utf-8",
+                )
+                (workspace / "created.txt").write_text(
+                    "CREATED_SECRET_FROM_FILE\n",
+                    encoding="utf-8",
+                )
+                return 0
+
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "RUNHAVEN_CACHE_HOME": str(cache),
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.subprocess.call", side_effect=fake_container_run),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        str(workspace),
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            records = [
+                json.loads(line)
+                for line in (cache / "runs.jsonl").read_text().splitlines()
+            ]
+
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        git = record["git"]
+        self.assertTrue(git["available"])
+        self.assertEqual(git["repo_root"], str(workspace.resolve()))
+        self.assertTrue(git["changed"])
+        self.assertEqual(git["before"]["head"], head)
+        self.assertFalse(git["before"]["dirty"])
+        self.assertEqual(git["before"]["changed_count"], 0)
+        self.assertEqual(git["before"]["paths"], [])
+        self.assertEqual(git["after"]["head"], head)
+        self.assertTrue(git["after"]["dirty"])
+        self.assertEqual(git["after"]["changed_count"], 2)
+        self.assertCountEqual(git["after"]["paths"], ["created.txt", "tracked.txt"])
+        self.assertFalse(git["after"]["truncated"])
+        serialized = json.dumps(records)
+        self.assertNotIn("SECRET_FROM_FILE", serialized)
+        self.assertNotIn("CREATED_SECRET_FROM_FILE", serialized)
+        self.assertNotIn("fake-openai-api-key-value", serialized)
+        self.assertNotIn("OPENAI_API_KEY", serialized)
+        self.assertNotIn("/bin/true", serialized)
 
     def test_provider_run_writes_run_record_with_policy_auth_and_cleanup_summary(self) -> None:
         with TemporaryDirectory() as directory:
@@ -967,6 +1063,65 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["auth_broker"]["broker"], "codex-api-key")
         self.assertNotIn("fake-openai-api-key-value", output.getvalue())
         self.assertNotIn("OPENAI_API_KEY", output.getvalue())
+
+    def test_runs_show_prints_git_metadata_summary(self) -> None:
+        with TemporaryDirectory() as directory:
+            log_path = Path(directory) / "runs.jsonl"
+            log_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:02Z",
+                        "started_at": "2026-06-15T00:00:02Z",
+                        "finished_at": "2026-06-15T00:00:03Z",
+                        "run_id": "run-new",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "succeeded",
+                        "return_code": 0,
+                        "provider_policy": {"entries": 0, "allowed": 0, "denied": 0},
+                        "auth_broker": {
+                            "broker": None,
+                            "entries": 0,
+                            "allowed": 0,
+                            "denied": 0,
+                            "no_requests": False,
+                        },
+                        "cleanup": {"provider_network": "not-applicable"},
+                        "git": {
+                            "available": True,
+                            "repo_root": directory,
+                            "changed": True,
+                            "before": {
+                                "head": "1234567890abcdef",
+                                "dirty": False,
+                                "changed_count": 0,
+                                "paths": [],
+                                "truncated": False,
+                            },
+                            "after": {
+                                "head": "abcdef1234567890",
+                                "dirty": True,
+                                "changed_count": 2,
+                                "paths": ["created.txt", "tracked.txt"],
+                                "truncated": False,
+                            },
+                        },
+                    }
+                )
+                + "\n"
+            )
+            output = io.StringIO()
+            with patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False):
+                with redirect_stdout(output):
+                    code = main(["runs", "show", "run-new"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Git: changed=true", text)
+        self.assertIn("before=1234567", text)
+        self.assertIn("after=abcdef1", text)
+        self.assertIn("files=2", text)
 
     def test_runs_log_prints_joined_secret_free_run_events(self) -> None:
         with TemporaryDirectory() as directory:

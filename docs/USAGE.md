@@ -198,10 +198,14 @@ runhaven runs log <run-id> --json
 
 Run records are stored under RunHaven's cache directory in `runs.jsonl`. They
 include run id, profile, workspace, network mode, return code, provider policy
-summary, auth broker summary, and cleanup outcome. They do not include command
-lines, agent arguments, environment variable names, environment values, request
-bodies, or token values. `runs log` joins the run record with matching
-provider policy and auth broker entries for the same run id.
+summary, auth broker summary, cleanup outcome, and git change metadata when
+the workspace is inside a git repository. Git metadata includes repo root,
+before and after `HEAD`, dirty state, changed file count, and a capped list of
+relative paths scoped to the selected workspace. It does not include diffs or
+file contents. Run records also omit command lines, agent arguments,
+environment variable names, environment values, request bodies, prompts, and
+token values. `runs log` joins the run record with matching provider policy and
+auth broker entries for the same run id.
 
 ## Provider Egress Smoke
 

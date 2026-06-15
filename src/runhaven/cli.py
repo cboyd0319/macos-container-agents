@@ -40,6 +40,8 @@ from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_
 from .profiles import PROFILES, get_profile
 from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
 
+GIT_STATUS_PATH_LIMIT = 100
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
@@ -323,9 +325,11 @@ def run_agent(args: argparse.Namespace) -> int:
         for command in plan.preflight:
             run_preflight(command)
         run_id = uuid.uuid4().hex
+        git_before = capture_git_snapshot(plan.workspace)
         started_at = utc_timestamp()
         return_code = subprocess.call(plan.command)
         finished_at = utc_timestamp()
+        git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         write_run_record(
             plan,
             run_id=run_id,
@@ -335,6 +339,7 @@ def run_agent(args: argparse.Namespace) -> int:
             provider_decisions=(),
             auth_decisions=None,
             cleanup={"provider_network": "not-applicable"},
+            git=git,
         )
         return return_code
 
@@ -476,6 +481,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
     return_code: int | None = None
     provider_decisions: tuple[ProxyDecision, ...] = ()
     auth_decisions: tuple[BrokerDecision, ...] | None = None
+    git: dict[str, object] | None = None
     cleanup: dict[str, object] = {
         "provider_network": "not-created",
         "provider_network_name": plan.network_name,
@@ -514,9 +520,11 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
             )
             command = with_codex_api_key_broker_config(command, plan, broker_url)
 
+        git_before = capture_git_snapshot(plan.workspace)
         started_at = utc_timestamp()
         return_code = subprocess.call(command)
         finished_at = utc_timestamp()
+        git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         provider_decisions = tuple(proxy.policy_decisions())
         write_provider_policy_log(plan, provider_decisions, run_id=run_id)
         if codex_broker is not None:
@@ -554,6 +562,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
                 provider_decisions=provider_decisions,
                 auth_decisions=auth_decisions,
                 cleanup=cleanup,
+                git=git or {"available": False, "reason": "git-snapshot-missing"},
             )
 
 
@@ -688,6 +697,131 @@ def utc_timestamp() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
+def capture_git_snapshot(workspace: Path) -> dict[str, object]:
+    repo_root, unavailable_reason = git_repo_root(workspace)
+    if repo_root is None:
+        return {"available": False, "reason": unavailable_reason}
+
+    head = git_head(repo_root)
+    resolved_workspace = str(workspace.resolve())
+    status_result = run_git_for_metadata(
+        ("git", "-C", repo_root, "status", "--porcelain=v1", "-z", "--", resolved_workspace),
+    )
+    if status_result is None or status_result.returncode != 0:
+        return {
+            "available": False,
+            "reason": "git-status-failed",
+            "repo_root": repo_root,
+        }
+
+    paths = parse_git_status_paths(status_result.stdout)
+    shown_paths = list(paths[:GIT_STATUS_PATH_LIMIT])
+    return {
+        "available": True,
+        "repo_root": repo_root,
+        "head": head,
+        "dirty": bool(paths),
+        "changed_count": len(paths),
+        "paths": shown_paths,
+        "truncated": len(paths) > GIT_STATUS_PATH_LIMIT,
+    }
+
+
+def git_repo_root(workspace: Path) -> tuple[str | None, str]:
+    result = run_git_for_metadata(
+        ("git", "-C", str(workspace), "rev-parse", "--show-toplevel"),
+        text=True,
+    )
+    if result is None:
+        return None, "git-not-found"
+    if result.returncode != 0:
+        return None, "not-a-git-worktree"
+    repo_root = result.stdout.strip()
+    if not repo_root:
+        return None, "not-a-git-worktree"
+    return str(Path(repo_root).resolve()), ""
+
+
+def git_head(repo_root: str) -> str | None:
+    result = run_git_for_metadata(
+        ("git", "-C", repo_root, "rev-parse", "HEAD"),
+        text=True,
+    )
+    if result is None or result.returncode != 0:
+        return None
+    head = result.stdout.strip()
+    return head or None
+
+
+def run_git_for_metadata(
+    command: tuple[str, ...],
+    *,
+    text: bool = False,
+) -> subprocess.CompletedProcess[Any] | None:
+    try:
+        return subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=text,
+        )
+    except (FileNotFoundError, OSError):
+        return None
+
+
+def parse_git_status_paths(output: bytes) -> tuple[str, ...]:
+    entries = [entry for entry in output.split(b"\0") if entry]
+    paths: list[str] = []
+    index = 0
+    while index < len(entries):
+        entry = entries[index]
+        if len(entry) >= 4:
+            status = entry[:2]
+            paths.append(os.fsdecode(entry[3:]))
+            if b"R" in status or b"C" in status:
+                index += 1
+        index += 1
+    return tuple(sorted(dict.fromkeys(paths)))
+
+
+def summarize_git_change(
+    before: dict[str, object],
+    after: dict[str, object],
+) -> dict[str, object]:
+    before_available = before.get("available") is True
+    after_available = after.get("available") is True
+    if not before_available or not after_available:
+        reason = after.get("reason") if not after_available else before.get("reason")
+        metadata: dict[str, object] = {
+            "available": False,
+            "reason": reason if isinstance(reason, str) else "git-unavailable",
+        }
+        repo_root = after.get("repo_root") or before.get("repo_root")
+        if isinstance(repo_root, str):
+            metadata["repo_root"] = repo_root
+        return metadata
+
+    before_summary = git_snapshot_for_record(before)
+    after_summary = git_snapshot_for_record(after)
+    return {
+        "available": True,
+        "repo_root": after["repo_root"],
+        "changed": before_summary != after_summary,
+        "before": before_summary,
+        "after": after_summary,
+    }
+
+
+def git_snapshot_for_record(snapshot: dict[str, object]) -> dict[str, object]:
+    return {
+        "head": snapshot.get("head"),
+        "dirty": snapshot.get("dirty") is True,
+        "changed_count": snapshot.get("changed_count", 0),
+        "paths": snapshot.get("paths", []),
+        "truncated": snapshot.get("truncated") is True,
+    }
+
+
 def cleanup_provider_network(plan: AgentRunPlan) -> dict[str, object]:
     if plan.network_name is None:
         return {"provider_network": "not-created", "provider_network_name": None}
@@ -712,6 +846,7 @@ def write_run_record(
     provider_decisions: Sequence[ProxyDecision],
     auth_decisions: Sequence[BrokerDecision] | None,
     cleanup: dict[str, object],
+    git: dict[str, object],
 ) -> None:
     log_path = runs_log_path()
     log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -728,6 +863,7 @@ def write_run_record(
         "provider_policy": summarize_provider_policy(provider_decisions),
         "auth_broker": summarize_auth_broker(auth_decisions),
         "cleanup": cleanup,
+        "git": git,
     }
     with log_path.open("a", encoding="utf-8") as log_file:
         log_file.write(json.dumps(payload, sort_keys=True) + "\n")
@@ -811,6 +947,9 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     print(f"Network: {record.get('network', 'unknown')}")
     print(f"Status: {record.get('status', 'unknown')}")
     print(f"Return code: {record.get('return_code', '-')}")
+    git = record.get("git")
+    if isinstance(git, dict):
+        print(format_git_summary(git))
     if isinstance(provider_policy, dict):
         print(
             "Provider policy: "
@@ -831,6 +970,27 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     if isinstance(cleanup, dict):
         print(f"Cleanup provider network: {cleanup.get('provider_network', '-')}")
     return 0
+
+
+def format_git_summary(git: dict[str, Any]) -> str:
+    if git.get("available") is not True:
+        reason = git.get("reason")
+        reason_text = reason if isinstance(reason, str) else "unknown"
+        return f"Git: unavailable ({reason_text})"
+
+    before = git.get("before")
+    after = git.get("after")
+    before_head = short_git_head(before.get("head") if isinstance(before, dict) else None)
+    after_head = short_git_head(after.get("head") if isinstance(after, dict) else None)
+    changed = str(git.get("changed") is True).lower()
+    files = after.get("changed_count", 0) if isinstance(after, dict) else 0
+    return f"Git: changed={changed} before={before_head} after={after_head} files={files}"
+
+
+def short_git_head(head: object) -> str:
+    if not isinstance(head, str) or not head:
+        return "-"
+    return head[:7]
 
 
 def runs_log(run_id: str, *, json_output: bool) -> int:

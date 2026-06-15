@@ -260,6 +260,11 @@ runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 ```
 
+Run history includes a git change summary when the workspace is in a git repo:
+before and after `HEAD`, dirty state, changed file count, and a capped list of
+relative paths. It does not store diffs, file contents, prompts, commands, or
+secret values.
+
 Broker a Codex API key without placing the raw value in the guest:
 
 ```bash
