@@ -35,6 +35,7 @@ Start pre-release large-file modularization.
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
 - `scripts/check_pins.py`
+- `scripts/npm_pin_policy.py`
 - `scripts/codex_broker_smoke.py`
 - `scripts/provider_egress_smoke.py`
 - `tests/`
@@ -244,6 +245,25 @@ Start pre-release large-file modularization.
   `src/runhaven/cli.py`; `uvx --from ruff==0.15.17 ruff check` on those
   files; `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_active*.py'`
   with 33 tests; and `uvx --from mypy==2.1.0 mypy src`.
+- Focused NPM pin-policy extraction checks passed:
+  `python3 -m compileall scripts/check_pins.py scripts/npm_pin_policy.py`,
+  `uvx --from ruff==0.15.17 ruff check --fix` plus
+  `uvx --from ruff==0.15.17 ruff format` on those files,
+  `python3 scripts/check_pins.py`,
+  `PYTHONPATH=src python3 -m unittest tests.test_repo_policy` with 5 tests,
+  and
+  `uvx --from mypy==2.1.0 mypy scripts/check_pins.py scripts/npm_pin_policy.py`.
+- Full verification passed after the NPM pin-policy extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`,
+  `uvx --from mypy==2.1.0 mypy scripts/check_pins.py scripts/npm_pin_policy.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
 - Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
@@ -996,6 +1016,8 @@ Start pre-release large-file modularization.
   refactor sequence. The first behavior-preserving extraction moved setup
   guide output, active-run marker persistence, cache paths, and shared
   validators out of `src/runhaven/cli.py`.
+- The twelfth behavior-preserving extraction moved NPM package and
+  package-lock policy checks into `scripts/npm_pin_policy.py`.
 
 ## Next Session
 
@@ -1007,10 +1029,9 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file cleanup by reviewing `scripts/check_pins.py`,
-   `src/runhaven/auth_broker.py`, and `src/runhaven/provider_runtime.py` for
-   complexity-only refactors. Keep cohesive files intact if a split would only
-   move code.
+5. Continue large-file cleanup by reviewing `src/runhaven/auth_broker.py` and
+   `src/runhaven/provider_runtime.py` for complexity-only refactors. Keep
+   cohesive files intact if a split would only move code.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

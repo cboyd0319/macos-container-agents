@@ -7,18 +7,18 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the active repair extraction:
+Measured on 2026-06-15 after the NPM pin-policy extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 766 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
 | `src/runhaven/provider_runtime.py` | 501 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
-| `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
 | `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
 | `src/runhaven/run_history.py` | 383 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
+| `scripts/check_pins.py` | 380 | Owns text target discovery, pin ledger orchestration, Python/dev deps, CI, Containerfile, and Debian package/source checks. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
@@ -35,6 +35,7 @@ Measured on 2026-06-15 after the active repair extraction:
 | `tests/test_cli_active_stop_kill.py` | 216 | Owns active stop and kill coverage. |
 | `tests/test_cli_runs_list_show.py` | 195 | Owns `runs list` and `runs show` coverage. |
 | `tests/test_cli_active_list.py` | 133 | Owns active-run list coverage. |
+| `scripts/npm_pin_policy.py` | 108 | Owns package.json and package-lock pin policy checks. |
 | `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
 | `tests/test_cli_state.py` | 80 | Owns state list, prune, and state lock coverage. |
 | `tests/test_cli_provider_internal_network.py` | 52 | Owns existing, rejected, and newly created internal-network coverage. |
@@ -193,9 +194,21 @@ This removes stale-marker repair internals from `active_commands.py` while
 preserving the existing CLI import surface, active-run ownership checks,
 fail-closed repair behavior, and active-command test coverage.
 
+## NPM Pin-Policy Extraction Completed
+
+- `scripts/npm_pin_policy.py`: package.json and package-lock policy,
+  install-script approvals, exact NPM version checks, registry checks, and
+  lockfile integrity checks.
+- `scripts/check_pins.py`: text target discovery, pin ledger loading,
+  Python/dev dependency checks, CI action checks, Containerfile checks, Debian
+  package/source checks, and orchestration of NPM package checks.
+
+This keeps `python3 scripts/check_pins.py` as the pin-policy entrypoint while
+moving package-lock-specific checks into a focused helper module.
+
 ## Recommended Sequence
 
-1. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
+1. Review `src/runhaven/auth_broker.py` and
    `src/runhaven/provider_runtime.py` for the same kind of complexity-only
    refactor. The next pass should be willing to stop at "no split needed" if
    the modules are cohesive.

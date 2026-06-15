@@ -158,3 +158,6 @@ repo and link to primary sources instead.
   policy modes. Internet mode stays explicitly unrestricted, internal mode
   stays local-only, provider mode fails closed without provider hosts, and the
   proxy policy rejects empty allowlists directly.
+- 2026-06-15: Continued pre-release modularization by extracting
+  `scripts/npm_pin_policy.py` from `scripts/check_pins.py` for NPM package and
+  package-lock policy checks.
