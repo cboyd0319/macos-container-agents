@@ -316,6 +316,21 @@ Start pre-release large-file modularization.
   the expected existing macOS-only acceptance-criteria line, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
+- Focused active-repair test cleanup checks passed:
+  `python3 -m compileall tests/test_cli_active_repair.py`,
+  `uvx --from ruff==0.15.17 ruff check tests/test_cli_active_repair.py`, and
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_active_repair.py'`
+  with 11 tests.
+- Full verification passed after the active-repair test cleanup:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan with
+  only the expected existing macOS-only evidence lines, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
 - Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
@@ -1077,6 +1092,9 @@ Start pre-release large-file modularization.
   `src/runhaven/provider_observability.py`.
 - The fifteenth behavior-preserving extraction moved CLI parser construction
   into `src/runhaven/cli_parser.py`.
+- The active-repair CLI test file was reviewed and kept as one focused repair
+  command surface after replacing repeated marker JSON setup with
+  `write_active_marker`.
 
 ## Next Session
 
@@ -1088,9 +1106,8 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file cleanup by reviewing `tests/test_cli_active_repair.py`
-   only if test readability is a real blocker. Otherwise pause large-file
-   cleanup and return to the product backlog.
+5. Pause large-file cleanup and return to the product backlog unless a concrete
+   maintainability problem remains.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

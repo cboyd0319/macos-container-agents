@@ -16,24 +16,11 @@ from runhaven.cli import main
 class CliActiveRepairTests(unittest.TestCase):
     def test_runs_repair_removes_marker_when_container_is_missing(self) -> None:
         with TemporaryDirectory() as directory:
-            active_dir = Path(directory) / "active-runs"
-            active_dir.mkdir()
-            active_path = active_dir / "run-active.json"
-            active_path.write_text(
-                json.dumps(
-                    {
-                        "timestamp": "2026-06-15T00:00:00Z",
-                        "run_id": "run-active",
-                        "profile": "shell",
-                        "workspace": directory,
-                        "network": "internet",
-                        "status": "running",
-                        "container_name": "runhaven-shell-abc-run",
-                        "host_pid": 12345,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+            active_path = write_active_marker(
+                Path(directory),
+                run_id="run-active",
+                timestamp="2026-06-15T00:00:00Z",
+                container_name="runhaven-shell-abc-run",
             )
             output = io.StringIO()
             with (
@@ -103,24 +90,11 @@ class CliActiveRepairTests(unittest.TestCase):
 
     def test_runs_repair_refuses_when_container_still_exists(self) -> None:
         with TemporaryDirectory() as directory:
-            active_dir = Path(directory) / "active-runs"
-            active_dir.mkdir()
-            active_path = active_dir / "run-active.json"
-            active_path.write_text(
-                json.dumps(
-                    {
-                        "timestamp": "2026-06-15T00:00:00Z",
-                        "run_id": "run-active",
-                        "profile": "shell",
-                        "workspace": directory,
-                        "network": "internet",
-                        "status": "running",
-                        "container_name": "runhaven-shell-abc-run",
-                        "host_pid": 12345,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+            active_path = write_active_marker(
+                Path(directory),
+                run_id="run-active",
+                timestamp="2026-06-15T00:00:00Z",
+                container_name="runhaven-shell-abc-run",
             )
             error_output = io.StringIO()
             with (
@@ -138,24 +112,11 @@ class CliActiveRepairTests(unittest.TestCase):
 
     def test_runs_repair_leaves_marker_on_unverified_inspect_failure(self) -> None:
         with TemporaryDirectory() as directory:
-            active_dir = Path(directory) / "active-runs"
-            active_dir.mkdir()
-            active_path = active_dir / "run-active.json"
-            active_path.write_text(
-                json.dumps(
-                    {
-                        "timestamp": "2026-06-15T00:00:00Z",
-                        "run_id": "run-active",
-                        "profile": "shell",
-                        "workspace": directory,
-                        "network": "internet",
-                        "status": "running",
-                        "container_name": "runhaven-shell-abc-run",
-                        "host_pid": 12345,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+            active_path = write_active_marker(
+                Path(directory),
+                run_id="run-active",
+                timestamp="2026-06-15T00:00:00Z",
+                container_name="runhaven-shell-abc-run",
             )
             error_output = io.StringIO()
             with (
@@ -414,23 +375,11 @@ class CliActiveRepairTests(unittest.TestCase):
 
     def test_runs_repair_refuses_unowned_container_name(self) -> None:
         with TemporaryDirectory() as directory:
-            active_dir = Path(directory) / "active-runs"
-            active_dir.mkdir()
-            (active_dir / "run-active.json").write_text(
-                json.dumps(
-                    {
-                        "timestamp": "2026-06-15T00:00:00Z",
-                        "run_id": "run-active",
-                        "profile": "shell",
-                        "workspace": directory,
-                        "network": "internet",
-                        "status": "running",
-                        "container_name": "other-container",
-                        "host_pid": 12345,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+            write_active_marker(
+                Path(directory),
+                run_id="run-active",
+                timestamp="2026-06-15T00:00:00Z",
+                container_name="other-container",
             )
             error_output = io.StringIO()
             with (

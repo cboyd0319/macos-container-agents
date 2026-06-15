@@ -171,3 +171,6 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued pre-release modularization by extracting
   `src/runhaven/cli_parser.py` from `src/runhaven/cli.py` for argparse
   construction.
+- 2026-06-15: Reviewed `tests/test_cli_active_repair.py`; kept it as one
+  focused repair test surface and reduced repeated marker setup with the
+  existing `write_active_marker` helper.

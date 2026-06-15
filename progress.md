@@ -233,6 +233,10 @@ Start pre-release large-file modularization.
 - The fifteenth behavior-preserving modularization extraction moved argparse
   construction from `src/runhaven/cli.py` into `src/runhaven/cli_parser.py`.
   `src/runhaven/cli.py` now measures 472 lines, down from 767 lines.
+- The active-repair CLI test file was reviewed and kept as one focused repair
+  command surface. Repeated hand-written active marker JSON setup now uses the
+  existing `write_active_marker` helper, reducing
+  `tests/test_cli_active_repair.py` to 401 lines.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -368,10 +372,9 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by reviewing `tests/test_cli_active_repair.py` only
-if test readability is a real blocker. Otherwise pause large-file cleanup and
-return to the product backlog. Run the optional Codex broker smoke with a
-disposable OpenAI API key when one is available.
+Pause the large-file cleanup and return to the product backlog unless a
+concrete maintainability problem remains. Run the optional Codex broker smoke
+with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -480,6 +483,21 @@ disposable OpenAI API key when one is available.
   `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
   `git diff --check`, Markdown local link check, platform wording scan with
   the expected existing macOS-only acceptance-criteria line, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- 2026-06-15: Focused active-repair test cleanup checks passed:
+  `python3 -m compileall tests/test_cli_active_repair.py`,
+  `uvx --from ruff==0.15.17 ruff check tests/test_cli_active_repair.py`, and
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_active_repair.py'`
+  with 11 tests.
+- 2026-06-15: Full verification passed after the active-repair test cleanup:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan with
+  only the expected existing macOS-only evidence lines, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the active-repair extraction:

@@ -60,6 +60,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-15 | Auth-profile extraction | structural review, focused auth broker and diagnostic checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/auth_profiles.py` for static auth broker profile metadata; `src/runhaven/auth_broker.py` is now 374 lines. |
 | 2026-06-15 | Provider-observability extraction | structural review, focused provider, diagnostic, and log checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/provider_observability.py` for provider and auth log writes plus blocked-host review text; `src/runhaven/provider_runtime.py` is now 379 lines. |
 | 2026-06-15 | CLI parser extraction | structural review, focused CLI parser checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/cli_parser.py` for argparse construction; `src/runhaven/cli.py` is now 472 lines. |
+| 2026-06-15 | Active-repair test cleanup | structural review, focused active-repair tests, compileall, ruff, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Reused `write_active_marker` in `tests/test_cli_active_repair.py`; file is now 401 lines and remains cohesive. |
 
 Rules:
 

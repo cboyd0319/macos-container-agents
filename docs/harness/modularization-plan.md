@@ -7,14 +7,14 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the CLI parser extraction:
+Measured on 2026-06-15 after the active-repair test cleanup:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 472 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
+| `tests/test_cli_active_repair.py` | 401 | Owns active-run stale-marker repair coverage; reviewed as cohesive after helper cleanup. |
 | `src/runhaven/run_history.py` | 383 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
 | `scripts/check_pins.py` | 380 | Owns text target discovery, pin ledger orchestration, Python/dev deps, CI, Containerfile, and Debian package/source checks. |
 | `src/runhaven/provider_runtime.py` | 379 | Owns provider run lifecycle, proxy/broker startup, active marker cleanup, internal network inspection, and runtime command injection. |
@@ -249,13 +249,18 @@ This separates parser construction from command execution while preserving the
 existing `runhaven.cli.build_parser` import surface and the `Path` patch seam
 used by help-path regression tests.
 
+## Active-Repair Test Cleanup Completed
+
+- `tests/test_cli_active_repair.py`: replaced repeated hand-written active
+  marker JSON setup with the existing `write_active_marker` helper.
+
+The file remains a single focused repair test surface. Splitting it now would
+mostly move cohesive `runs repair` coverage around, so the large-file cleanup
+can pause unless a concrete readability issue reappears.
+
 ## Recommended Sequence
 
-1. Consider splitting `tests/test_cli_active_repair.py` only if test
-   readability becomes a blocker. The test file is large but currently maps to
-   one focused command surface.
-
-2. After that review, pause the large-file cleanup and return to the product
+1. Pause the large-file cleanup and return to the product
    backlog unless a concrete maintainability problem remains.
 
 ## Acceptance Criteria
