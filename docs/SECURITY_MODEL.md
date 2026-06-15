@@ -108,18 +108,21 @@ and the next review step before the user adds a new host.
 
 Actual agent runs also append one secret-free record to `runs.jsonl`.
 `runhaven runs list`, `runhaven runs show RUN_ID`,
-`runhaven runs log RUN_ID`, and `runhaven runs diff RUN_ID` expose run id,
-profile, workspace, network mode, return code, provider policy summary, auth
-broker summary, cleanup outcome, and matching provider/auth log entries for the
-run. When the workspace is inside a git repository, the run ledger also records
-repo root, before and after `HEAD`, dirty state, changed file count, and a
-capped list of relative paths scoped to the selected workspace. The run ledger
-does not record diffs, file contents, prompts, command lines, agent arguments,
-environment variable names, environment values, request bodies, or token
-values. `runs diff` prints a live git diff on demand only after verifying the
-recorded repo root, `HEAD`, and path set still match; dirty working-tree diffs
-include a warning because metadata cannot prove file contents stayed unchanged
-after the run.
+`runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, and
+`runhaven runs stop RUN_ID` expose run id, profile, workspace, network mode,
+return code, provider policy summary, auth broker summary, cleanup outcome, and
+matching provider/auth log entries for the run. While a run is active, a
+temporary active-run marker records the RunHaven-owned container name so
+`runs stop` can call Apple `container stop`; the marker is removed after the
+run finishes. When the workspace is inside a git repository, the run ledger
+also records repo root, before and after `HEAD`, dirty state, changed file
+count, and a capped list of relative paths scoped to the selected workspace.
+The run ledger and active-run markers do not record diffs, file contents,
+prompts, command lines, agent arguments, environment variable names,
+environment values, request bodies, or token values. `runs diff` prints a live
+git diff on demand only after verifying the recorded repo root, `HEAD`, and
+path set still match; dirty working-tree diffs include a warning because
+metadata cannot prove file contents stayed unchanged after the run.
 
 Provider host allowlists are intentionally conservative and source-backed.
 Bundled auth and provider routing hosts are tracked in

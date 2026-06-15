@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
+Implement `runhaven runs stop RUN_ID` for active RunHaven containers.
 
 ## Files
 
@@ -50,6 +50,25 @@ Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest tests.test_plans.RunPlanTests.test_default_plan_mounts_only_workspace_and_agent_home tests.test_cli.CliTests.test_standard_run_writes_and_removes_active_run_marker tests.test_cli.CliTests.test_standard_run_records_stopped_status_when_stop_requested tests.test_cli.CliTests.test_runs_stop_stops_active_run_container tests.test_cli.CliTests.test_runs_stop_refuses_missing_active_run tests.test_cli.CliTests.test_runs_stop_refuses_unowned_container_name`
+  first failed because plans had no named container, runs wrote no active
+  marker, and `runs stop` was not a valid subcommand. The focused set passed
+  after adding named containers, active markers, stopped status, and guarded
+  Apple `container stop` routing.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli tests.test_plans`
+  ran 86 tests and passed after adding `runs stop`.
+- `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py src/runhaven/plans.py tests/test_cli.py tests/test_plans.py`
+  and `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py src/runhaven/plans.py`
+  passed after adding `runs stop`.
+- `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 120 tests,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py`
+  passed after adding `runs stop`.
+- Manual `runs stop` smoke passed for a temporary active-run marker with mocked
+  Apple `container stop`.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 120 unit
+  tests, pin check, ruff, mypy, and build after adding `runs stop`.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_diff_prints_live_committed_git_diff tests.test_cli.CliTests.test_runs_diff_prints_live_dirty_git_diff_with_warning tests.test_cli.CliTests.test_runs_diff_prints_live_untracked_git_diff tests.test_cli.CliTests.test_runs_diff_includes_committed_and_dirty_changes tests.test_cli.CliTests.test_runs_diff_refuses_unavailable_git_metadata tests.test_cli.CliTests.test_runs_diff_refuses_when_recorded_head_is_stale tests.test_cli.CliTests.test_runs_diff_refuses_when_dirty_path_set_changed`
   first failed because `runs diff` was not a valid subcommand. The mixed
   committed-and-dirty regression then failed until dirty diff assembly included
@@ -511,6 +530,17 @@ Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
   dirty path sets, truncated path lists, and missing repo/workspace state.
 - Dirty working-tree diffs warn that RunHaven verified the recorded `HEAD` and
   path set, not exact file contents since the run.
+- Planned and actual agent runs now include a RunHaven-owned Apple `container`
+  name derived from profile and workspace.
+- Active runs now write a temporary secret-free marker under
+  `active-runs/<run-id>.json` in the RunHaven cache root. The marker records run
+  id, profile, workspace, network mode, state volume, host pid, and container
+  name, but not command lines, agent arguments, environment variable names,
+  environment values, request bodies, prompts, or token values.
+- `runhaven runs stop RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, marks stop requested, and calls Apple
+  `container stop` for that container. Active markers are removed after run
+  completion, and stopped runs are recorded with `status=stopped`.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -553,8 +583,8 @@ Implement `runhaven runs diff RUN_ID` from recorded metadata and live git.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Choose the next smallest recovery command from the backlog, likely
-   `runhaven runs stop` or `runhaven runs attach`. Run
+5. Choose the next recovery or visibility command from the backlog, likely
+   `runhaven runs attach RUN_ID` or active-run discovery. Run
    `scripts/codex_broker_smoke.py --require-api-key` with a disposable OpenAI
    API key when available.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by

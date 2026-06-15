@@ -257,6 +257,7 @@ runhaven runs list --limit 20
 runhaven runs show <run-id>
 runhaven runs log <run-id>
 runhaven runs diff <run-id>
+runhaven runs stop <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 ```
@@ -266,6 +267,8 @@ before and after `HEAD`, dirty state, changed file count, and a capped list of
 relative paths. It does not store diffs, file contents, prompts, commands, or
 secret values. `runs diff` uses that metadata to print a live git diff only
 after the recorded repo root, head, and path set still match the workspace.
+Active runs print their run id at start; `runs stop` uses that id to request a
+graceful Apple `container stop` for the named RunHaven container.
 
 Broker a Codex API key without placing the raw value in the guest:
 

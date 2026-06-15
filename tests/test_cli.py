@@ -638,6 +638,102 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("OPENAI_API_KEY", json.dumps(records))
         self.assertNotIn("/bin/true", json.dumps(records))
 
+    def test_standard_run_writes_and_removes_active_run_marker(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory) / "cache"
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            active_payloads: list[dict[str, object]] = []
+
+            def fake_container_run(command: tuple[str, ...]) -> int:
+                active_files = list((cache / "active-runs").glob("*.json"))
+                self.assertEqual(len(active_files), 1)
+                payload = json.loads(active_files[0].read_text(encoding="utf-8"))
+                active_payloads.append(payload)
+                self.assertEqual(payload["profile"], "shell")
+                self.assertEqual(payload["workspace"], str(workspace.resolve()))
+                self.assertEqual(payload["network"], "internet")
+                self.assertEqual(payload["status"], "running")
+                self.assertEqual(payload["container_name"], command[command.index("--name") + 1])
+                self.assertTrue(str(payload["container_name"]).startswith("runhaven-shell-"))
+                serialized = json.dumps(payload)
+                self.assertNotIn("/bin/true", serialized)
+                self.assertNotIn("OPENAI_API_KEY", serialized)
+                self.assertNotIn("fake-openai-api-key-value", serialized)
+                return 0
+
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "RUNHAVEN_CACHE_HOME": str(cache),
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.subprocess.call", side_effect=fake_container_run),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        str(workspace),
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(len(active_payloads), 1)
+            self.assertEqual(list((cache / "active-runs").glob("*.json")), [])
+
+    def test_standard_run_records_stopped_status_when_stop_requested(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory) / "cache"
+
+            def fake_container_run(command: tuple[str, ...]) -> int:
+                active_files = list((cache / "active-runs").glob("*.json"))
+                self.assertEqual(len(active_files), 1)
+                payload = json.loads(active_files[0].read_text(encoding="utf-8"))
+                payload["status"] = "stop-requested"
+                payload["stop_requested_at"] = "2026-06-15T00:00:01Z"
+                active_files[0].write_text(json.dumps(payload) + "\n", encoding="utf-8")
+                return 143
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.subprocess.call", side_effect=fake_container_run),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        directory,
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            records = [
+                json.loads(line)
+                for line in (cache / "runs.jsonl").read_text(encoding="utf-8").splitlines()
+            ]
+
+        self.assertEqual(code, 143)
+        self.assertEqual(records[0]["status"], "stopped")
+        self.assertEqual(records[0]["return_code"], 143)
+        self.assertEqual(list((cache / "active-runs").glob("*.json")), [])
+
     def test_standard_run_records_git_change_metadata_without_file_contents(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace"
@@ -822,6 +918,94 @@ class CliTests(unittest.TestCase):
         self.assertEqual(record["run_id"], auth_entries[0]["run_id"])
         self.assertNotIn("fake-openai-api-key-value", json.dumps(records))
         self.assertNotIn("OPENAI_API_KEY", json.dumps(records))
+
+    def test_runs_stop_stops_active_run_container(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stdout(output),
+            ):
+                run.return_value = Mock(returncode=0)
+                code = main(["runs", "stop", "run-active"])
+
+            self.assertEqual(code, 0)
+            run.assert_called_once_with(
+                ("container", "stop", "runhaven-shell-abc-run"),
+                check=False,
+            )
+            text = output.getvalue()
+            self.assertIn("Stop requested", text)
+            updated = json.loads(active_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["status"], "stop-requested")
+            self.assertIn("stop_requested_at", updated)
+
+    def test_runs_stop_refuses_missing_active_run(self) -> None:
+        with TemporaryDirectory() as directory:
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "stop", "missing-run"])
+
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("active run not found", error_output.getvalue())
+
+    def test_runs_stop_refuses_unowned_container_name(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            (active_dir / "run-active.json").write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "other-container",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "stop", "run-active"])
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        self.assertIn("not a RunHaven-owned container", error_output.getvalue())
 
     def test_provider_run_with_codex_api_key_broker_requires_host_env_first(self) -> None:
         with TemporaryDirectory() as directory:

@@ -156,6 +156,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="show live git diff for one RunHaven run",
     )
     runs_diff_parser.add_argument("run_id", help="run id to diff")
+    runs_stop_parser = runs_subcommands.add_parser(
+        "stop",
+        help="stop an active RunHaven run",
+    )
+    runs_stop_parser.add_argument("run_id", help="active run id to stop")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -332,7 +337,13 @@ def run_agent(args: argparse.Namespace) -> int:
         run_id = uuid.uuid4().hex
         git_before = capture_git_snapshot(plan.workspace)
         started_at = utc_timestamp()
-        return_code = subprocess.call(plan.command)
+        print(f"Run id: {run_id}", file=sys.stderr)
+        write_active_run_record(plan, run_id=run_id, started_at=started_at)
+        try:
+            return_code = subprocess.call(plan.command)
+        finally:
+            stop_requested = active_run_stop_requested(run_id)
+            remove_active_run_record(run_id)
         finished_at = utc_timestamp()
         git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         write_run_record(
@@ -341,6 +352,7 @@ def run_agent(args: argparse.Namespace) -> int:
             started_at=started_at,
             finished_at=finished_at,
             return_code=return_code,
+            status="stopped" if stop_requested else None,
             provider_decisions=(),
             auth_decisions=None,
             cleanup={"provider_network": "not-applicable"},
@@ -380,6 +392,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_log(args.run_id, json_output=args.json)
     if args.runs_command == "diff":
         return runs_diff(args.run_id)
+    if args.runs_command == "stop":
+        return runs_stop(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -495,6 +509,8 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
     provider_decisions: tuple[ProxyDecision, ...] = ()
     auth_decisions: tuple[BrokerDecision, ...] | None = None
     git: dict[str, object] | None = None
+    stop_requested = False
+    active_run_recorded = False
     cleanup: dict[str, object] = {
         "provider_network": "not-created",
         "provider_network_name": plan.network_name,
@@ -535,7 +551,13 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
 
         git_before = capture_git_snapshot(plan.workspace)
         started_at = utc_timestamp()
-        return_code = subprocess.call(command)
+        print(f"Run id: {run_id}", file=sys.stderr)
+        write_active_run_record(plan, run_id=run_id, started_at=started_at)
+        active_run_recorded = True
+        try:
+            return_code = subprocess.call(command)
+        finally:
+            stop_requested = active_run_stop_requested(run_id)
         finished_at = utc_timestamp()
         git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         provider_decisions = tuple(proxy.policy_decisions())
@@ -572,11 +594,14 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
                 started_at=started_at,
                 finished_at=finished_at,
                 return_code=return_code,
+                status="stopped" if stop_requested else None,
                 provider_decisions=provider_decisions,
                 auth_decisions=auth_decisions,
                 cleanup=cleanup,
                 git=git or {"available": False, "reason": "git-snapshot-missing"},
             )
+        if active_run_recorded:
+            remove_active_run_record(run_id)
 
 
 def require_codex_api_key_broker_secret(plan: AgentRunPlan) -> str | None:
@@ -868,6 +893,7 @@ def write_run_record(
     started_at: str,
     finished_at: str,
     return_code: int,
+    status: str | None = None,
     provider_decisions: Sequence[ProxyDecision],
     auth_decisions: Sequence[BrokerDecision] | None,
     cleanup: dict[str, object],
@@ -883,7 +909,7 @@ def write_run_record(
         "profile": plan.profile_name,
         "workspace": str(plan.workspace),
         "network": plan.network_mode,
-        "status": "succeeded" if return_code == 0 else "failed",
+        "status": status or ("succeeded" if return_code == 0 else "failed"),
         "return_code": return_code,
         "provider_policy": summarize_provider_policy(provider_decisions),
         "auth_broker": summarize_auth_broker(auth_decisions),
@@ -918,6 +944,120 @@ def summarize_auth_broker(decisions: Sequence[BrokerDecision] | None) -> dict[st
         "denied": sum(decision.count for decision in decisions if decision.decision == "denied"),
         "no_requests": not decisions,
     }
+
+
+def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str) -> None:
+    payload: dict[str, object] = {
+        "timestamp": started_at,
+        "run_id": run_id,
+        "profile": plan.profile_name,
+        "workspace": str(plan.workspace),
+        "network": plan.network_mode,
+        "status": "running",
+        "container_name": plan.container_name,
+        "state_volume": plan.state_volume,
+        "network_name": plan.network_name,
+        "host_pid": os.getpid(),
+    }
+    write_active_run_payload(run_id, payload)
+
+
+def write_active_run_payload(run_id: str, payload: dict[str, object]) -> None:
+    path = active_run_path(run_id)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(".tmp")
+    temporary_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    temporary_path.chmod(0o600)
+    temporary_path.replace(path)
+
+
+def find_active_run_record(run_id: str) -> dict[str, Any]:
+    path = active_run_path(run_id)
+    if not path.exists():
+        raise ValueError(f"active run not found: {run_id}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"active run record is invalid: {run_id}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"active run record is invalid: {run_id}")
+    return payload
+
+
+def mark_active_run_stop_requested(run_id: str, record: dict[str, Any]) -> None:
+    updated = dict(record)
+    updated["status"] = "stop-requested"
+    updated["stop_requested_at"] = utc_timestamp()
+    write_active_run_payload(run_id, updated)
+
+
+def clear_active_run_stop_requested(run_id: str, record: dict[str, Any]) -> None:
+    updated = dict(record)
+    updated["status"] = "running"
+    updated.pop("stop_requested_at", None)
+    write_active_run_payload(run_id, updated)
+
+
+def active_run_stop_requested(run_id: str) -> bool:
+    try:
+        record = find_active_run_record(run_id)
+    except ValueError:
+        return False
+    return isinstance(record.get("stop_requested_at"), str)
+
+
+def remove_active_run_record(run_id: str) -> None:
+    try:
+        active_run_path(run_id).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def active_run_path(run_id: str) -> Path:
+    validate_run_id(run_id)
+    return active_runs_dir() / f"{run_id}.json"
+
+
+def active_runs_dir() -> Path:
+    return runhaven_cache_root() / "active-runs"
+
+
+def validate_run_id(run_id: str) -> None:
+    if not run_id or run_id.startswith("-"):
+        raise ValueError(f"invalid run id: {run_id!r}")
+    if any(character.isspace() or character in "/\\" for character in run_id):
+        raise ValueError(f"invalid run id: {run_id!r}")
+
+
+def runs_stop(run_id: str) -> int:
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    require_container_cli()
+    mark_active_run_stop_requested(run_id, record)
+    result = subprocess.run(("container", "stop", container_name), check=False)
+    if result.returncode != 0:
+        try:
+            clear_active_run_stop_requested(run_id, record)
+        except ValueError:
+            pass
+        return result.returncode
+    print(f"Stop requested for run {run_id} ({container_name}).")
+    return 0
+
+
+def validate_runhaven_container_name(container_name: str) -> None:
+    if not container_name.startswith("runhaven-"):
+        raise ValueError(
+            f"active run container {container_name!r} is not a RunHaven-owned container"
+        )
+    if container_name.startswith("-"):
+        raise ValueError(f"invalid active run container name: {container_name!r}")
+    if any(character.isspace() or character in "/\\," for character in container_name):
+        raise ValueError(f"invalid active run container name: {container_name!r}")
 
 
 def runs_list(*, limit: int, json_output: bool) -> int:

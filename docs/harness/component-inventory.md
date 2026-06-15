@@ -11,8 +11,9 @@ inventory, not permission to mutate nested projects.
   `tests/`, `scripts/check_pins.py`, and
   `scripts/provider_egress_smoke.py`.
 - Broker smoke harness: `scripts/codex_broker_smoke.py`.
-- Runtime cache ledgers: `egress-policy.jsonl`, `auth-broker.jsonl`, and
-  `runs.jsonl` under the RunHaven cache root.
+- Runtime cache ledgers and markers: `egress-policy.jsonl`,
+  `auth-broker.jsonl`, `runs.jsonl`, and `active-runs/*.json` under the
+  RunHaven cache root.
 - Bundled image templates:
   `src/runhaven/images/base/`,
   `src/runhaven/images/claude/`,

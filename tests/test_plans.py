@@ -33,6 +33,10 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn("PATH=/opt/runhaven-agent/node_modules/.bin", joined)
         self.assertNotIn(str(Path.home()), joined)
         self.assertNotIn("ANTHROPIC_API_KEY", command)
+        self.assertIn("--name", command)
+        self.assertTrue(plan.container_name.startswith("runhaven-claude-"))
+        self.assertTrue(plan.container_name.endswith("-run"))
+        self.assertIn(plan.container_name, command)
         self.assertEqual(len(plan.preflight), 2)
         self.assertEqual(
             plan.preflight[0],

@@ -69,6 +69,12 @@ runhaven run claude
 `runhaven` allows one active run per project/profile state volume. If another run is
 already using the same isolated home volume, `runhaven` fails before starting Apple
 `container` and tells you to wait or use a different workspace/profile.
+When a run starts, RunHaven prints a run id to stderr. From another terminal,
+use that id to request a graceful stop:
+
+```bash
+runhaven runs stop <run-id>
+```
 
 RunHaven allocates an interactive TTY when attached to a terminal. Use
 `--tty never` for non-interactive automation.
@@ -193,6 +199,7 @@ runhaven runs list --limit 20
 runhaven runs show <run-id>
 runhaven runs log <run-id>
 runhaven runs diff <run-id>
+runhaven runs stop <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 ```
@@ -214,6 +221,12 @@ is gone, `HEAD` no longer matches the recorded run, the recorded path list was
 truncated, or the current dirty path set differs from the run record. For dirty
 working-tree diffs, RunHaven warns that it verified the recorded `HEAD` and
 path set, not the exact file contents since the run.
+
+`runs stop` works only for currently active runs. It reads a temporary
+secret-free active-run marker from the RunHaven cache root, verifies the marker
+contains a RunHaven-owned container name, and calls Apple `container stop`.
+Finished runs remain inspectable through `runs list/show/log/diff`, but they
+cannot be stopped.
 
 ## Provider Egress Smoke
 

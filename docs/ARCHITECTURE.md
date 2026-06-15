@@ -107,12 +107,17 @@ Internet mode remains unrestricted egress.
 ## Run Records
 
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
-the RunHaven cache root. `runhaven runs list`, `runhaven runs show RUN_ID`, and
-`runhaven runs log RUN_ID` read this ledger. Records include run id,
+the RunHaven cache root. While a run is active, RunHaven also writes a
+temporary secret-free marker under `active-runs/` with run id, profile,
+workspace, network mode, state volume, host pid, and the RunHaven-owned
+container name. `runhaven runs stop RUN_ID` reads that marker and calls Apple
+`container stop` for the named container. The marker is removed when the run
+finishes. `runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven
+runs log RUN_ID` read the completed-run ledger. Records include run id,
 timestamps, profile, workspace, network mode, return code, provider policy
-summary, auth broker summary, cleanup outcome, and git change metadata when
-the workspace is inside a git repository. Git metadata records repo root,
-before and after `HEAD`, dirty state, changed file count, and a capped list of
+summary, auth broker summary, cleanup outcome, and git change metadata when the
+workspace is inside a git repository. Git metadata records repo root, before
+and after `HEAD`, dirty state, changed file count, and a capped list of
 relative paths scoped to the selected workspace. `runs log` joins the run
 record with matching `egress-policy.jsonl` and `auth-broker.jsonl` entries for
 the same run id. `runs diff` validates the recorded git metadata against live
@@ -120,7 +125,7 @@ git state and then prints a live `git diff`; it does not read or store patches
 from `runs.jsonl`. These commands intentionally omit diffs, file contents,
 prompts, the `container run` command, agent arguments, environment variable
 names, environment values, request bodies, and token values from persisted
-ledgers.
+ledgers and active-run markers.
 
 ## Auth Broker Model
 

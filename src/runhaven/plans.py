@@ -60,6 +60,7 @@ class AgentRunPlan:
     preflight: tuple[tuple[str, ...], ...]
     workspace: Path
     state_volume: str
+    container_name: str
     profile_name: str
     network_name: str | None
     network_mode: NetworkMode
@@ -102,6 +103,7 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
 
     project_id = project_identifier(workspace)
     state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
+    container_name = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-run")
     network_name = safe_resource_name(f"runhaven-{project_id}-internal")
     image = options.image or options.profile.image
     validate_image_reference(image, "image")
@@ -111,6 +113,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         "run",
         "--rm",
         "--init",
+        "--name",
+        container_name,
         "--read-only",
         "--tmpfs",
         "/tmp",
@@ -207,6 +211,7 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         preflight=tuple(preflight),
         workspace=workspace,
         state_volume=state_volume,
+        container_name=container_name,
         profile_name=options.profile.name,
         network_name=active_network,
         network_mode=options.network,
