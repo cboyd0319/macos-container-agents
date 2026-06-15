@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
+Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
 
 ## Files
 
@@ -62,6 +62,20 @@ Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
 - Local `container kill --help` shows
   `container kill [--all] [--signal <signal>] [--debug] [<container-ids> ...]`;
   the default signal is `KILL`.
+- Local `container inspect runhaven-nonexistent-repair-smoke` exits 1 with
+  `Error: container not found: runhaven-nonexistent-repair-smoke`.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing tests.test_cli.CliTests.test_runs_repair_refuses_when_container_still_exists tests.test_cli.CliTests.test_runs_repair_leaves_marker_on_unverified_inspect_failure tests.test_cli.CliTests.test_runs_repair_refuses_unowned_container_name`
+  first failed because `repair` was not a valid `runs` subcommand, then passed
+  after adding fail-closed stale-marker repair.
+- Focused `runs repair` tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs repair` smoke passed.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 144 unit
+  tests, pin check, ruff, mypy, and build after adding `runs repair`.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_records_killed_status_when_kill_requested tests.test_cli.CliTests.test_runs_kill_kills_active_run_container tests.test_cli.CliTests.test_runs_kill_rolls_back_marker_when_container_kill_fails tests.test_cli.CliTests.test_runs_kill_refuses_unowned_container_name`
   first failed because `kill` was not a valid `runs` subcommand and
   kill-requested runs recorded as `failed`, then passed after adding guarded
@@ -629,6 +643,15 @@ Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
 - `runhaven runs status RUN_ID` now reads the active marker, verifies the
   container name is RunHaven-owned, calls Apple `container inspect`, and prints
   only curated marker, state, image, resource, and network fields.
+- `runhaven runs kill RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, marks kill requested, calls Apple
+  `container kill`, rolls the marker back if the kill command fails, and
+  records killed runs as `killed`.
+- `runhaven runs repair RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, calls Apple `container inspect`, and removes
+  the marker only when Apple reports that the recorded container is not found.
+  It keeps the marker if the container still exists or inspection fails for any
+  other reason.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -671,9 +694,9 @@ Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Choose the next recovery or visibility command from the backlog, such as a
-   live log-follow command. Run the Codex broker smoke with a disposable OpenAI
-   API key when available.
+5. Choose the next recovery improvement from the backlog, such as a guarded
+   bulk stale-marker review and repair mode. Run the Codex broker smoke with a
+   disposable OpenAI API key when available.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

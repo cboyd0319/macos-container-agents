@@ -45,6 +45,9 @@ Observed runtime command surface on 2026-06-15:
   the default signal is `KILL`.
 - Local `container inspect --help` shows the supported shape:
   `container inspect [--debug] <container-ids> ...`.
+- Local `container inspect runhaven-nonexistent-repair-smoke` exits 1 with
+  `Error: container not found: runhaven-nonexistent-repair-smoke`, which
+  RunHaven uses as the narrow stale-marker repair guard.
 - The pinned command reference states that `container inspect` displays detailed
   container information in JSON. Local `container inspect buildkit` confirmed
   JSON output and showed raw inspect data can include process arguments,

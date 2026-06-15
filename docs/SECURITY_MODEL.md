@@ -118,8 +118,10 @@ status, and container name. The same marker lets `runs status` call Apple
 `container inspect` for curated live state, lets `runs attach` call Apple
 `container exec` for a guarded shell or command, lets `runs logs-follow` call
 Apple `container logs --follow`, lets `runs stop` call Apple `container stop`,
-and lets `runs kill` call Apple `container kill`; the marker is removed after
-the run finishes.
+lets `runs kill` call Apple `container kill`, and lets `runs repair` remove a
+stale marker only after Apple `container inspect` reports that the recorded
+RunHaven-owned container is not found; the marker is removed after the run
+finishes.
 When the workspace is inside a git repository, the run ledger also records repo
 root, before and after `HEAD`, dirty state, changed file count, and a capped
 list of relative paths scoped to the selected workspace.

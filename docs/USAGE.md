@@ -81,6 +81,7 @@ runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 runhaven runs kill <run-id>
+runhaven runs repair <run-id>
 ```
 
 `runs status` shows the active marker plus sanitized live Apple
@@ -236,6 +237,7 @@ runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 runhaven runs kill <run-id>
+runhaven runs repair <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
@@ -269,6 +271,11 @@ cannot be stopped.
 `runs kill` uses the same active marker and RunHaven-owned container-name
 check before calling Apple `container kill`. It is the hard-stop recovery path
 for cases where graceful `runs stop` fails or hangs.
+
+`runs repair` removes a stale active-run marker only after the same
+RunHaven-owned container-name check and an Apple `container inspect` result
+that says the recorded container is not found. If the container still exists
+or RunHaven cannot confirm why inspection failed, the marker is kept.
 
 `runs active` lists those currently active markers in text or JSON without
 requiring Apple `container` access and skips invalid marker files.

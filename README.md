@@ -263,6 +263,7 @@ runhaven runs attach <run-id>
 runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 runhaven runs kill <run-id>
+runhaven runs repair <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
@@ -280,7 +281,8 @@ lists currently active markers. `runs status` shows sanitized live Apple
 a guarded `container exec` shell. `runs logs-follow` follows recent Apple
 `container logs` output. `runs stop` uses the id to request a graceful Apple
 `container stop`; `runs kill` sends Apple `container kill` for explicit
-hard-stop recovery.
+hard-stop recovery. `runs repair` removes a stale active marker only after
+Apple `container inspect` reports the recorded container is not found.
 
 Broker a Codex API key without placing the raw value in the guest:
 

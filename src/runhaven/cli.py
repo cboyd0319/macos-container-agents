@@ -239,6 +239,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="hard-stop an active RunHaven run",
     )
     runs_kill_parser.add_argument("run_id", help="active run id to kill")
+    runs_repair_parser = runs_subcommands.add_parser(
+        "repair",
+        help="remove a stale active marker after confirming its container is gone",
+    )
+    runs_repair_parser.add_argument("run_id", help="active run id to repair")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -489,6 +494,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_stop(args.run_id)
     if args.runs_command == "kill":
         return runs_kill(args.run_id)
+    if args.runs_command == "repair":
+        return runs_repair(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -1451,6 +1458,45 @@ def runs_kill(run_id: str) -> int:
         return result.returncode
     print(f"Kill requested for run {run_id} ({container_name}).")
     return 0
+
+
+def runs_repair(run_id: str) -> int:
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    require_container_cli()
+    result = subprocess.run(
+        ("container", "inspect", container_name),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print(
+            f"runhaven: active marker kept because container still exists: {container_name}",
+            file=sys.stderr,
+        )
+        return 1
+    if not container_inspect_reports_missing(result, container_name):
+        print(
+            f"runhaven: could not confirm missing container for run {run_id} ({container_name})",
+            file=sys.stderr,
+        )
+        return result.returncode
+    remove_active_run_record(run_id)
+    print(f"Removed stale active marker for run {run_id} ({container_name}).")
+    return 0
+
+
+def container_inspect_reports_missing(
+    result: subprocess.CompletedProcess[str],
+    container_name: str,
+) -> bool:
+    output = f"{result.stdout}\n{result.stderr}".lower()
+    return f"container not found: {container_name.lower()}" in output
 
 
 def validate_runhaven_container_name(container_name: str) -> None:

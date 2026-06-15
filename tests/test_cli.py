@@ -1079,6 +1079,121 @@ class CliTests(unittest.TestCase):
             self.assertEqual(updated["status"], "running")
             self.assertNotIn("kill_requested_at", updated)
 
+    def test_runs_repair_removes_marker_when_container_is_missing(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stdout(output),
+            ):
+                run.return_value = Mock(
+                    returncode=1,
+                    stdout="",
+                    stderr="Error: container not found: runhaven-shell-abc-run\n",
+                )
+                code = main(["runs", "repair", "run-active"])
+
+            self.assertEqual(code, 0)
+            run.assert_called_once_with(
+                ("container", "inspect", "runhaven-shell-abc-run"),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertFalse(active_path.exists())
+            self.assertIn("Removed stale active marker", output.getvalue())
+
+    def test_runs_repair_refuses_when_container_still_exists(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stderr(error_output),
+            ):
+                run.return_value = Mock(returncode=0, stdout="[]", stderr="")
+                code = main(["runs", "repair", "run-active"])
+
+            self.assertEqual(code, 1)
+            self.assertTrue(active_path.exists())
+            self.assertIn("container still exists", error_output.getvalue())
+
+    def test_runs_repair_leaves_marker_on_unverified_inspect_failure(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            active_path = active_dir / "run-active.json"
+            active_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "runhaven-shell-abc-run",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stderr(error_output),
+            ):
+                run.return_value = Mock(returncode=7, stdout="", stderr="daemon unavailable\n")
+                code = main(["runs", "repair", "run-active"])
+
+            self.assertEqual(code, 7)
+            self.assertTrue(active_path.exists())
+            self.assertIn("could not confirm", error_output.getvalue())
+
     def test_runs_active_prints_active_run_markers(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace"
@@ -1838,6 +1953,41 @@ class CliTests(unittest.TestCase):
                 self.assertRaises(SystemExit) as error,
             ):
                 main(["runs", "kill", "run-active"])
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        run.assert_not_called()
+        self.assertIn("not a RunHaven-owned container", error_output.getvalue())
+
+    def test_runs_repair_refuses_unowned_container_name(self) -> None:
+        with TemporaryDirectory() as directory:
+            active_dir = Path(directory) / "active-runs"
+            active_dir.mkdir()
+            (active_dir / "run-active.json").write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-active",
+                        "profile": "shell",
+                        "workspace": directory,
+                        "network": "internet",
+                        "status": "running",
+                        "container_name": "other-container",
+                        "host_pid": 12345,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                patch("runhaven.cli.subprocess.run") as run,
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "repair", "run-active"])
 
         self.assertEqual(error.exception.code, 2)
         require_container.assert_not_called()

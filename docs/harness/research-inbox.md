@@ -70,6 +70,10 @@ repo and link to primary sources instead.
 - 2026-06-15: Implemented `runhaven runs kill RUN_ID` from the promoted run
   recovery backlog. The command uses Apple `container kill` after the same
   active-marker and RunHaven-owned container-name checks.
+- 2026-06-15: Implemented `runhaven runs repair RUN_ID` from the promoted run
+  recovery backlog. The command removes a stale marker only after Apple
+  `container inspect` reports that the recorded RunHaven-owned container is
+  not found.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

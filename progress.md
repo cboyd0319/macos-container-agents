@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
+Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
 
 ## Current State
 
@@ -243,6 +243,11 @@ Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
   container name is RunHaven-owned, marks kill requested, calls Apple
   `container kill`, rolls the marker back if the kill command fails, and
   records killed runs as `killed`.
+- `runhaven runs repair RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, calls Apple `container inspect`, and removes
+  the marker only when Apple reports that the recorded container is not found.
+  It keeps the marker if the container still exists or if inspection fails for
+  any other reason.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -264,9 +269,10 @@ Implement `runhaven runs kill RUN_ID` for active RunHaven hard-stop recovery.
 
 ## Recommended Next Step
 
-Add a guarded active-run repair command that can remove stale active markers
-after confirming the Apple container no longer exists. Run the optional Codex
-broker smoke with a disposable OpenAI API key when one is available.
+Add a bulk stale-marker review and repair mode, such as guarded
+`runhaven runs repair --all`, so users can clean multiple confirmed-stale
+markers without copying ids one by one. Run the optional Codex broker smoke
+with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -283,6 +289,22 @@ broker smoke with a disposable OpenAI API key when one is available.
 - 2026-06-15: Local `container kill --help` shows
   `container kill [--all] [--signal <signal>] [--debug] [<container-ids> ...]`;
   the default signal is `KILL`.
+- 2026-06-15: Local
+  `container inspect runhaven-nonexistent-repair-smoke` exits 1 with
+  `Error: container not found: runhaven-nonexistent-repair-smoke`.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing tests.test_cli.CliTests.test_runs_repair_refuses_when_container_still_exists tests.test_cli.CliTests.test_runs_repair_leaves_marker_on_unverified_inspect_failure tests.test_cli.CliTests.test_runs_repair_refuses_unowned_container_name`
+  first failed because `repair` was not a valid `runs` subcommand, then passed
+  after adding fail-closed stale-marker repair.
+- 2026-06-15: Focused `runs repair` tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs repair` smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 144 unit tests, pin check, ruff, mypy, and build after adding
+  `runs repair`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_records_killed_status_when_kill_requested tests.test_cli.CliTests.test_runs_kill_kills_active_run_container tests.test_cli.CliTests.test_runs_kill_rolls_back_marker_when_container_kill_fails tests.test_cli.CliTests.test_runs_kill_refuses_unowned_container_name`
   first failed because `kill` was not a valid `runs` subcommand and
   kill-requested runs recorded as `failed`, then passed after adding guarded
