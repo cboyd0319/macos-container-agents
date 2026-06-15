@@ -7,13 +7,14 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the run-history extraction:
+Measured on 2026-06-15 after the active-command extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `tests/test_cli.py` | 3515 | Broad integration-style CLI coverage. Useful, but too large for targeted review. |
-| `src/runhaven/cli.py` | 1874 | Still owns parser, command routing, provider runtime, active run commands, auth, egress logs, network helpers, and state commands. |
+| `src/runhaven/cli.py` | 1411 | Still owns parser, command routing, provider runtime, auth, egress logs, network helpers, and state commands. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
+| `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
@@ -42,22 +43,31 @@ leaving command handlers and runtime subprocess calls in place.
 This removes run observability from `cli.py` while preserving the existing
 command output, git diff validation, and secret-free log behavior.
 
+## Active-Command Extraction Completed
+
+- `src/runhaven/active_commands.py`: `runs active/status/attach/logs-follow`,
+  `runs stop/kill/repair`, sanitized container inspect summarization, attach
+  validation, and repair result payloads.
+- `src/runhaven/cli.py`: keeps parser and command dispatch, and passes
+  `require_container_cli`, `subprocess.run`, `subprocess.call`, and TTY checks
+  into active commands so runtime subprocess seams stay explicit.
+
+This removes active-run command handlers from `cli.py` while preserving
+RunHaven-owned container validation, non-root attach defaults, secret-free
+status output, stale-marker repair behavior, and existing test patch seams.
+
 ## Recommended Sequence
 
-1. Split active run commands from `cli.py`.
-   Move `runs active/status/attach/logs-follow/stop/kill/repair` after the
-   subprocess patch seams are updated or wrapped explicitly.
-
-2. Split provider runtime orchestration.
+1. Split provider runtime orchestration.
    Move provider proxy startup, broker wiring, cleanup, and decision logging
    into a provider runtime module. This is higher risk because tests patch
    runtime hooks heavily.
 
-3. Split auth, egress log, and `why host` commands.
+2. Split auth, egress log, and `why host` commands.
    These are moderate-risk read-only command surfaces and can move after run
    history is stable.
 
-4. Split `tests/test_cli.py`.
+3. Split `tests/test_cli.py`.
    Mirror the production seams after they exist: setup, planning, provider
    runtime, run history, active runs, auth, egress, state, and repo policy.
 

@@ -26,6 +26,7 @@ Start pre-release large-file modularization.
 - `pins.toml`
 - `pyproject.toml`
 - `src/runhaven/`
+- `src/runhaven/active_commands.py`
 - `src/runhaven/auth_broker.py`
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/run_history.py`
@@ -143,6 +144,22 @@ Start pre-release large-file modularization.
   capture, `runs list/show/log/diff`, and run-record readers into
   `src/runhaven/run_history.py`. `src/runhaven/cli.py` measured 1,874 lines
   after extraction, down from 2,440 after the first slice.
+- Third modularization extraction moved active-run command handlers, sanitized
+  status output, attach/log-follow command construction, stop/kill, and repair
+  into `src/runhaven/active_commands.py`. `src/runhaven/cli.py` measured 1,411
+  lines after extraction, down from 1,874 after the run-history slice.
+- Focused active-command extraction tests passed:
+  `PYTHONPATH=src python3 -m unittest` with 33 selected `runs active`,
+  `runs status`, `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`,
+  and `runs repair` tests.
+- Full verification passed after the active-command extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
 - Focused run-history extraction tests passed:
   `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_provider_run_writes_run_record_with_policy_auth_and_cleanup_summary tests.test_cli.CliTests.test_runs_list_prints_recent_records tests.test_cli.CliTests.test_runs_show_json_is_secret_free tests.test_cli.CliTests.test_runs_show_prints_git_metadata_summary tests.test_cli.CliTests.test_runs_diff_prints_live_committed_git_diff tests.test_cli.CliTests.test_runs_diff_prints_live_dirty_git_diff_with_warning tests.test_cli.CliTests.test_runs_diff_prints_live_untracked_git_diff tests.test_cli.CliTests.test_runs_diff_includes_committed_and_dirty_changes tests.test_cli.CliTests.test_runs_diff_refuses_unavailable_git_metadata tests.test_cli.CliTests.test_runs_diff_refuses_when_recorded_head_is_stale tests.test_cli.CliTests.test_runs_diff_refuses_when_dirty_path_set_changed tests.test_cli.CliTests.test_runs_log_prints_joined_secret_free_run_events tests.test_cli.CliTests.test_runs_log_json_is_secret_free`.
 - Full verification passed after the run-history extraction:
@@ -822,10 +839,11 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file modularization by splitting active run commands from
-   `src/runhaven/cli.py`: `runs active/status/attach/logs-follow/stop/kill/repair`.
-   Keep Apple `container` subprocess seams explicit because current tests patch
-   those calls heavily.
+5. Continue large-file modularization by splitting provider runtime
+   orchestration from `src/runhaven/cli.py`: provider proxy startup, internal
+   network inspection, broker wiring, cleanup, and decision logging. Keep
+   Apple `container`, proxy, and broker patch seams explicit because current
+   tests patch provider runtime hooks heavily.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

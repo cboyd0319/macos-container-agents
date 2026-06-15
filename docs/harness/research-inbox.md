@@ -104,6 +104,9 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued the pre-release modularization pass by extracting
   `src/runhaven/run_history.py` for run-record persistence, git metadata
   capture, `runs list/show/log/diff`, and run-record readers.
+- 2026-06-15: Continued the pre-release modularization pass by extracting
+  `src/runhaven/active_commands.py` for `runs active/status/attach/logs-follow`,
+  `runs stop/kill/repair`, sanitized status output, and repair payloads.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.
