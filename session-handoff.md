@@ -30,6 +30,7 @@ Start pre-release large-file modularization.
 - `src/runhaven/active_repair.py`
 - `src/runhaven/auth_broker.py`
 - `src/runhaven/auth_profiles.py`
+- `src/runhaven/cli_parser.py`
 - `src/runhaven/diagnostic_commands.py`
 - `src/runhaven/git_metadata.py`
 - `src/runhaven/provider_endpoints.py`
@@ -297,6 +298,22 @@ Start pre-release large-file modularization.
   `uvx --from ruff==0.15.17 ruff check .`,
   `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
   `git diff --check`, Markdown local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- Focused CLI parser extraction checks passed:
+  `python3 -m compileall src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  and `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
+  with 90 tests.
+- Full verification passed after the CLI parser extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan with
+  the expected existing macOS-only acceptance-criteria line, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
 - Full verification passed after the active-repair extraction:
@@ -1058,6 +1075,8 @@ Start pre-release large-file modularization.
 - The fourteenth behavior-preserving extraction moved provider policy logs,
   auth broker log writes, and blocked-host review text into
   `src/runhaven/provider_observability.py`.
+- The fifteenth behavior-preserving extraction moved CLI parser construction
+  into `src/runhaven/cli_parser.py`.
 
 ## Next Session
 
@@ -1069,9 +1088,9 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file cleanup by reviewing `src/runhaven/cli.py` for any
-   remaining complexity-only parser or dispatch split. Keep cohesive files
-   intact if a split would only move code.
+5. Continue large-file cleanup by reviewing `tests/test_cli_active_repair.py`
+   only if test readability is a real blocker. Otherwise pause large-file
+   cleanup and return to the product backlog.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

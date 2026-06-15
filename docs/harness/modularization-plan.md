@@ -7,11 +7,11 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the provider-observability extraction:
+Measured on 2026-06-15 after the CLI parser extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
-| `src/runhaven/cli.py` | 766 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
+| `src/runhaven/cli.py` | 472 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
@@ -23,6 +23,7 @@ Measured on 2026-06-15 after the provider-observability extraction:
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
+| `src/runhaven/cli_parser.py` | 302 | Owns argparse construction for all RunHaven CLI commands. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
@@ -236,21 +237,31 @@ This separates provider run lifecycle control from provider observability while
 preserving the existing policy log, auth log, run record, and blocked-host
 review behavior.
 
+## CLI Parser Extraction Completed
+
+- `src/runhaven/cli_parser.py`: argparse construction for top-level commands,
+  run/plan options, run-history commands, active-run commands, auth, egress,
+  and `why host`.
+- `src/runhaven/cli.py`: command dispatch, standard run flow, state commands,
+  provider-runtime compatibility patch seams, and CLI-specific runtime helpers.
+
+This separates parser construction from command execution while preserving the
+existing `runhaven.cli.build_parser` import surface and the `Path` patch seam
+used by help-path regression tests.
+
 ## Recommended Sequence
 
-1. Review `src/runhaven/cli.py` for any remaining complexity-only split that
-   would keep parser construction, command dispatch, and compatibility patch
-   seams clear. The next pass should be willing to stop at "no split needed" if
-   the module is cohesive enough.
-
-2. Consider splitting `tests/test_cli_active_repair.py` only if test
+1. Consider splitting `tests/test_cli_active_repair.py` only if test
    readability becomes a blocker. The test file is large but currently maps to
    one focused command surface.
 
+2. After that review, pause the large-file cleanup and return to the product
+   backlog unless a concrete maintainability problem remains.
+
 ## Acceptance Criteria
 
-- `cli.py` is primarily parser construction, command dispatch, and small
-  command wrappers.
+- `cli.py` is primarily command dispatch, standard run flow, and small command
+  wrappers.
 - Tests are grouped by command surface, not by the historical single CLI file.
 - Runtime subprocess patch seams are explicit and reviewable.
 - No refactor weakens macOS 26+ only support, default isolation, egress

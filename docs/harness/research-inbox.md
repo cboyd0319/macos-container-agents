@@ -168,3 +168,6 @@ repo and link to primary sources instead.
   `src/runhaven/provider_observability.py` from
   `src/runhaven/provider_runtime.py` for provider policy logs, auth broker log
   writes, and blocked-host review text.
+- 2026-06-15: Continued pre-release modularization by extracting
+  `src/runhaven/cli_parser.py` from `src/runhaven/cli.py` for argparse
+  construction.

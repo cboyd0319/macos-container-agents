@@ -230,6 +230,9 @@ Start pre-release large-file modularization.
   `src/runhaven/provider_runtime.py` into
   `src/runhaven/provider_observability.py`. `src/runhaven/provider_runtime.py`
   now measures 379 lines, down from 501 lines.
+- The fifteenth behavior-preserving modularization extraction moved argparse
+  construction from `src/runhaven/cli.py` into `src/runhaven/cli_parser.py`.
+  `src/runhaven/cli.py` now measures 472 lines, down from 767 lines.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -365,10 +368,10 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by reviewing `src/runhaven/cli.py` for any remaining
-complexity-only parser or dispatch split. Keep cohesive files intact if a split
-would only move code. Run the optional Codex broker smoke with a disposable
-OpenAI API key when one is available.
+Continue the cleanup pass by reviewing `tests/test_cli_active_repair.py` only
+if test readability is a real blocker. Otherwise pause large-file cleanup and
+return to the product backlog. Run the optional Codex broker smoke with a
+disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -461,6 +464,22 @@ OpenAI API key when one is available.
   `uvx --from ruff==0.15.17 ruff check .`,
   `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
   `git diff --check`, Markdown local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- 2026-06-15: Focused CLI parser extraction checks passed:
+  `python3 -m compileall src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py src/runhaven/cli_parser.py`,
+  and `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
+  with 90 tests.
+- 2026-06-15: Full verification passed after the CLI parser extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan with
+  the expected existing macOS-only acceptance-criteria line, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the active-repair extraction:
