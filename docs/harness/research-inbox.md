@@ -85,6 +85,13 @@ repo and link to primary sources instead.
   backlog. `runhaven setup` runs prerequisite checks, prints exact remedies
   when the host is not ready, and shows profile-specific first-run commands
   without installing, starting, building, running, or mounting anything.
+- 2026-06-15: Implemented goal-based network selection copy in
+  `runhaven setup`. The guide now distinguishes local-only, provider-only,
+  package install, and unrestricted internet runs without changing runtime
+  behavior.
+- 2026-06-15: Added a pre-release backlog item to consider a major large-file
+  refactor and modularization pass, especially around the CLI and broad test
+  modules, before release.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

@@ -3321,6 +3321,28 @@ class CliTests(unittest.TestCase):
         self.assertIn("runhaven plan codex", text)
         self.assertIn("runhaven run codex", text)
 
+    def test_setup_prints_goal_based_network_guidance(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(Check("container system", True, "running"),),
+            ),
+        ):
+            code = main(["setup"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Network choices", text)
+        self.assertIn("Local-only", text)
+        self.assertIn("runhaven run claude --network internal", text)
+        self.assertIn("Provider-only", text)
+        self.assertIn("runhaven run claude --network provider", text)
+        self.assertIn("Package install", text)
+        self.assertIn("Unrestricted internet", text)
+        self.assertIn("Use `runhaven plan` before changing network modes.", text)
+
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
             run.return_value = Mock(

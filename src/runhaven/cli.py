@@ -461,11 +461,32 @@ def setup(agent: str) -> int:
     print("Safety defaults")
     print("- One selected project is mounted at /workspace.")
     print("- No host home, raw SSH keys, or cloud credential folders are mounted by default.")
-    print(
-        "- Use `--network internal` for local-only work or "
-        "`--network provider` for provider mode."
-    )
+    print_setup_network_choices(agent)
     return 0
+
+
+def print_setup_network_choices(agent: str) -> None:
+    print()
+    print("Network choices")
+    print(
+        f"- Local-only: use `runhaven run {agent} --network internal` for tests, "
+        "builds, and commands that do not need internet."
+    )
+    print(
+        f"- Provider-only: use `runhaven run {agent} --network provider` to allow "
+        "reviewed provider hosts through the proxy. Login, telemetry, package "
+        "registries, or feature paths may need extra reviewed hosts."
+    )
+    print(
+        f"- Package install: use default internet mode with `runhaven run {agent}` "
+        "when package managers or dependency updates need broad registry and "
+        "CDN access."
+    )
+    print(
+        f"- Unrestricted internet: default `runhaven run {agent}` leaves egress "
+        "unrestricted inside Apple `container` and your host network."
+    )
+    print("- Use `runhaven plan` before changing network modes.")
 
 
 def plan_run(args: argparse.Namespace) -> int:

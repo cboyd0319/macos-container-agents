@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement non-mutating guided first-run setup.
+Implement setup network selection guidance.
 
 ## Current State
 
@@ -158,6 +158,9 @@ Implement non-mutating guided first-run setup.
   blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
   flows, image/state/network repair commands, `auth status`, and
   task-language docs recipes.
+- The pre-release backlog now includes considering a major large-file refactor
+  and modularization pass, especially around the CLI and broad test modules,
+  before release.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -262,6 +265,10 @@ Implement non-mutating guided first-run setup.
   first-run commands. The command is intentionally non-mutating: it does not
   install Apple `container`, start services, build images, run agents, write
   state, or mount a workspace.
+- `runhaven setup` now prints goal-based network guidance for local-only,
+  provider-only, package install, and unrestricted internet runs. The guidance
+  keeps provider egress framed as stricter and potentially review-heavy for
+  login, telemetry, package registry, or feature-path hosts.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -283,10 +290,10 @@ Implement non-mutating guided first-run setup.
 
 ## Recommended Next Step
 
-Extend `runhaven setup` with goal-based network selection copy for local-only,
-provider-only, package install, and unrestricted internet runs. Run the
-optional Codex broker smoke with a disposable OpenAI API key when one is
-available.
+Extend `runhaven setup` with workspace-scope guidance and credential-path
+explanations. Before release, evaluate whether a major large-file refactor and
+modularization pass is needed for reviewability. Run the optional Codex broker
+smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -349,6 +356,21 @@ available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 154 unit tests, pin check, ruff, mypy, and build after adding
   `runhaven setup`.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_goal_based_network_guidance`
+  first failed because `setup` did not print a network-choice section, then
+  passed after adding local-only, provider-only, package install, and
+  unrestricted internet guidance.
+- 2026-06-15: Focused setup/doctor tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 155 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runhaven setup --agent shell` smoke
+  passed after adding setup network guidance.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 155 unit tests, pin check, ruff, mypy, and build after adding
+  setup network guidance.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,

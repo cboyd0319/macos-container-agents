@@ -28,7 +28,8 @@ runhaven setup --agent codex
 `doctor`, prints exact fixes when the Mac is not ready, and then shows the
 image build, plan, and run commands for the selected agent. It does not
 install Apple `container`, start the container service, build images, run
-agents, or mount any workspace.
+agents, or mount any workspace. It also explains when to use local-only,
+provider-only, package install, or unrestricted internet network modes.
 
 ## Check the Mac
 
@@ -189,6 +190,18 @@ runhaven run shell --network internal -- python -m unittest discover -s tests
 `internal` creates a host-only Apple container network before the run. Hosted AI
 agent CLIs usually need internet access for model traffic, so this mode is most
 useful for local commands and custom images.
+
+## Package Install Or Unrestricted Internet
+
+```bash
+runhaven plan claude
+runhaven run claude
+```
+
+Default internet mode is intentionally broad. Use it when package managers,
+dependency updates, model traffic, or other tools need registry and CDN access.
+Review `runhaven plan` first because this mode does not enforce provider-domain
+allowlisting.
 
 ## Provider Network
 

@@ -74,6 +74,12 @@
 - image, state, and managed-network repair commands
 - provider auth broker run records that never print secrets
 
+## Pre-Release Codebase Health
+
+- consider a major large-file refactor and modularization pass before release,
+  especially around the CLI and broad test modules, so command surfaces,
+  policy logic, run-state handling, and verification helpers remain reviewable
+
 ## Phase 6: Repeatable Workflows
 
 - strict project-local workflow files

@@ -141,7 +141,9 @@ runhaven setup
 `setup` runs the same prerequisite checks as `doctor`, prints exact fixes when
 the host is not ready, and shows the image build, plan, and run commands for
 the selected agent without installing, starting, building, or mounting
-anything. Use `runhaven setup --agent codex` to prepare a different profile.
+anything. It also explains when to use local-only, provider-only, package
+install, or unrestricted internet network modes. Use
+`runhaven setup --agent codex` to prepare a different profile.
 
 Build and preview a bundled agent image:
 
@@ -239,6 +241,17 @@ explicitly:
 ```bash
 runhaven run shell --network provider --provider-host api.example.com
 ```
+
+Package install or unrestricted internet:
+
+```bash
+runhaven plan claude
+runhaven run claude
+```
+
+Default internet mode is intentionally broad. Use it for package managers,
+dependency updates, and other work that needs registry or CDN access, then
+review the plan before running.
 
 Before adding a host, ask RunHaven why it would or would not be allowed:
 
