@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs repair --all` for bulk stale active-run marker recovery.
+Implement JSON output for active-run repair summaries.
 
 ## Current State
 
@@ -251,6 +251,10 @@ Implement `runhaven runs repair --all` for bulk stale active-run marker recovery
 - `runhaven runs repair --all` now applies the same confirmed-missing guard to
   all valid active markers, removes only confirmed-stale markers, keeps live or
   unverified markers, and returns nonzero when any marker cannot be verified.
+- `runhaven runs repair RUN_ID --json` and
+  `runhaven runs repair --all --json` now emit secret-free repair results,
+  counts, and exit codes for scripts without raw Apple inspect output or
+  active-marker contents.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -272,9 +276,9 @@ Implement `runhaven runs repair --all` for bulk stale active-run marker recovery
 
 ## Recommended Next Step
 
-Add JSON output for active-run repair summaries so `runs repair RUN_ID` and
-`runs repair --all` can feed scripts without parsing text. Run the optional
-Codex broker smoke with a disposable OpenAI API key when one is available.
+Add a guided `runhaven setup` or `runhaven doctor --fix` style path for
+beginner-safe prerequisite checks and repair prompts. Run the optional Codex
+broker smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -310,6 +314,19 @@ Codex broker smoke with a disposable OpenAI API key when one is available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 148 unit tests, pin check, ruff, mypy, and build after adding
   `runs repair --all`.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_json_reports_removed_marker tests.test_cli.CliTests.test_runs_repair_all_json_reports_mixed_outcomes tests.test_cli.CliTests.test_runs_repair_all_json_reports_empty_summary`
+  first failed because `runs repair` did not accept `--json`, then passed
+  after adding single-run and bulk repair JSON summaries.
+- 2026-06-15: Focused combined repair tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 151 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual repair JSON smokes passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 151 unit tests, pin check, ruff, mypy, and build after adding
+  repair JSON output.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,

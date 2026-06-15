@@ -265,6 +265,8 @@ runhaven runs stop <run-id>
 runhaven runs kill <run-id>
 runhaven runs repair <run-id>
 runhaven runs repair --all
+runhaven runs repair <run-id> --json
+runhaven runs repair --all --json
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
@@ -285,7 +287,8 @@ a guarded `container exec` shell. `runs logs-follow` follows recent Apple
 hard-stop recovery. `runs repair` removes a stale active marker only after
 Apple `container inspect` reports the recorded container is not found. Use
 `runs repair --all` to review all active markers and remove only those
-confirmed stale.
+confirmed stale. `--json` prints the same repair results and counts without
+raw Apple inspect output or marker contents.
 
 Broker a Codex API key without placing the raw value in the guest:
 

@@ -121,8 +121,9 @@ Apple `container logs --follow`, lets `runs stop` call Apple `container stop`,
 lets `runs kill` call Apple `container kill`, and lets `runs repair` remove a
 stale marker only after Apple `container inspect` reports that the recorded
 RunHaven-owned container is not found. `runs repair --all` applies the same
-confirmed-missing guard to each valid active marker; the marker is removed
-after the run finishes.
+confirmed-missing guard to each valid active marker. Repair JSON output
+contains only result status, counts, exit code, run id, container name, and
+inspect return code; the marker is removed after the run finishes.
 When the workspace is inside a git repository, the run ledger also records repo
 root, before and after `HEAD`, dirty state, changed file count, and a capped
 list of relative paths scoped to the selected workspace.

@@ -77,6 +77,10 @@ repo and link to primary sources instead.
 - 2026-06-15: Implemented `runhaven runs repair --all` from the promoted run
   recovery backlog. The command applies the same confirmed-missing guard to
   each valid active marker and keeps live or unverified markers.
+- 2026-06-15: Implemented repair JSON summaries from the promoted automation
+  backlog. `runhaven runs repair RUN_ID --json` and
+  `runhaven runs repair --all --json` emit secret-free result lists, counts,
+  and exit codes.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, Literal, TextIO
 
 from .auth_broker import (
     AUTH_BROKER_RUNTIME,
@@ -65,13 +65,15 @@ ACTIVE_RUN_PUBLIC_FIELDS = (
     "kill_requested_at",
 )
 
+ActiveRunRepairStatus = Literal["kept", "removed", "unverified"]
+
 
 @dataclass(frozen=True)
 class ActiveRunRepairResult:
     run_id: str
     container_name: str
-    status: str
-    return_code: int
+    status: ActiveRunRepairStatus
+    inspect_return_code: int
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -257,6 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="inspect all active markers and remove only confirmed-stale markers",
     )
+    runs_repair_parser.add_argument("--json", action="store_true", help="print JSON output")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -508,7 +511,7 @@ def runs_command(args: argparse.Namespace) -> int:
     if args.runs_command == "kill":
         return runs_kill(args.run_id)
     if args.runs_command == "repair":
-        return runs_repair(args.run_id, repair_all=args.all)
+        return runs_repair(args.run_id, repair_all=args.all, json_output=args.json)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -1473,68 +1476,141 @@ def runs_kill(run_id: str) -> int:
     return 0
 
 
-def runs_repair(run_id: str | None, *, repair_all: bool) -> int:
+def runs_repair(run_id: str | None, *, repair_all: bool, json_output: bool) -> int:
     if run_id is not None and repair_all:
         raise ValueError("--all cannot be used with RUN_ID")
     if repair_all:
-        return runs_repair_all()
+        return runs_repair_all(json_output=json_output)
     if run_id is None:
         raise ValueError("repair requires RUN_ID or --all")
-    return runs_repair_one(run_id)
+    return runs_repair_one(run_id, json_output=json_output)
 
 
-def runs_repair_one(run_id: str) -> int:
+def runs_repair_one(run_id: str, *, json_output: bool) -> int:
     record = find_active_run_record(run_id)
     active_run_repair_container_name(record)
     require_container_cli()
     result = repair_active_run_record(run_id, record)
+    exit_code = active_run_repair_single_exit_code(result)
+    if json_output:
+        print(
+            json.dumps(
+                active_run_repair_payload("single", [result], exit_code),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return exit_code
     if result.status == "kept":
         print(
             f"runhaven: active marker kept because container still exists: "
             f"{result.container_name}",
             file=sys.stderr,
         )
-        return 1
+        return exit_code
     if result.status == "unverified":
         print(
             f"runhaven: could not confirm missing container for run "
             f"{result.run_id} ({result.container_name})",
             file=sys.stderr,
         )
-        return result.return_code
+        return exit_code
     print(f"Removed stale active marker for run {result.run_id} ({result.container_name}).")
-    return 0
+    return exit_code
 
 
-def runs_repair_all() -> int:
+def runs_repair_all(*, json_output: bool) -> int:
     records = read_active_run_records()
     if not records:
+        if json_output:
+            print(
+                json.dumps(
+                    active_run_repair_payload("all", [], 0),
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
         print("No active RunHaven runs found.")
         return 0
     require_container_cli()
-    removed = 0
-    kept = 0
-    unverified = 0
+    results: list[ActiveRunRepairResult] = []
     for record in records:
         run_id = require_string(record.get("run_id"), "active run record is missing run id")
         result = repair_active_run_record(run_id, record)
+        results.append(result)
+    counts = active_run_repair_summary(results)
+    exit_code = 1 if counts["unverified"] else 0
+    if json_output:
+        print(
+            json.dumps(
+                active_run_repair_payload("all", results, exit_code),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return exit_code
+    for result in results:
+        run_id = result.run_id
         if result.status == "removed":
-            removed += 1
             print(f"Removed stale active marker for run {run_id} ({result.container_name}).")
         elif result.status == "kept":
-            kept += 1
             print(
                 f"Kept active marker for run {run_id} "
                 f"({result.container_name}): container still exists."
             )
         else:
-            unverified += 1
             print(
                 f"Could not verify active marker for run {run_id} "
                 f"({result.container_name}); marker kept."
             )
-    print(f"Repair summary: removed={removed} kept={kept} unverified={unverified}")
-    return 1 if unverified else 0
+    print(
+        "Repair summary: "
+        f"removed={counts['removed']} kept={counts['kept']} unverified={counts['unverified']}"
+    )
+    return exit_code
+
+
+def active_run_repair_single_exit_code(result: ActiveRunRepairResult) -> int:
+    if result.status == "removed":
+        return 0
+    if result.status == "kept":
+        return 1
+    return result.inspect_return_code
+
+
+def active_run_repair_payload(
+    mode: str,
+    results: list[ActiveRunRepairResult],
+    exit_code: int,
+) -> dict[str, Any]:
+    return {
+        "exit_code": exit_code,
+        "mode": mode,
+        "results": [active_run_repair_result_payload(result) for result in results],
+        "summary": active_run_repair_summary(results),
+    }
+
+
+def active_run_repair_summary(results: list[ActiveRunRepairResult]) -> dict[str, int]:
+    summary: dict[ActiveRunRepairStatus, int] = {"kept": 0, "removed": 0, "unverified": 0}
+    for result in results:
+        summary[result.status] += 1
+    return {
+        "kept": summary["kept"],
+        "removed": summary["removed"],
+        "unverified": summary["unverified"],
+    }
+
+
+def active_run_repair_result_payload(result: ActiveRunRepairResult) -> dict[str, object]:
+    return {
+        "container_name": result.container_name,
+        "inspect_return_code": result.inspect_return_code,
+        "marker_removed": result.status == "removed",
+        "run_id": result.run_id,
+        "status": result.status,
+    }
 
 
 def repair_active_run_record(
@@ -1553,21 +1629,21 @@ def repair_active_run_record(
             run_id=run_id,
             container_name=container_name,
             status="kept",
-            return_code=1,
+            inspect_return_code=result.returncode,
         )
     if not container_inspect_reports_missing(result, container_name):
         return ActiveRunRepairResult(
             run_id=run_id,
             container_name=container_name,
             status="unverified",
-            return_code=result.returncode,
+            inspect_return_code=result.returncode,
         )
     remove_active_run_record(run_id)
     return ActiveRunRepairResult(
         run_id=run_id,
         container_name=container_name,
         status="removed",
-        return_code=0,
+        inspect_return_code=result.returncode,
     )
 
 

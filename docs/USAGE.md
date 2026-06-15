@@ -83,6 +83,8 @@ runhaven runs stop <run-id>
 runhaven runs kill <run-id>
 runhaven runs repair <run-id>
 runhaven runs repair --all
+runhaven runs repair <run-id> --json
+runhaven runs repair --all --json
 ```
 
 `runs status` shows the active marker plus sanitized live Apple
@@ -240,6 +242,8 @@ runhaven runs stop <run-id>
 runhaven runs kill <run-id>
 runhaven runs repair <run-id>
 runhaven runs repair --all
+runhaven runs repair <run-id> --json
+runhaven runs repair --all --json
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
 runhaven runs active --json
@@ -280,6 +284,8 @@ that says the recorded container is not found. If the container still exists
 or RunHaven cannot confirm why inspection failed, the marker is kept.
 `runs repair --all` applies that same check to each valid active marker and
 returns nonzero if any marker could not be verified.
+`--json` emits `results`, `summary`, and `exit_code` fields for automation
+without raw Apple inspect output or active-marker contents.
 
 `runs active` lists those currently active markers in text or JSON without
 requiring Apple `container` access and skips invalid marker files.

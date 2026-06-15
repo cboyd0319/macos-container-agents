@@ -69,7 +69,7 @@
   `runs stop`, `runs kill`, `runs repair`, `runs repair --all`, and git
   change metadata
 - structured blocked-host and cleanup event records
-- stable JSON output for read-only and run-status commands
+- stable JSON output for read-only, run-status, and repair-summary commands
 - warm reusable project sessions with explicit reset and prune UX
 - image, state, and managed-network repair commands
 - provider auth broker run records that never print secrets
