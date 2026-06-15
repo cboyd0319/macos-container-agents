@@ -29,6 +29,7 @@ Start pre-release large-file modularization.
 - `src/runhaven/active_commands.py`
 - `src/runhaven/auth_broker.py`
 - `src/runhaven/diagnostic_commands.py`
+- `src/runhaven/git_metadata.py`
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
@@ -190,6 +191,10 @@ Start pre-release large-file modularization.
 - Ninth modularization extraction split the 12 provider-runtime CLI tests in
   `tests/test_cli_provider_runtime.py` into focused files for provider proxy
   behavior, Codex broker behavior, and internal-network handling.
+- Tenth modularization extraction moved git discovery, status parsing, run
+  metadata summaries, and live diff helpers from
+  `src/runhaven/run_history.py` into `src/runhaven/git_metadata.py`.
+  `src/runhaven/run_history.py` now measures 383 lines, down from 604 lines.
 - Reviewed "Development On Apple Silicon with Apple Container Machine" and
   recorded UX backlog items in `docs/harness/ux-research-ideas.md`: explain
   why RunHaven avoids `container machine` defaults, add future host-service/DNS
@@ -222,6 +227,21 @@ Start pre-release large-file modularization.
   `uvx --from ruff==0.15.17 ruff check` on those files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_provider*.py'`
   with 12 tests.
+- Focused git-metadata extraction checks passed: `python3 -m compileall` on
+  `src/runhaven/git_metadata.py`, `src/runhaven/run_history.py`,
+  `src/runhaven/cli.py`, and `src/runhaven/provider_runtime.py`;
+  `uvx --from ruff==0.15.17 ruff check` on those files;
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
+  with 90 tests; and `uvx --from mypy==2.1.0 mypy src`.
+- Full verification passed after the git-metadata extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - Full verification passed after the provider-runtime CLI test split:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
@@ -967,11 +987,10 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file cleanup by reviewing `src/runhaven/run_history.py`,
-   `src/runhaven/active_commands.py`, `scripts/check_pins.py`,
-   `src/runhaven/auth_broker.py`, and `src/runhaven/provider_runtime.py` for
-   complexity-only refactors. Keep cohesive files intact if a split would only
-   move code.
+5. Continue large-file cleanup by reviewing `src/runhaven/active_commands.py`,
+   `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
+   `src/runhaven/provider_runtime.py` for complexity-only refactors. Keep
+   cohesive files intact if a split would only move code.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

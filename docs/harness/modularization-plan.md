@@ -7,19 +7,19 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the provider-runtime CLI test split:
+Measured on 2026-06-15 after the git metadata extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
-| `src/runhaven/cli.py` | 767 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
+| `src/runhaven/cli.py` | 766 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
-| `src/runhaven/provider_runtime.py` | 500 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
+| `src/runhaven/provider_runtime.py` | 501 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
 | `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
+| `src/runhaven/run_history.py` | 383 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
@@ -27,6 +27,7 @@ Measured on 2026-06-15 after the provider-runtime CLI test split:
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
 | `tests/test_cli_provider_proxy.py` | 242 | Owns provider plan, proxy injection, blocked-host summary, and policy-log coverage. |
+| `src/runhaven/git_metadata.py` | 235 | Owns git discovery, status parsing, run git summary construction, and live diff helpers. |
 | `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
 | `tests/test_cli_active_status.py` | 233 | Owns active status coverage. |
 | `tests/test_cli.py` | 228 | Owns core CLI, setup, doctor, and plan smoke coverage. |
@@ -52,8 +53,8 @@ leaving command handlers and runtime subprocess calls in place.
 ## Run-History Extraction Completed
 
 - `src/runhaven/run_history.py`: run-record persistence, provider/auth summary
-  fields, git metadata capture, `runs list/show/log/diff`, and run-record
-  readers.
+  fields, `runs list/show/log/diff`, and run-record readers. Git metadata
+  helpers were split out later into `src/runhaven/git_metadata.py`.
 - `src/runhaven/cli.py`: retains parser and command dispatch, and passes auth
   plus egress log readers into `runs log` to avoid circular imports.
 
@@ -165,11 +166,24 @@ existing 12 run-history tests and the same production patch targets.
 This removes the 622-line provider-runtime CLI test file while preserving the
 existing 12 provider-runtime tests and the same production patch targets.
 
+## Git-Metadata Extraction Completed
+
+- `src/runhaven/git_metadata.py`: git worktree discovery, status parsing,
+  run metadata snapshot summaries, diff validation helpers, and live git diff
+  subprocess wrappers.
+- `src/runhaven/run_history.py`: run-record persistence, provider/auth
+  summaries, `runs list/show/log`, and the `runs diff` user-facing command
+  output.
+
+This removes git subprocess and parsing details from `run_history.py` while
+preserving run metadata capture, live diff refusal behavior, and existing CLI
+test coverage.
+
 ## Recommended Sequence
 
-1. Review `src/runhaven/run_history.py` and `src/runhaven/active_commands.py`
-   for complexity-only refactors. Keep them intact if a split would only move
-   code without improving reviewability.
+1. Review `src/runhaven/active_commands.py` for complexity-only refactors.
+   Keep it intact if a split would only move code without improving
+   reviewability.
 
 2. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
    `src/runhaven/provider_runtime.py` for the same kind of complexity-only

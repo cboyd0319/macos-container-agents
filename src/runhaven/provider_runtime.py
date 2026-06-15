@@ -24,9 +24,10 @@ from .auth_broker import (
 )
 from .cache_paths import auth_broker_log_path, egress_policy_log_path
 from .egress import EgressPolicy, ProxyDecision, ThreadedAllowlistProxy, is_ip_literal
+from .git_metadata import capture_git_snapshot, summarize_git_change
 from .plans import AgentRunPlan
 from .provider_endpoints import match_provider_endpoints
-from .run_history import capture_git_snapshot, summarize_git_change, write_run_record
+from .run_history import write_run_record
 
 
 @dataclass(frozen=True)

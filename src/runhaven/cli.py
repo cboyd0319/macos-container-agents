@@ -45,6 +45,7 @@ from .egress import (
     EgressPolicy,
     ThreadedAllowlistProxy,
 )
+from .git_metadata import capture_git_snapshot, summarize_git_change
 from .images import build_image_plan
 from .plans import (
     SUPPORTED_NETWORK_MODES,
@@ -54,12 +55,10 @@ from .plans import (
 )
 from .profiles import PROFILES, get_profile
 from .run_history import (
-    capture_git_snapshot,
     runs_diff,
     runs_list,
     runs_log,
     runs_show,
-    summarize_git_change,
     write_run_record,
 )
 from .setup_guide import print_checks, print_setup_guide

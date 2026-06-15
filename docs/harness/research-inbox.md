@@ -125,6 +125,9 @@ repo and link to primary sources instead.
   622-line `tests/test_cli_provider_runtime.py` into focused CLI test files for
   provider proxy behavior, Codex broker behavior, and internal-network
   handling.
+- 2026-06-15: Continued the pre-release modularization pass by extracting
+  `src/runhaven/git_metadata.py` from `src/runhaven/run_history.py` for git
+  discovery, status parsing, run metadata summaries, and live diff helpers.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
   `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids
