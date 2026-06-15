@@ -7,12 +7,11 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the run-history CLI test split:
+Measured on 2026-06-15 after the provider-runtime CLI test split:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 767 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `tests/test_cli_provider_runtime.py` | 622 | Owns provider runtime, Codex broker run, and internal-network CLI coverage. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
@@ -22,10 +21,12 @@ Measured on 2026-06-15 after the run-history CLI test split:
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
+| `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
+| `tests/test_cli_provider_proxy.py` | 242 | Owns provider plan, proxy injection, blocked-host summary, and policy-log coverage. |
 | `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
 | `tests/test_cli_active_status.py` | 233 | Owns active status coverage. |
 | `tests/test_cli.py` | 228 | Owns core CLI, setup, doctor, and plan smoke coverage. |
@@ -34,6 +35,7 @@ Measured on 2026-06-15 after the run-history CLI test split:
 | `tests/test_cli_active_list.py` | 133 | Owns active-run list coverage. |
 | `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
 | `tests/test_cli_state.py` | 80 | Owns state list, prune, and state lock coverage. |
+| `tests/test_cli_provider_internal_network.py` | 52 | Owns existing, rejected, and newly created internal-network coverage. |
 
 ## First Extraction Completed
 
@@ -105,8 +107,10 @@ auth output, provider policy log output, `why host` provider matching, and
 - `tests/cli_test_helpers.py`: existing shared git, run-record, and
   active-marker helpers moved out of the monolithic test file.
 - `tests/test_cli.py`: core CLI, setup, doctor, and plan smoke coverage.
-- `tests/test_cli_provider_runtime.py`: provider runtime, Codex broker run, and
-  internal-network CLI coverage.
+- `tests/test_cli_provider_proxy.py`,
+  `tests/test_cli_provider_codex_broker.py`, and
+  `tests/test_cli_provider_internal_network.py`: provider runtime, Codex
+  broker run, and internal-network CLI coverage.
 - `tests/test_cli_standard_run.py`: standard run record and active-marker
   lifecycle coverage.
 - `tests/test_cli_active_commands.py`: active listing, attach, logs-follow,
@@ -149,16 +153,28 @@ existing 33 active-command tests and the same production patch targets.
 This removes the 663-line run-history CLI test file while preserving the
 existing 12 run-history tests and the same production patch targets.
 
+## Provider-Runtime CLI Test Split Completed
+
+- `tests/test_cli_provider_proxy.py`: provider allowlist planning, proxy
+  injection and cleanup, blocked-host summary, and policy-log coverage.
+- `tests/test_cli_provider_codex_broker.py`: Codex API-key broker config,
+  auth log, no-request log, run record summary, and missing-env coverage.
+- `tests/test_cli_provider_internal_network.py`: existing, rejected, and newly
+  created internal-network coverage.
+
+This removes the 622-line provider-runtime CLI test file while preserving the
+existing 12 provider-runtime tests and the same production patch targets.
+
 ## Recommended Sequence
 
-1. Split `tests/test_cli_provider_runtime.py` further if the next cleanup pass
-   stays focused on large test files. Good seams are provider proxy lifecycle,
-   Codex broker run integration, provider run record and policy log coverage,
-   and internal-network commands.
+1. Review `src/runhaven/run_history.py` and `src/runhaven/active_commands.py`
+   for complexity-only refactors. Keep them intact if a split would only move
+   code without improving reviewability.
 
 2. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
-   `src/runhaven/provider_runtime.py` for complexity-only refactors. Keep them
-   intact if a split would only move code without improving reviewability.
+   `src/runhaven/provider_runtime.py` for the same kind of complexity-only
+   refactor. The next pass should be willing to stop at "no split needed" if
+   the modules are cohesive.
 
 ## Acceptance Criteria
 

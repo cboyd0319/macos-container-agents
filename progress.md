@@ -203,6 +203,10 @@ Start pre-release large-file modularization.
 - The eighth behavior-preserving modularization extraction split the 12
   run-history CLI tests in `tests/test_cli_run_history.py` into focused files
   for run list/show, run diff, and joined run logs.
+- The ninth behavior-preserving modularization extraction split the 12
+  provider-runtime CLI tests in `tests/test_cli_provider_runtime.py` into
+  focused files for provider proxy behavior, Codex broker behavior, and
+  internal-network handling.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -337,11 +341,12 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by either splitting `tests/test_cli_provider_runtime.py`
-further, or reviewing `scripts/check_pins.py`, `src/runhaven/auth_broker.py`,
-and `src/runhaven/provider_runtime.py` for complexity-only refactors. Run the
-optional Codex broker smoke with a disposable OpenAI API key when one is
-available.
+Continue the cleanup pass by reviewing `src/runhaven/run_history.py`,
+`src/runhaven/active_commands.py`, `scripts/check_pins.py`,
+`src/runhaven/auth_broker.py`, and `src/runhaven/provider_runtime.py` for
+complexity-only refactors. Keep cohesive files intact if a split would only
+move code. Run the optional Codex broker smoke with a disposable OpenAI API key
+when one is available.
 
 ## Verification Evidence
 
@@ -367,6 +372,20 @@ available.
   `uvx --from ruff==0.15.17 ruff check` on those files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_runs*.py'`
   with 12 tests.
+- 2026-06-15: Focused provider-runtime CLI test split checks passed:
+  `python3 -m compileall` on the provider-runtime CLI test files,
+  `uvx --from ruff==0.15.17 ruff check` on those files, and
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_provider*.py'`
+  with 12 tests.
+- 2026-06-15: Full verification passed after the provider-runtime CLI test
+  split: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the run-history CLI test split:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,

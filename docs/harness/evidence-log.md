@@ -53,6 +53,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-15 | CLI test modularization split | structural review, focused split CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 90 CLI tests from `tests/test_cli.py` into focused test files plus `tests/cli_test_helpers.py`; `tests/test_cli.py` is now 228 lines. |
 | 2026-06-15 | Active-command CLI test split | structural review, focused active-command CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 33 active-command tests from `tests/test_cli_active_commands.py` into focused list, attach/logs, status, and stop/kill test files. |
 | 2026-06-15 | Run-history CLI test split | structural review, focused run-history CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 12 run-history CLI tests from `tests/test_cli_run_history.py` into focused list/show, diff, and log test files. |
+| 2026-06-15 | Provider-runtime CLI test split | structural review, focused provider-runtime CLI tests, full unit suite, compileall, ruff, mypy, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Split the 12 provider-runtime CLI tests from `tests/test_cli_provider_runtime.py` into focused proxy, Codex broker, and internal-network test files. |
 
 Rules:
 
