@@ -9,6 +9,7 @@ inventory, not permission to mutate nested projects.
 
 - Root Python package: `pyproject.toml`, `src/runhaven/`,
   `src/runhaven/active_records.py`, `src/runhaven/cache_paths.py`,
+  `src/runhaven/run_history.py`,
   `src/runhaven/setup_guide.py`, `src/runhaven/validators.py`,
   `tests/`, `scripts/check_pins.py`, and
   `scripts/provider_egress_smoke.py`.

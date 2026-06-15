@@ -165,6 +165,10 @@ Start pre-release large-file modularization.
   `docs/harness/modularization-plan.md`. The first behavior-preserving
   extraction moved setup guide output, active-run marker persistence, cache
   paths, and shared validators out of `src/runhaven/cli.py`.
+- The second behavior-preserving modularization extraction moved run-record
+  persistence, git metadata capture, `runs list/show/log/diff`, and run-record
+  readers into `src/runhaven/run_history.py`. `src/runhaven/cli.py` now
+  measures 1,874 lines, down from 2,440 after the first extraction.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -299,13 +303,24 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the large-file modularization by splitting run observability from
-`src/runhaven/cli.py`: `runs list/show/log/diff`, git metadata helpers, and
-run-record readers. Run the optional Codex broker smoke with a disposable
+Continue the large-file modularization by splitting active run commands from
+`src/runhaven/cli.py`: `runs active/status/attach/logs-follow/stop/kill/repair`.
+Keep the Apple `container` subprocess seams explicit because the current tests
+patch them heavily. Run the optional Codex broker smoke with a disposable
 OpenAI API key when one is available.
 
 ## Verification Evidence
 
+- 2026-06-15: Focused run-history extraction tests passed:
+  `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_provider_run_writes_run_record_with_policy_auth_and_cleanup_summary tests.test_cli.CliTests.test_runs_list_prints_recent_records tests.test_cli.CliTests.test_runs_show_json_is_secret_free tests.test_cli.CliTests.test_runs_show_prints_git_metadata_summary tests.test_cli.CliTests.test_runs_diff_prints_live_committed_git_diff tests.test_cli.CliTests.test_runs_diff_prints_live_dirty_git_diff_with_warning tests.test_cli.CliTests.test_runs_diff_prints_live_untracked_git_diff tests.test_cli.CliTests.test_runs_diff_includes_committed_and_dirty_changes tests.test_cli.CliTests.test_runs_diff_refuses_unavailable_git_metadata tests.test_cli.CliTests.test_runs_diff_refuses_when_recorded_head_is_stale tests.test_cli.CliTests.test_runs_diff_refuses_when_dirty_path_set_changed tests.test_cli.CliTests.test_runs_log_prints_joined_secret_free_run_events tests.test_cli.CliTests.test_runs_log_json_is_secret_free`.
+- 2026-06-15: Full verification passed after the run-history extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
 - 2026-06-15: `container --help`, `container exec --help`, and
   `container attach --help` were checked. The pinned local Apple `container`
   CLI exposes `exec`; `attach` reports plugin `container-attach` is not

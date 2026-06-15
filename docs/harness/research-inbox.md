@@ -101,6 +101,9 @@ repo and link to primary sources instead.
   `docs/harness/modularization-plan.md` and extracted setup guide output,
   active-run marker persistence, cache path helpers, and shared validators from
   `src/runhaven/cli.py`.
+- 2026-06-15: Continued the pre-release modularization pass by extracting
+  `src/runhaven/run_history.py` for run-record persistence, git metadata
+  capture, `runs list/show/log/diff`, and run-record readers.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.
