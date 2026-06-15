@@ -1,6 +1,7 @@
 # Auth Broker
 
-Status: design only.
+Status: Codex API-key broker prototype. Other agent auth brokers remain design
+only.
 
 RunHaven exposes two auth inspection commands:
 
@@ -11,7 +12,7 @@ runhaven auth explain codex
 
 These commands are intentionally safe to run. They do not inspect Keychain,
 browser profiles, cloud credential files, provider login caches, or environment
-values. They print static broker status and profile-specific guidance only.
+values. They print broker status and profile-specific guidance only.
 
 ## Boundary
 
@@ -19,7 +20,7 @@ Trusted:
 
 - the user
 - the RunHaven host process
-- explicit user approval for a future brokered auth action
+- explicit user approval for a brokered auth action
 
 Untrusted or partially trusted:
 
@@ -39,17 +40,32 @@ Sensitive:
 - Google Cloud ADC and service account JSON files
 - GitHub, Copilot, OpenAI, Anthropic, Gemini, and Claude credentials
 
-## Current Behavior
+## Codex API-Key Broker
 
-The auth broker is not implemented yet. Current RunHaven behavior is:
+Codex can use an explicit host-side API-key broker:
+
+```bash
+runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
+```
+
+Current behavior:
 
 - no host credential store is read
-- no environment variable value is inspected
-- no provider credential is copied into the guest by RunHaven
+- the named host environment variable is read only for a real run, never for
+  `plan`, `run --dry-run`, `auth status`, or `auth explain`
+- the raw API key is not copied into the guest environment or container command
+- the guest receives a placeholder `RUNHAVEN_CODEX_BROKER_TOKEN` value and
+  temporary Codex custom-provider overrides pointing at the broker
+- the broker binds to the RunHaven provider network, restricts clients to that
+  Apple `container` subnet, and forwards only Codex Responses API create
+  requests to `api.openai.com`
 - no token is printed in plan, status, JSON, or diagnostic output
-- `--env NAME` remains an explicit fallback for deliberate headless runs
 - interactive login inside the isolated agent home volume remains available
   when the agent supports it
+
+Other providers remain design-only. `--env NAME` is still available as an
+explicit fallback when a user deliberately wants a token value inside the guest,
+but it is not the preferred Codex headless path.
 
 Provider egress controls are separate. `--network provider` limits CONNECT
 targets by host, records policy decisions, and groups blocked-host reviews.
@@ -73,8 +89,10 @@ safer long-term pattern is a provider-specific host-side broker:
 
 Current source-backed auth surfaces:
 
-- Codex supports ChatGPT sign-in, OpenAI API-key sign-in, and trusted access
-  tokens for some automation. Codex login details may be cached locally.
+- Codex supports ChatGPT sign-in, OpenAI API-key sign-in, trusted access tokens
+  for some automation, custom model providers, command-line configuration
+  overrides, and the Responses API. The RunHaven prototype uses only the
+  API-key plus custom-provider path.
 - Claude Code supports Claude.ai credentials, Claude API credentials, cloud
   provider auth, API key or bearer-token environment variables, and
   `apiKeyHelper`.
@@ -102,10 +120,10 @@ The broker design does not allow:
 - TLS interception as the default provider egress model
 - treating broad GitHub hosts as safe merely because Copilot uses them
 
-## Future Acceptance Criteria
+## Remaining Acceptance Criteria
 
-A real broker implementation must satisfy all of these before becoming a
-default path:
+Before this can become a default path, or before another provider gets a real
+broker, the implementation must satisfy all relevant criteria:
 
 - explicit user opt-in for each provider account or credential source
 - provider-specific policy tied to the endpoint matrix

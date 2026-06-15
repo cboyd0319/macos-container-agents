@@ -51,6 +51,7 @@ class RunOptions:
     allow_sensitive_workspace: bool = False
     allow_root_user: bool = False
     provider_hosts: tuple[str, ...] = ()
+    codex_api_key_broker_env: str | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ class AgentRunPlan:
     egress_summary: str
     image: str
     provider_allowed_hosts: tuple[str, ...] = ()
+    codex_api_key_broker_env: str | None = None
 
     def shell_command(self) -> str:
         return shlex.join(self.command)
@@ -87,6 +89,12 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
 
     for name in options.env:
         validate_env_name(name)
+    if options.codex_api_key_broker_env:
+        validate_env_name(options.codex_api_key_broker_env)
+        if options.profile.name != "codex":
+            raise ValueError("Codex API key broker requires codex profile")
+        if options.network != "provider":
+            raise ValueError("Codex API key broker requires --network provider")
     validate_resource_options(options.cpus, options.memory, options.user)
     if uses_root_identity(options.user) and not options.allow_root_user:
         raise ValueError("root user or group requires --allow-root-user")
@@ -188,6 +196,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
     agent_command = strip_remainder_separator(options.agent_args)
     if not agent_command:
         agent_command = options.profile.command
+    if options.codex_api_key_broker_env and agent_command[0] != "codex":
+        raise ValueError("Codex API key broker requires the agent command to start with codex")
 
     command.append(image)
     command.extend(agent_command)
@@ -200,9 +210,14 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         profile_name=options.profile.name,
         network_name=active_network,
         network_mode=options.network,
-        egress_summary=network_egress_summary(options.network, provider_allowed_hosts),
+        egress_summary=network_egress_summary(
+            options.network,
+            provider_allowed_hosts,
+            codex_api_key_broker=options.codex_api_key_broker_env is not None,
+        ),
         image=image,
         provider_allowed_hosts=provider_allowed_hosts,
+        codex_api_key_broker_env=options.codex_api_key_broker_env,
     )
 
 
@@ -313,13 +328,18 @@ def validate_network_mode(network: str) -> None:
 def network_egress_summary(
     network: NetworkMode,
     provider_allowed_hosts: Sequence[str] = (),
+    *,
+    codex_api_key_broker: bool = False,
 ) -> str:
     if network == "internet":
         return "unrestricted internet egress; domain allowlisting is not enforced"
     if network == "internal":
         return "host-only internal network; internet egress disabled"
     hosts = ", ".join(provider_allowed_hosts)
-    return f"provider allowlist egress through runtime proxy: {hosts}"
+    summary = f"provider allowlist egress through runtime proxy: {hosts}"
+    if codex_api_key_broker:
+        summary = f"{summary}; Codex API key broker enabled"
+    return summary
 
 
 def uses_root_identity(user: str) -> bool:

@@ -101,11 +101,30 @@ RunHaven auth broker decision from this review:
 
 - `runhaven auth status` and `runhaven auth explain AGENT` are static,
   secret-free diagnostics only.
-- The real broker remains future work. It should be provider-specific,
+- The Codex API-key broker can be a narrow first implementation because Codex
+  supports custom model providers and the OpenAI Responses API.
+- Other real brokers remain future work. They should be provider-specific,
   host-owned, explicit opt-in, auditable, and tied to the endpoint matrix.
 - Broad path-sensitive GitHub hosts are not bundled merely because Copilot can
   use them; the broker or another verified provider-specific control must make
   the credential and path boundary explicit first.
+
+Codex API-key broker implementation source check on 2026-06-15:
+
+- Codex CLI command-line options:
+  <https://developers.openai.com/codex/cli/reference>.
+  Reviewed for repeatable `-c key=value` configuration overrides.
+- Codex advanced configuration:
+  <https://developers.openai.com/codex/config-advanced>.
+  Reviewed for custom model provider definitions and `model_provider`
+  selection.
+- Codex configuration reference:
+  <https://developers.openai.com/codex/config-reference>.
+  Reviewed for `model_providers.<id>.base_url`, `env_key`, and `wire_api`;
+  `responses` is the supported wire API.
+- OpenAI Responses create API:
+  <https://developers.openai.com/api/reference/resources/responses/methods/create>.
+  Reviewed for the Responses create endpoint used by the broker.
 
 ## Provider Endpoint Sources
 

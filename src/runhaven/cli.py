@@ -19,6 +19,10 @@ from typing import Any, TextIO
 from .auth_broker import (
     AUTH_BROKER_RUNTIME,
     AUTH_BROKER_STATUS,
+    CODEX_BROKER_PLACEHOLDER_ENV,
+    CODEX_BROKER_PLACEHOLDER_VALUE,
+    CODEX_BROKER_PROVIDER_ID,
+    CodexApiKeyBrokerProxy,
     auth_broker_profiles,
     get_auth_broker_profile,
 )
@@ -207,6 +211,14 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         help="additional fully qualified HTTPS host allowed by --network provider",
     )
     parser.add_argument(
+        "--codex-api-key-broker-env",
+        metavar="NAME",
+        help=(
+            "Codex-only: read this host environment variable at run time and broker "
+            "OpenAI Responses API requests without placing the raw value in the guest"
+        ),
+    )
+    parser.add_argument(
         "--read-only-workspace",
         action="store_true",
         help="mount the workspace read-only so the agent can inspect but not edit it",
@@ -269,6 +281,7 @@ def run_agent(args: argparse.Namespace) -> int:
         print_run_plan(plan)
         return 0
 
+    validate_runtime_auth_broker_environment(plan)
     require_container_cli()
     with acquire_state_lock(plan.state_volume):
         if plan.network_mode == "provider":
@@ -343,6 +356,7 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
             allow_sensitive_workspace=args.allow_sensitive_workspace,
             allow_root_user=args.allow_root_user,
             provider_hosts=tuple(args.provider_host),
+            codex_api_key_broker_env=args.codex_api_key_broker_env,
         )
     )
 
@@ -355,6 +369,11 @@ def print_run_plan(plan: AgentRunPlan) -> None:
     if plan.network_mode == "provider":
         print(f"Provider hosts: {', '.join(plan.provider_allowed_hosts)}")
         print("Provider proxy: RunHaven injects proxy environment variables at runtime.")
+    if plan.codex_api_key_broker_env:
+        print(
+            "Codex API key broker: enabled from host environment variable "
+            f"{plan.codex_api_key_broker_env}; value is not printed or planned."
+        )
     if plan.preflight:
         print("Preflight:")
         for command in plan.shell_preflight():
@@ -385,9 +404,12 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
     if not plan.provider_allowed_hosts:
         raise ValueError("provider network plan is missing provider hosts")
 
+    codex_api_key = require_codex_api_key_broker_secret(plan)
     provider_network_created = False
     proxy: ThreadedAllowlistProxy | None = None
-    thread: threading.Thread | None = None
+    proxy_thread: threading.Thread | None = None
+    codex_broker: CodexApiKeyBrokerProxy | None = None
+    codex_broker_thread: threading.Thread | None = None
     try:
         for command in plan.preflight:
             run_preflight(command)
@@ -401,27 +423,74 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         proxy = create_provider_proxy(policy, network_info)
         worker = threading.Thread(target=proxy.serve_forever, daemon=True)
         worker.start()
-        thread = worker
+        proxy_thread = worker
         proxy_url = f"http://{network_info.ipv4_gateway}:{proxy.server_address[1]}"
-        return_code = subprocess.call(with_provider_proxy_environment(plan, proxy_url))
+
+        if codex_api_key is None:
+            command = with_provider_proxy_environment(plan, proxy_url)
+        else:
+            codex_broker = create_codex_api_key_broker(codex_api_key, network_info)
+            broker_worker = threading.Thread(target=codex_broker.serve_forever, daemon=True)
+            broker_worker.start()
+            codex_broker_thread = broker_worker
+            broker_url = (
+                f"http://{network_info.ipv4_gateway}:"
+                f"{codex_broker.server_address[1]}/v1"
+            )
+            command = with_provider_proxy_environment(
+                plan,
+                proxy_url,
+                no_proxy_hosts=(network_info.ipv4_gateway,),
+            )
+            command = with_codex_api_key_broker_config(command, plan, broker_url)
+
+        return_code = subprocess.call(command)
         decisions = proxy.policy_decisions()
         run_id = uuid.uuid4().hex
         write_provider_policy_log(plan, decisions, run_id=run_id)
         print_provider_blocked_host_review(plan, decisions, run_id=run_id)
         return return_code
     finally:
+        if codex_broker is not None:
+            if codex_broker_thread is not None:
+                codex_broker.shutdown()
+            codex_broker.server_close()
+        if codex_broker_thread is not None:
+            codex_broker_thread.join(timeout=5)
         if proxy is not None:
-            if thread is not None:
+            if proxy_thread is not None:
                 proxy.shutdown()
             proxy.server_close()
-        if thread is not None:
-            thread.join(timeout=5)
+        if proxy_thread is not None:
+            proxy_thread.join(timeout=5)
         if provider_network_created:
             delete_container_network(plan.network_name)
 
 
-def with_provider_proxy_environment(plan: AgentRunPlan, proxy_url: str) -> tuple[str, ...]:
+def require_codex_api_key_broker_secret(plan: AgentRunPlan) -> str | None:
+    if plan.codex_api_key_broker_env is None:
+        return None
+    value = os.environ.get(plan.codex_api_key_broker_env)
+    if value is None or not value.strip():
+        raise ValueError(
+            f"{plan.codex_api_key_broker_env} is not set on the host; export it before "
+            "using --codex-api-key-broker-env"
+        )
+    return value
+
+
+def validate_runtime_auth_broker_environment(plan: AgentRunPlan) -> None:
+    require_codex_api_key_broker_secret(plan)
+
+
+def with_provider_proxy_environment(
+    plan: AgentRunPlan,
+    proxy_url: str,
+    *,
+    no_proxy_hosts: Sequence[str] = (),
+) -> tuple[str, ...]:
     image_index = plan.command.index(plan.image)
+    no_proxy = ",".join(("localhost", "127.0.0.1", "::1", *no_proxy_hosts))
     proxy_environment = (
         ("HTTPS_PROXY", proxy_url),
         ("HTTP_PROXY", proxy_url),
@@ -429,13 +498,48 @@ def with_provider_proxy_environment(plan: AgentRunPlan, proxy_url: str) -> tuple
         ("https_proxy", proxy_url),
         ("http_proxy", proxy_url),
         ("all_proxy", proxy_url),
-        ("NO_PROXY", "localhost,127.0.0.1,::1"),
-        ("no_proxy", "localhost,127.0.0.1,::1"),
+        ("NO_PROXY", no_proxy),
+        ("no_proxy", no_proxy),
     )
     injected: list[str] = []
     for name, value in proxy_environment:
         injected.extend(("--env", f"{name}={value}"))
     return (*plan.command[:image_index], *injected, *plan.command[image_index:])
+
+
+def with_codex_api_key_broker_config(
+    command: tuple[str, ...],
+    plan: AgentRunPlan,
+    broker_base_url: str,
+) -> tuple[str, ...]:
+    image_index = command.index(plan.image)
+    if image_index + 1 >= len(command) or command[image_index + 1] != "codex":
+        raise ValueError("Codex API key broker requires the agent command to start with codex")
+    broker_environment = (
+        "--env",
+        f"{CODEX_BROKER_PLACEHOLDER_ENV}={CODEX_BROKER_PLACEHOLDER_VALUE}",
+    )
+    command_with_env = (*command[:image_index], *broker_environment, *command[image_index:])
+    codex_index = image_index + len(broker_environment) + 1
+    config = (
+        "-c",
+        f'model_provider="{CODEX_BROKER_PROVIDER_ID}"',
+        "-c",
+        f'model_providers.{CODEX_BROKER_PROVIDER_ID}.name='
+        '"RunHaven OpenAI API-key broker"',
+        "-c",
+        f'model_providers.{CODEX_BROKER_PROVIDER_ID}.base_url="{broker_base_url}"',
+        "-c",
+        f'model_providers.{CODEX_BROKER_PROVIDER_ID}.env_key='
+        f'"{CODEX_BROKER_PLACEHOLDER_ENV}"',
+        "-c",
+        f'model_providers.{CODEX_BROKER_PROVIDER_ID}.wire_api="responses"',
+    )
+    return (
+        *command_with_env[: codex_index + 1],
+        *config,
+        *command_with_env[codex_index + 1 :],
+    )
 
 
 def print_provider_blocked_host_review(
@@ -594,6 +698,7 @@ def auth_status(*, json_output: bool) -> int:
         print(f"  {profile.name:<{width}}  {profile.status}")
     print("Current safe paths:")
     print("  - authenticate inside the isolated agent state volume when interactive")
+    print("  - use the Codex API-key broker for headless Codex API-key runs")
     print("  - pass one token with --env NAME only when explicitly needed")
     print("  - use --network provider to constrain provider egress separately")
     return 0
@@ -721,6 +826,24 @@ def create_provider_proxy(
         return ThreadedAllowlistProxy(
             ("0.0.0.0", 0),
             policy,
+            allowed_client_subnets=(network_info.ipv4_subnet,),
+        )
+
+
+def create_codex_api_key_broker(
+    api_key: str,
+    network_info: InternalNetworkInfo,
+) -> CodexApiKeyBrokerProxy:
+    try:
+        return CodexApiKeyBrokerProxy(
+            (network_info.ipv4_gateway, 0),
+            api_key=api_key,
+            allowed_client_subnets=(network_info.ipv4_subnet,),
+        )
+    except OSError:
+        return CodexApiKeyBrokerProxy(
+            ("0.0.0.0", 0),
+            api_key=api_key,
             allowed_client_subnets=(network_info.ipv4_subnet,),
         )
 

@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add empty-allowlist regression coverage for network policy modes.
+Implement the first real Codex API-key broker prototype behind explicit opt-in.
 
 ## Files
 
@@ -31,6 +31,7 @@ Add empty-allowlist regression coverage for network policy modes.
 - `scripts/check_pins.py`
 - `scripts/provider_egress_smoke.py`
 - `tests/`
+- `tests/test_auth_broker.py`
 - `tests/test_egress.py`
 - `tests/test_plans.py`
 - `tests/test_provider_egress_smoke.py`
@@ -47,6 +48,24 @@ Add empty-allowlist regression coverage for network policy modes.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest discover -s tests` ran 93 tests and
+  passed after adding the Codex API-key broker prototype.
+- `python3 -m compileall src tests scripts`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding the Codex API-key broker prototype.
+- `uvx --from ruff==0.15.17 ruff check src/runhaven/auth_broker.py src/runhaven/cli.py src/runhaven/plans.py tests/test_auth_broker.py tests/test_cli.py tests/test_plans.py`
+  passed after adding the Codex API-key broker prototype.
+- `uvx --from mypy==2.1.0 mypy src/runhaven/auth_broker.py src/runhaven/cli.py src/runhaven/plans.py`
+  passed after adding the Codex API-key broker prototype.
+- Manual CLI smokes passed:
+  `PYTHONPATH=src python3 -m runhaven plan codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never`,
+  `env -u OPENAI_API_KEY PYTHONPATH=src python3 -m runhaven run codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never --dry-run`,
+  `env -u OPENAI_API_KEY PYTHONPATH=src python3 -m runhaven run codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never`,
+  and `PYTHONPATH=src python3 -m runhaven auth explain codex`. The real run
+  without `OPENAI_API_KEY` exited 2 before container startup.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 93 unit
+  tests, pin check, ruff, mypy, and build after adding the Codex API-key broker
+  prototype.
 - `PYTHONPATH=src python3 -m unittest tests.test_plans tests.test_egress`
   ran 39 focused planner and egress tests and passed after adding
   empty-allowlist regression coverage.
@@ -374,12 +393,23 @@ Add empty-allowlist regression coverage for network policy modes.
 - `scripts/provider_egress_smoke.py --agent AGENT` now checks all bundled
   provider hosts for a selected profile through the same host-side proxy
   pattern, without requiring provider credentials.
-- `runhaven auth status` and `runhaven auth explain AGENT` now expose static,
+- `runhaven run codex --network provider --codex-api-key-broker-env NAME` now
+  provides an opt-in Codex API-key broker prototype. It reads the named host
+  environment variable only during real runs, starts a subnet-restricted host
+  broker on the Apple `container` provider network, and injects temporary Codex
+  custom-provider config plus a placeholder token into the guest.
+- The Codex broker accepts only Responses API create requests and injects the
+  raw host API key into the host-side upstream request to `api.openai.com`; the
+  raw key is not placed in the planned command or guest environment.
+- `runhaven plan` and `runhaven run --dry-run` show broker status but do not
+  read the named API-key environment variable.
+- `runhaven auth status` and `runhaven auth explain AGENT` now expose
   secret-free broker boundary diagnostics. They do not read Keychain, browser
   profiles, cloud credential files, provider login caches, or environment
   values.
-- `docs/AUTH_BROKER.md` records the design-only broker boundary, provider auth
-  notes, non-goals, and acceptance criteria for any future real broker.
+- `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
+  design-only provider status, provider auth notes, non-goals, and acceptance
+  criteria for future broker expansion.
 - Empty provider allowlist behavior is now covered at both the planner and
   proxy-policy layers. Internet mode stays explicitly unrestricted, internal
   mode stays local-only with internet egress disabled, provider mode fails
@@ -419,8 +449,8 @@ Add empty-allowlist regression coverage for network policy modes.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Build the first real host-side broker prototype for Codex behind explicit
-   user opt-in.
+5. Add broker observability and live-smoke coverage for the Codex API-key
+   broker. Use a disposable test key if a real provider smoke is requested.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

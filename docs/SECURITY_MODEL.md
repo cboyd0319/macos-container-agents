@@ -68,14 +68,15 @@ or raw credential folders by default.
 
 ## Auth Broker Boundary
 
-`runhaven auth status` and `runhaven auth explain AGENT` describe a future
-host-side provider credential broker. The current broker status is design-only.
-Those commands read static profile metadata. They do not inspect Keychain,
-browser profiles, cloud credential files, provider login caches, or environment
-variable values, and they do not print secrets.
+`runhaven auth status` and `runhaven auth explain AGENT` describe the host-side
+provider credential broker boundary. The current broker status is a Codex
+API-key prototype with all other agent brokers design-only. Those commands read
+static profile metadata. They do not inspect Keychain, browser profiles, cloud
+credential files, provider login caches, or environment variable values, and
+they do not print secrets.
 
-The intended future pattern is host-owned credentials with provider-specific
-policy tied to the endpoint matrix. The guest should receive only a narrow
+The intended pattern is host-owned credentials with provider-specific policy
+tied to the endpoint matrix. The guest should receive only a narrow
 provider action or short-lived run credential when that flow is explicitly
 implemented and verified. Broad host credential import, implicit environment
 passthrough, and host home or credential-folder mounts remain out of scope.
@@ -112,10 +113,12 @@ release-note, update, plugin marketplace, and broad path-sensitive hosts may
 fail until an additional fully qualified host is reviewed and passed with
 `--provider-host`.
 
-The host-side auth broker is not implemented yet. Until it exists, credentials
-can still reach the guest through isolated in-agent login state or explicit
-`--env NAME` passthrough. Use [`AUTH_BROKER.md`](AUTH_BROKER.md) for the
-current design boundary and non-goals.
+The host-side auth broker currently has an opt-in Codex API-key prototype. It
+keeps the raw API key in the RunHaven host process and gives the guest only a
+placeholder token plus temporary Codex custom-provider config. Other providers
+remain design-only, and credentials can still reach the guest through isolated
+in-agent login state or explicit `--env NAME` passthrough. Use
+[`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and

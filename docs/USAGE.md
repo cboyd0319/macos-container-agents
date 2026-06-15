@@ -73,7 +73,14 @@ already using the same isolated home volume, `runhaven` fails before starting Ap
 RunHaven allocates an interactive TTY when attached to a terminal. Use
 `--tty never` for non-interactive automation.
 
-Pass a host environment variable by name only:
+Broker a Codex API key without placing the raw value in the guest:
+
+```bash
+runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
+```
+
+Pass a host environment variable by name only when the run deliberately needs
+that value inside the guest:
 
 ```bash
 runhaven run claude --env ANTHROPIC_API_KEY
@@ -93,14 +100,15 @@ runhaven auth explain codex
 runhaven auth explain codex --json
 ```
 
-The auth broker is design-only. These commands describe the future
-host-side broker boundary and the current safe paths for each profile. They do
-not inspect Keychain, browser profiles, provider login caches, cloud credential
-files, or environment variable values, and they do not print secrets.
+The Codex API-key broker is an opt-in prototype. Other agent auth brokers remain
+design-only. These commands describe the host-side broker boundary and the
+current safe paths for each profile. They do not inspect Keychain, browser
+profiles, provider login caches, cloud credential files, or environment variable
+values, and they do not print secrets.
 
-Until a broker is implemented, authenticate inside the isolated agent state
-volume when the provider supports interactive login. Use `--env NAME` only when
-a headless run deliberately needs one token value inside the guest.
+For non-Codex providers, authenticate inside the isolated agent state volume
+when the provider supports interactive login. Use `--env NAME` only when a
+headless run deliberately needs one token value inside the guest.
 
 ## Read-Only Review
 

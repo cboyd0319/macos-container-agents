@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add empty-allowlist regression coverage for network policy modes.
+Implement the first real Codex API-key broker prototype behind explicit opt-in.
 
 ## Current State
 
@@ -158,18 +158,30 @@ Add empty-allowlist regression coverage for network policy modes.
   blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
   flows, image/state/network repair commands, `auth status`, and
   task-language docs recipes.
-- `src/runhaven/auth_broker.py` now records static per-profile auth broker
-  metadata for Claude, Codex, Gemini, Antigravity, Copilot, and custom shell
-  profiles.
+- `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
+  and implements the first Codex API-key broker prototype.
+- `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
+  the named host environment variable only during real runs, starts a
+  subnet-restricted host broker on the Apple `container` provider network, and
+  injects temporary Codex custom-provider config plus a placeholder token into
+  the guest.
+- The Codex broker accepts only Responses API create requests and injects the
+  raw host API key into the host-side upstream request to `api.openai.com`; the
+  raw key is not placed in the planned command or guest environment.
+- `runhaven plan` and `runhaven run --dry-run` show broker status but do not
+  read the named API-key environment variable.
+- Missing Codex broker environment variables fail before Apple `container`
+  runtime startup.
 - `runhaven auth status` and `runhaven auth explain AGENT` now describe the
-  future host-side broker boundary without reading Keychain, browser profiles,
+  current host-side broker boundary without reading Keychain, browser profiles,
   cloud credential files, provider login caches, or environment values.
 - `runhaven auth status --json` and `runhaven auth explain AGENT --json` expose
-  the same static broker metadata for future automation without secret values.
-- `docs/AUTH_BROKER.md` records the design-only status, trust boundary,
-  provider auth notes, non-goals, and future acceptance criteria.
-- `docs/RESEARCH.md` now records the current provider auth references used for
-  this broker boundary.
+  broker metadata for automation without secret values.
+- `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
+  design-only provider status, trust boundary, provider auth notes, non-goals,
+  and remaining acceptance criteria.
+- `docs/RESEARCH.md` now records the current provider auth references and the
+  official Codex configuration references used for this broker boundary.
 - Empty provider allowlist behavior is now covered at both the planner and
   proxy-policy layers.
 - `internet` mode is regression-tested as no provider allowlist and
@@ -186,13 +198,31 @@ Add empty-allowlist regression coverage for network policy modes.
 
 ## Recommended Next Step
 
-Build the first real host-side broker prototype for Codex behind explicit user
-opt-in. Keep broad hosts such as `github.com` and `api.github.com` explicit
-until RunHaven can restrict them by path or brokered credentials without
-mounting provider secrets into the guest.
+Add broker observability and live-smoke coverage for the Codex API-key broker:
+record secret-free broker run decisions, exercise the real Codex container path
+when a disposable test key is available, and keep other provider brokers
+design-only until their path and credential boundaries are similarly narrow.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 93
+  tests and passed after adding the Codex API-key broker prototype.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding the Codex API-key broker prototype.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check src/runhaven/auth_broker.py src/runhaven/cli.py src/runhaven/plans.py tests/test_auth_broker.py tests/test_cli.py tests/test_plans.py`
+  passed after adding the Codex API-key broker prototype.
+- 2026-06-15: `uvx --from mypy==2.1.0 mypy src/runhaven/auth_broker.py src/runhaven/cli.py src/runhaven/plans.py`
+  passed after adding the Codex API-key broker prototype.
+- 2026-06-15: Manual CLI smokes passed:
+  `PYTHONPATH=src python3 -m runhaven plan codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never`,
+  `env -u OPENAI_API_KEY PYTHONPATH=src python3 -m runhaven run codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never --dry-run`,
+  `env -u OPENAI_API_KEY PYTHONPATH=src python3 -m runhaven run codex --workspace . --network provider --codex-api-key-broker-env OPENAI_API_KEY --tty never`,
+  and `PYTHONPATH=src python3 -m runhaven auth explain codex`. The real run
+  without `OPENAI_API_KEY` exited 2 before container startup.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 93 unit tests, pin check, ruff, mypy, and build after adding the
+  Codex API-key broker prototype.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_plans tests.test_egress`
   ran 39 focused planner and egress tests and passed after adding
   empty-allowlist regression coverage.

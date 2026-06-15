@@ -105,7 +105,8 @@ Internet mode remains unrestricted egress.
 ## Auth Broker Model
 
 Auth brokering is a separate host-side boundary from provider egress. The
-current implementation is design-only and exposes static inspection commands:
+current implementation includes an opt-in Codex API-key broker prototype and
+static inspection commands:
 
 ```bash
 runhaven auth status
@@ -113,11 +114,14 @@ runhaven auth explain codex
 ```
 
 `src/runhaven/auth_broker.py` records per-profile auth surfaces, current safe
-paths, and broker notes. `runhaven auth` reads that static metadata only. It
-does not inspect Keychain, browser profiles, provider login caches, cloud
-credential files, or environment values.
+paths, broker notes, and the Codex Responses API broker. `runhaven auth` reads
+static metadata only. It does not inspect Keychain, browser profiles, provider
+login caches, cloud credential files, or environment values. During a real
+Codex run with `--codex-api-key-broker-env`, the host process reads only the
+named environment variable, starts a subnet-restricted broker on the provider
+network, and injects temporary Codex custom-provider overrides into the guest.
 
-The future broker shape is:
+The broker shape is:
 
 - keep provider credentials owned by the host
 - require explicit user opt-in for each provider account or credential source

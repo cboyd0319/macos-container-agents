@@ -141,6 +141,59 @@ class RunPlanTests(unittest.TestCase):
         self.assertEqual(plan.provider_allowed_hosts, ("api.example.com",))
         self.assertIn("provider allowlist", plan.egress_summary)
 
+    def test_codex_api_key_broker_requires_codex_profile(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "Codex API key broker requires codex"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        network="provider",
+                        provider_hosts=("api.example.com",),
+                        codex_api_key_broker_env="OPENAI_API_KEY",
+                    )
+                )
+
+    def test_codex_api_key_broker_requires_provider_network(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "--network provider"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("codex"),
+                        workspace=Path(directory),
+                        codex_api_key_broker_env="OPENAI_API_KEY",
+                    )
+                )
+
+    def test_codex_api_key_broker_plan_is_secret_free(self) -> None:
+        with TemporaryDirectory() as directory:
+            plan = build_run_plan(
+                RunOptions(
+                    profile=get_profile("codex"),
+                    workspace=Path(directory),
+                    network="provider",
+                    codex_api_key_broker_env="OPENAI_API_KEY",
+                )
+            )
+
+        self.assertEqual(plan.codex_api_key_broker_env, "OPENAI_API_KEY")
+        self.assertIn("Codex API key broker", plan.egress_summary)
+        self.assertNotIn("fake-openai-api-key-value", plan.shell_command())
+        self.assertNotIn("OPENAI_API_KEY", plan.command)
+
+    def test_codex_api_key_broker_requires_codex_command(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "agent command to start with codex"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("codex"),
+                        workspace=Path(directory),
+                        network="provider",
+                        agent_args=("--", "python", "-V"),
+                        codex_api_key_broker_env="OPENAI_API_KEY",
+                    )
+                )
+
     def test_empty_provider_allowlist_behavior_is_explicit_for_each_network_mode(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)

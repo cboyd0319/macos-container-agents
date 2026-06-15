@@ -176,17 +176,20 @@
       "priority": 5,
       "area": "security",
       "title": "Host-side auth broker boundary",
-      "user_visible_behavior": "`runhaven auth status` and `runhaven auth explain AGENT` describe the future credential broker boundary without reading or printing secrets.",
+      "user_visible_behavior": "`runhaven auth status` and `runhaven auth explain AGENT` describe the credential broker boundary without reading or printing secrets. Codex can opt into a host-side API-key broker with `--network provider --codex-api-key-broker-env NAME`.",
       "status": "passing",
       "dependencies": [
         "provider-egress-allowlisting"
       ],
       "verification": [
         "Static auth broker metadata exists for every bundled profile",
+        "Codex API-key broker reads a named host environment variable only during real runs",
+        "Codex broker injects temporary custom-provider config and a placeholder token into the guest without exposing the raw key",
+        "Codex broker only accepts provider-network clients and forwards Responses API create requests",
         "`runhaven auth status` prints broker status without reading credential stores or environment values",
         "`runhaven auth explain AGENT` prints profile-specific auth guidance without brokered secrets",
         "JSON auth output is deterministic and secret-free",
-        "Docs state the design-only status, trust boundary, non-goals, and future acceptance criteria",
+        "Docs state the Codex prototype status, remaining design-only provider status, trust boundary, non-goals, and future acceptance criteria",
         "Source ledger records current provider auth references"
       ],
       "evidence": [
@@ -194,9 +197,10 @@
         "2026-06-15: Added `runhaven auth status` and `runhaven auth explain AGENT` with optional JSON output.",
         "2026-06-15: Focused auth CLI tests passed and verified fake `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` values were not printed.",
         "2026-06-15: Manual `PYTHONPATH=src python3 -m runhaven auth status` and `PYTHONPATH=src python3 -m runhaven auth explain codex` checks passed.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 79 unit tests, pin check, ruff, mypy, and build."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 79 unit tests, pin check, ruff, mypy, and build.",
+        "2026-06-15: Added opt-in Codex API-key broker prototype, focused planner/proxy/CLI tests, and official Codex configuration source notes."
       ],
-      "notes": "This is a design and diagnostics slice only. No credential store is read, no environment value is inspected, and no provider credential is brokered into the guest yet."
+      "notes": "Codex has an opt-in host-side API-key broker prototype. Other agent auth brokers remain design-only. Auth status/explain do not inspect credential stores or environment values. `plan` and `run --dry-run` do not read the named Codex API-key environment variable."
     },
     {
       "id": "repo-logo",

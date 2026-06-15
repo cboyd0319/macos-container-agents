@@ -89,9 +89,9 @@ This is not a complete data-loss or exfiltration solution.
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
   `--env NAME`, malicious repository content may try to misuse it.
-- Host-side auth brokering is design-only. `runhaven auth status` and
-  `runhaven auth explain AGENT` explain the boundary without reading or
-  printing secrets.
+- Host-side auth brokering has an opt-in Codex API-key prototype. Other agent
+  auth brokers remain design-only. `runhaven auth status` and `runhaven auth
+  explain AGENT` explain the boundary without reading or printing secrets.
 - Agent-native approval systems are useful, but they are not a replacement for
   the outer container boundary.
 
@@ -249,7 +249,14 @@ runhaven egress log --limit 20
 runhaven egress log --json
 ```
 
-Pass a token by variable name only:
+Broker a Codex API key without placing the raw value in the guest:
+
+```bash
+runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
+```
+
+Or pass a token by variable name only when you deliberately want that value
+inside the guest:
 
 ```bash
 runhaven run codex --env OPENAI_API_KEY
@@ -258,7 +265,7 @@ runhaven run codex --env OPENAI_API_KEY
 `runhaven` rejects `NAME=value` so secrets do not get copied into shell history or
 dry-run output.
 
-Inspect the future auth broker boundary:
+Inspect the auth broker boundary:
 
 ```bash
 runhaven auth status

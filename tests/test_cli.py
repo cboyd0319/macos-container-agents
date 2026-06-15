@@ -8,6 +8,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
+from runhaven.auth_broker import (
+    CODEX_BROKER_PLACEHOLDER_ENV,
+    CODEX_BROKER_PLACEHOLDER_VALUE,
+    CODEX_BROKER_PROVIDER_ID,
+)
 from runhaven.cli import (
     acquire_state_lock,
     ensure_internal_network,
@@ -311,6 +316,107 @@ class CliTests(unittest.TestCase):
             self.assertEqual(entries[1]["decision"], "denied")
             self.assertEqual(entries[1]["reason"], "not-in-allowlist")
 
+    def test_provider_run_with_codex_api_key_broker_injects_secret_free_config(self) -> None:
+        with TemporaryDirectory() as directory:
+            fake_proxy = Mock()
+            fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.policy_decisions.return_value = ()
+            fake_broker = Mock()
+            fake_broker.server_address = ("0.0.0.0", 48123)
+            thread = Mock()
+            network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                        "RUNHAVEN_CACHE_HOME": directory,
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.inspect_internal_network", return_value=network_info),
+                patch("runhaven.cli.create_provider_proxy", return_value=fake_proxy),
+                patch(
+                    "runhaven.cli.create_codex_api_key_broker",
+                    return_value=fake_broker,
+                ) as broker,
+                patch("runhaven.cli.threading.Thread", return_value=thread),
+                patch("runhaven.cli.delete_container_network"),
+                patch("runhaven.cli.subprocess.call", return_value=0) as call,
+            ):
+                code = main(
+                    [
+                        "run",
+                        "codex",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--codex-api-key-broker-env",
+                        "OPENAI_API_KEY",
+                        "--tty",
+                        "never",
+                    ]
+                )
+
+        self.assertEqual(code, 0)
+        broker.assert_called_once_with("fake-openai-api-key-value", network_info)
+        self.assertEqual(thread.start.call_count, 2)
+        fake_proxy.shutdown.assert_called_once()
+        fake_proxy.server_close.assert_called_once()
+        fake_broker.shutdown.assert_called_once()
+        fake_broker.server_close.assert_called_once()
+        command = call.call_args.args[0]
+        joined = " ".join(command)
+        self.assertIn(
+            f"{CODEX_BROKER_PLACEHOLDER_ENV}={CODEX_BROKER_PLACEHOLDER_VALUE}",
+            command,
+        )
+        self.assertIn(f'model_provider="{CODEX_BROKER_PROVIDER_ID}"', command)
+        self.assertIn(
+            f'model_providers.{CODEX_BROKER_PROVIDER_ID}.base_url='
+            '"http://192.168.130.1:48123/v1"',
+            command,
+        )
+        self.assertIn(
+            f'model_providers.{CODEX_BROKER_PROVIDER_ID}.env_key='
+            f'"{CODEX_BROKER_PLACEHOLDER_ENV}"',
+            command,
+        )
+        self.assertIn("NO_PROXY=localhost,127.0.0.1,::1,192.168.130.1", command)
+        self.assertNotIn("fake-openai-api-key-value", joined)
+        self.assertNotIn("OPENAI_API_KEY", joined)
+
+    def test_provider_run_with_codex_api_key_broker_requires_host_env_first(self) -> None:
+        with TemporaryDirectory() as directory:
+            error_output = io.StringIO()
+            with (
+                redirect_stderr(error_output),
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=True),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(
+                    [
+                        "run",
+                        "codex",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--codex-api-key-broker-env",
+                        "OPENAI_API_KEY",
+                        "--tty",
+                        "never",
+                    ]
+                )
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        self.assertIn("OPENAI_API_KEY is not set", error_output.getvalue())
+
     def test_egress_log_prints_recent_policy_entries(self) -> None:
         with TemporaryDirectory() as directory:
             log_path = Path(directory) / "egress-policy.jsonl"
@@ -369,8 +475,8 @@ class CliTests(unittest.TestCase):
             patch.dict(
                 "os.environ",
                 {
-                    "OPENAI_API_KEY": "sk-test-secret-value",
-                    "ANTHROPIC_API_KEY": "anthropic-test-secret-value",
+                    "OPENAI_API_KEY": "fake-openai-api-key-value",
+                    "ANTHROPIC_API_KEY": "fake-anthropic-api-key-value",
                 },
                 clear=False,
             ),
@@ -380,14 +486,15 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         text = output.getvalue()
-        self.assertIn("Auth broker: design-only", text)
+        self.assertIn("Auth broker: codex-api-key-prototype", text)
         self.assertIn("Credential stores inspected: no", text)
         self.assertIn("Environment values inspected: no", text)
         self.assertIn("Secrets printed: no", text)
         for profile in ("antigravity", "claude", "codex", "copilot", "gemini", "shell"):
             self.assertIn(profile, text)
-        self.assertNotIn("sk-test-secret-value", text)
-        self.assertNotIn("anthropic-test-secret-value", text)
+        self.assertIn("api-key-prototype", text)
+        self.assertNotIn("fake-openai-api-key-value", text)
+        self.assertNotIn("fake-anthropic-api-key-value", text)
 
     def test_auth_explain_prints_profile_boundary(self) -> None:
         output = io.StringIO()
@@ -397,16 +504,20 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("Profile: codex", text)
-        self.assertIn("Auth broker: design-only", text)
-        self.assertIn("OpenAI API key sign-in", text)
-        self.assertIn("nothing brokered by RunHaven today", text)
+        self.assertIn("Auth broker: api-key-prototype", text)
+        self.assertIn("OpenAI API key through --codex-api-key-broker-env NAME", text)
+        self.assertIn("RUNHAVEN_CODEX_BROKER_TOKEN", text)
         self.assertIn("Provider hosts: api.openai.com, chatgpt.com", text)
-        self.assertIn("OPENAI_API_KEY by name only", text)
+        self.assertIn("headless API-key run", text)
 
     def test_auth_explain_json_is_static_and_secret_free(self) -> None:
         output = io.StringIO()
         with (
-            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-secret-value"}, clear=False),
+            patch.dict(
+                "os.environ",
+                {"OPENAI_API_KEY": "fake-openai-api-key-value"},
+                clear=False,
+            ),
             redirect_stdout(output),
         ):
             code = main(["auth", "explain", "codex", "--json"])
@@ -418,7 +529,7 @@ class CliTests(unittest.TestCase):
         self.assertFalse(payload["environment_values_inspected"])
         self.assertFalse(payload["secrets_printed"])
         self.assertIn("api.openai.com", payload["provider_hosts"])
-        self.assertNotIn("sk-test-secret-value", output.getvalue())
+        self.assertNotIn("fake-openai-api-key-value", output.getvalue())
 
     def test_why_host_explains_ip_literal_rejection(self) -> None:
         output = io.StringIO()
