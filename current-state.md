@@ -71,6 +71,14 @@ policy, and repo-owned verification route.
 - Started the Apple Container pre-Tauri coverage review and added
   `docs/APPLE_CONTAINER_GAP_ANALYSIS.md` as the action ledger for remaining
   runtime, security, and verification gaps.
+- Added `scripts/apple_container_smoke.sh` as an opt-in local Apple
+  `container` smoke harness. The default path covers `doctor`, shell image
+  readiness, internal read-only workspace behavior, active-run
+  status/logs-follow/stop cleanup, provider planning, and exact cleanup.
+  `--with-provider` adds live provider allowlist and egress-denial coverage.
+- Fixed the Rust provider CONNECT proxy relay after the live smoke exposed TLS
+  tunnel failures. Accepted/tunnel sockets are forced back to blocking mode,
+  and CONNECT header reads no longer consume tunneled bytes.
 
 ## Trusted Verification
 
@@ -112,6 +120,15 @@ policy, and repo-owned verification route.
   `cargo run --locked --bin runhaven -- image build shell --dry-run`,
   `container system version`, `container system property list`, and
   `git diff --check`.
+- Apple Container smoke harness checks passed: `bash -n
+  scripts/apple_container_smoke.sh`, `cargo fmt --check`,
+  `cargo test --locked provider::egress -- --nocapture`,
+  `scripts/apple_container_smoke.sh`, and
+  `scripts/apple_container_smoke.sh --with-provider`.
+- Cleanup checks after smoke/debug runs passed: `target/debug/runhaven state
+  list` reported no RunHaven state volumes, `target/debug/runhaven runs active`
+  reported no active runs, and `target/debug/runhaven network list` showed only
+  the shared `runhaven-volume-prep-internal` network.
 
 ## Touched Surfaces
 
@@ -131,6 +148,7 @@ policy, and repo-owned verification route.
 - `docs/harness/`
 - `feature_list.json`
 - `images/`
+- `scripts/`
 - `src/`
 - `tests/`
 
@@ -140,6 +158,8 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Complete the Apple Container pre-Tauri gap-analysis actions before starting
-Tauri/UI work. Keep verification local while alpha CI is disabled, and run the
-planned Rust expert plus Rust skill repo-wide review as a backlog task.
+Close the remaining Apple Container P1 gaps before Tauri/UI planning: add
+fixture coverage for Apple `container` JSON schema assumptions and decide
+whether `doctor` should enforce the full runtime pin surface. Keep verification
+local while alpha CI is disabled, and run the planned Rust expert plus Rust
+skill repo-wide review as a backlog task.

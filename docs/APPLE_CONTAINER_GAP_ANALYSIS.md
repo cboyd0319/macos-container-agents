@@ -14,6 +14,11 @@ closed before Tauri/UI work starts.
   `container` CLI 1.0.0 build `release` commit `ee848e3`.
 - Runtime service evidence: `container system status` reported running
   `container-apiserver` 1.0.0 commit `ee848e3`.
+- Live Rust smoke evidence: `scripts/apple_container_smoke.sh --with-provider`
+  passed on 2026-06-16, covering `doctor`, shell image readiness, internal
+  read-only workspace behavior, active-run status/logs-follow/stop cleanup,
+  provider allowlist behavior, denied provider/direct egress, and exact
+  temporary state/network cleanup.
 - Runtime property evidence: `container system version` and
   `container system property list` matched the reviewed Apple `container`
   commit, builder image `ghcr.io/apple/container-builder-shim/builder:0.12.0`,
@@ -51,6 +56,7 @@ Apple `container` 1.0.0 behavior.
 | Active run control | `runs status`, `attach`, `logs-follow`, `stop`, `kill`, and `repair` route through Apple `container inspect`, `exec`, `logs`, `stop`, and `kill` with RunHaven-owned container-name validation. | `src/runhaven/runtime/active/` |
 | Image lifecycle | `image build` uses Apple `container build` with source-digest labels. `image doctor` reads Apple image and volume listings without mutating resources. | `src/runhaven/image/build.rs`, `src/runhaven/image/doctor.rs` |
 | Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `src/runhaven/runtime/network.rs`, `src/runhaven/runtime/state.rs` |
+| Opt-in live smoke | `scripts/apple_container_smoke.sh` proves the internal runtime path by default and adds provider egress coverage with `--with-provider`; it is intentionally local-only while alpha CI is disabled. | `scripts/apple_container_smoke.sh`, `docs/harness/feedback/verification-matrix.md` |
 | Machine avoidance | RunHaven uses task-scoped `container run`, not `container machine`, because machine defaults can mount the host home directory read-write. | `docs/ARCHITECTURE.md`, Apple `docs/container-machine.md` |
 
 ## Intentional Decisions
@@ -71,8 +77,8 @@ Apple `container` 1.0.0 behavior.
 
 | Priority | Gap | Why It Matters | Suggested Action | Verification |
 | --- | --- | --- | --- | --- |
-| P0 | Rust-era live runtime smokes are thin after the Python-to-Rust conversion. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Add an opt-in local smoke script or command set that runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, `runs status/logs-follow/repair` where practical, and cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | Script exits 0 on macOS 26+ with Apple `container` 1.0.0 and records cleanup evidence. |
-| P0 | Provider-mode live smoke needs a fresh Rust implementation pass. | Provider mode depends on host-only networking, network inspect schema, gateway binding, proxy env injection, and cleanup. | Re-run or port the provider egress smoke against the Rust CLI, including allowed proxied HTTPS, denied proxied host, denied IP literal, denied direct DNS/IP, and no leftover provider networks. | Focused provider smoke passes and `runhaven network list` shows no stale provider network. |
+| P0 | Rust-era live runtime smokes must stay easy to run before Tauri/UI work. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Use `scripts/apple_container_smoke.sh` as the opt-in local smoke. It runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, active-run status/logs-follow/stop/repair cleanup, provider plan guidance, and exact resource cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | `scripts/apple_container_smoke.sh` exits 0 on macOS 26+ with Apple `container` 1.0.0 and records cleanup evidence. |
+| P0 | Provider-mode live smoke must stay covered in Rust. | Provider mode depends on host-only networking, network inspect schema, gateway binding, proxy env injection, and cleanup. | Use `scripts/apple_container_smoke.sh --with-provider` for release and pre-Tauri provider evidence. Keep the default smoke usable without live provider network/proxy dependencies. | Provider smoke passes with allowed proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct DNS/IP egress, and no leftover provider network. |
 | P1 | Apple `container` JSON schema assumptions need fixtures. | `container image list --format json`, `container network inspect`, and `container inspect` are parsed directly. Upstream shape drift could break runtime commands. | Add fixture-based tests for image list, network inspect, container inspect, missing-container repair stderr, and alternate field names observed in docs/source. | `cargo test --locked` covers parser fixtures without requiring Apple `container`. |
 | P1 | `doctor` does not yet enforce the full Apple `container` pin surface. | Repo policy records CLI version, commit, installer hash, builder image, vminit image, and kernel. `doctor` currently checks CLI semver and service status only, so config overrides can drift while version still says 1.0.0. | Extend `doctor` or add a read-only runtime-pin check that compares `container system version` and `container system property list` to `pins.toml`, or narrow docs if the repo only intends a softer advisory. | `runhaven doctor` or a focused check reports mismatched commit, builder image, vminit image, or kernel without mutating config. |
 | P1 | Image builder lifecycle is not surfaced. | `container build` uses a builder VM with its own CPU, memory, image, and possible stale state. A GUI build button needs actionable diagnostics instead of a raw failure. | Extend `image doctor` or setup docs to read `container builder status` when available and explain builder start/delete/resource remedies without mutating by default. | `image doctor` smoke reports builder guidance; no builder mutation occurs without an explicit command. |
@@ -81,6 +87,11 @@ Apple `container` 1.0.0 behavior.
 | P1 | Provider-mode local-network/privacy troubleshooting is not documented. | The proxy binds on the host side and must be reachable from a host-only Apple `container` network. Apple source includes local-network privacy handling, so failures may present as macOS permission or reachability issues rather than RunHaven policy errors. | During the provider smoke pass, capture any macOS local-network/privacy prompts or failures and add a troubleshooting note if observed. | Provider smoke proves guest-to-host proxy reachability on macOS 26.5.1, or docs record the observed prompt/failure mode and next action. |
 | P2 | SSH forwarding lacks a live RunHaven smoke. | `--ssh` uses Apple `container --ssh`, which mounts an SSH agent socket rather than raw keys. This is safer but still a credential boundary. | Add a no-secret smoke that verifies the planned command shape and, when a disposable agent socket is available, confirms the guest sees only the forwarded socket path. | Plan test plus optional live smoke documented as skipped when no disposable socket exists. |
 | P2 | Apple `container` release update playbook is manual. | Runtime pin updates require source review, helper version review, command help review, docs updates, and live smokes. | Add a small release-update checklist under docs or harness release controls. | Checklist names version, installer SHA, signing team ID, helper versions, command help diffs, and smoke commands. |
+
+Current P0 status: the opt-in Rust smoke harness exists and passed with
+provider coverage on 2026-06-16. Re-run it before Tauri/UI work and before
+release hardening; the remaining known pre-Tauri gaps are P1/P2 unless provider
+runtime behavior changes again.
 
 ## Backlog Additions
 

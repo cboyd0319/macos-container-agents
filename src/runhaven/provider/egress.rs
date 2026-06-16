@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{Read, Write};
 use std::net::{IpAddr, Shutdown, SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -197,6 +197,7 @@ fn handle_proxy_client(
     peer: SocketAddr,
     state: Arc<ProxyState>,
 ) -> Result<()> {
+    stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(state.connect_timeout))?;
     stream.set_write_timeout(Some(state.connect_timeout))?;
     if !allows_client(&state, peer.ip()) {
@@ -204,18 +205,12 @@ fn handle_proxy_client(
         return Ok(());
     }
 
-    let mut reader = BufReader::new(stream.try_clone()?);
-    let mut request_line = String::new();
-    if reader.read_line(&mut request_line)? == 0 || request_line.len() > MAX_HEADER_BYTES {
+    let Some(request_line) = read_proxy_request_line(&mut stream)? else {
         send_proxy_response(&mut stream, 400, "Bad Request")?;
         return Ok(());
-    }
+    };
     let parts = request_line.split_whitespace().collect::<Vec<_>>();
     if parts.len() != 3 {
-        send_proxy_response(&mut stream, 400, "Bad Request")?;
-        return Ok(());
-    }
-    if !discard_headers(&mut reader)? {
         send_proxy_response(&mut stream, 400, "Bad Request")?;
         return Ok(());
     }
@@ -262,7 +257,7 @@ fn handle_proxy_client(
             return Ok(());
         }
     };
-    let mut upstream = match connect_any(&addrinfos, state.connect_timeout) {
+    let upstream = match connect_any(&addrinfos, state.connect_timeout) {
         Ok(stream) => stream,
         Err(_) => {
             record_decision(&state, &host, port, "allowed", "allowed", &matched_rule);
@@ -273,7 +268,7 @@ fn handle_proxy_client(
     record_decision(&state, &host, port, "allowed", "allowed", &matched_rule);
     stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")?;
     stream.flush()?;
-    relay(stream, &mut upstream, state.relay_timeout);
+    relay(stream, upstream, state.relay_timeout);
     Ok(())
 }
 
@@ -285,17 +280,21 @@ fn allows_client(state: &ProxyState, address: IpAddr) -> bool {
             .any(|network| network.contains(&address))
 }
 
-fn discard_headers(reader: &mut BufReader<TcpStream>) -> Result<bool> {
-    let mut consumed = 0usize;
+fn read_proxy_request_line(reader: &mut impl Read) -> Result<Option<String>> {
+    let mut header = Vec::new();
+    let mut byte = [0u8; 1];
     loop {
-        let mut line = String::new();
-        let read = reader.read_line(&mut line)?;
-        consumed += read;
-        if consumed > MAX_HEADER_BYTES {
-            return Ok(false);
+        if header.len() >= MAX_HEADER_BYTES {
+            return Ok(None);
         }
-        if read == 0 || line == "\r\n" || line == "\n" {
-            return Ok(true);
+        let read = reader.read(&mut byte)?;
+        if read == 0 {
+            return Ok(None);
+        }
+        header.push(byte[0]);
+        if header.ends_with(b"\r\n\r\n") || header.ends_with(b"\n\n") {
+            let request = std::str::from_utf8(&header).context("invalid proxy request header")?;
+            return Ok(request.lines().next().map(str::to_string));
         }
     }
 }
@@ -459,10 +458,15 @@ pub fn parse_connect_target(target: &str) -> Result<(String, u16)> {
     Ok((normalize_host(host)?, port))
 }
 
-fn relay(client: TcpStream, upstream: &mut TcpStream, timeout: Duration) {
+fn relay(client: TcpStream, upstream: TcpStream, timeout: Duration) {
+    let _ = client.set_nonblocking(false);
+    let _ = upstream.set_nonblocking(false);
     let _ = client.set_read_timeout(Some(timeout));
+    let _ = client.set_write_timeout(Some(timeout));
     let _ = upstream.set_read_timeout(Some(timeout));
-    let upstream_read = match upstream.try_clone() {
+    let _ = upstream.set_write_timeout(Some(timeout));
+
+    let mut client_read = match client.try_clone() {
         Ok(stream) => stream,
         Err(_) => return,
     };
@@ -470,22 +474,20 @@ fn relay(client: TcpStream, upstream: &mut TcpStream, timeout: Duration) {
         Ok(stream) => stream,
         Err(_) => return,
     };
-    let mut client_read = match client.try_clone() {
-        Ok(stream) => stream,
-        Err(_) => return,
-    };
-    let mut client_write = match client.try_clone() {
-        Ok(stream) => stream,
-        Err(_) => return,
-    };
-    let to_upstream = thread::spawn(move || {
+    let mut upstream_read = upstream;
+    let mut client_write = client;
+
+    let client_to_upstream = thread::spawn(move || {
         let _ = std::io::copy(&mut client_read, &mut upstream_write);
         let _ = upstream_write.shutdown(Shutdown::Write);
     });
-    let mut upstream_read = upstream_read;
-    let _ = std::io::copy(&mut upstream_read, &mut client_write);
-    let _ = client.shutdown(Shutdown::Both);
-    let _ = to_upstream.join();
+    let upstream_to_client = thread::spawn(move || {
+        let _ = std::io::copy(&mut upstream_read, &mut client_write);
+        let _ = client_write.shutdown(Shutdown::Write);
+    });
+
+    let _ = client_to_upstream.join();
+    let _ = upstream_to_client.join();
 }
 
 #[cfg(test)]
