@@ -1,6 +1,6 @@
 # Research And Source Ledger
 
-Last reviewed: 2026-06-14
+Last reviewed: 2026-06-16
 
 This file records sources used for product, security, runtime, and pinning
 decisions. Update it whenever a dependency pin, runtime assumption, security
@@ -217,6 +217,24 @@ Local reference harness:
 - A local reference harness repo was consulted for instruction, pin-check, and
   package layout patterns. Machine-specific paths are intentionally omitted
   from this ledger.
+
+## Tauri UI Planning Sources
+
+Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
+
+- Tauri v2 security overview:
+  <https://v2.tauri.app/security/>.
+  Reviewed for the Rust core versus WebView trust boundary and the IPC
+  boundary that exposes privileged operations.
+- Tauri v2 capabilities:
+  <https://v2.tauri.app/security/capabilities/>.
+  Reviewed for window/WebView capability scoping, capability files under
+  `src-tauri/capabilities`, and the risk of broad default command exposure
+  unless the app manifest narrows registered commands.
+- Tauri v2 permissions:
+  <https://v2.tauri.app/security/permissions/>.
+  Reviewed for explicit command privileges, permission scopes, and capability
+  references.
 
 ## Package And Image Sources
 

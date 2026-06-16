@@ -87,6 +87,8 @@ direction. The live feature status and verification evidence are tracked in
 - use the `apple-container-expert` agent with the Apple Container skill for
   Apple `container` runtime, networking, source, service, registry, machine,
   and security-boundary work.
+- add a short top-of-file description to every maintained script so future
+  contributors can see what each script is and what it does before running it.
 
 ## Pre-Tauri Apple Container Readiness
 
@@ -99,7 +101,9 @@ direction. The live feature status and verification evidence are tracked in
   commit, builder image, vminit image, and Kata kernel pins.
 - Keep `image doctor` surfacing read-only builder status and resource guidance
   before adding UI flows that trigger rebuilds.
-- Add UI-oriented resource guardrails for per-container VM memory behavior.
+- Keep [`docs/TAURI_UI_GUARDRAILS.md`](TAURI_UI_GUARDRAILS.md) as the
+  pre-implementation contract for UI resource warnings, approval gates, typed
+  Rust commands, and narrow Tauri capabilities.
 
 ## Phase 6: Repeatable Workflows
 

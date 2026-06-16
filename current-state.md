@@ -101,6 +101,11 @@ policy, and repo-owned verification route.
 - Updated `scripts/apple_container_smoke.sh` to assert that
   `image doctor shell` reports builder status and large-build resource
   guidance.
+- Added `docs/TAURI_UI_GUARDRAILS.md` as the pre-implementation contract for
+  future Tauri resource warnings, approval gates, typed Rust commands, narrow
+  capabilities, and denied-by-default WebView access.
+- Added an accepted backlog item to give every maintained script a short
+  top-of-file description explaining what it is and what it does.
 
 ## Trusted Verification
 
@@ -171,6 +176,10 @@ policy, and repo-owned verification route.
   `cargo run --locked --bin runhaven -- setup --agent shell`,
   `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
   check, Rust source size scan, and `git diff --check`.
+- Tauri guardrail and backlog-doc checks passed: official Tauri v2 security,
+  capabilities, and permissions docs reviewed; pin policy, JSON validation,
+  local Markdown link check, active-doc platform/stale-command scan, and
+  `git diff --check` passed.
 
 ## Touched Surfaces
 
@@ -187,6 +196,7 @@ policy, and repo-owned verification route.
 - `CONTRIBUTING.md`
 - `docs/`
 - `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
+- `docs/TAURI_UI_GUARDRAILS.md`
 - `docs/harness/`
 - `feature_list.json`
 - `images/`
@@ -202,8 +212,7 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the remaining Apple Container P1 gaps before Tauri/UI planning: define
-Tauri-facing resource and approval guardrails, then decide whether provider
-local-network/privacy troubleshooting needs a dedicated note. Keep verification
-local while alpha CI is disabled, and run the planned Rust expert plus Rust
-skill repo-wide review as a backlog task.
+Close the remaining provider local-network/privacy troubleshooting gap, then
+decide whether to do the accepted script-description cleanup or the planned
+Rust expert plus Rust skill repo-wide review next. Keep verification local
+while alpha CI is disabled.
