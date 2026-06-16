@@ -168,6 +168,30 @@
       "notes": "Raw log viewing remains a separate design because logs can contain secrets or workspace content. Mutating run-control operations remain CLI-first."
     },
     {
+      "id": "tauri-log-viewing-design",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri raw log viewing design",
+      "user_visible_behavior": "RunHaven has an accepted secure-default plan for desktop log viewing: show status first, then let the user explicitly request a bounded raw output snapshot for one validated active run.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-live-run-status",
+        "run-observability"
+      ],
+      "verification": [
+        "The design treats raw container stdio as sensitive output that can include secrets or workspace content",
+        "Completed-run `runs log` records remain separate from raw active-container output",
+        "The first implementation is bounded snapshot only, not live streaming",
+        "The plan uses a typed Rust command outside `main-read` and a narrow capability instead of a generic Apple `container` bridge",
+        "The frontend may keep only the current visible buffer in component state and must not durably store raw logs",
+        "Apple `container logs` local help and existing RunHaven `runs logs-follow` routing were reviewed"
+      ],
+      "evidence": [
+        "2026-06-16: Added `docs/TAURI_LOG_VIEWING_DESIGN.md` with the accepted `get_log_snapshot` implementation plan, Apple `container logs` constraints, trust boundary, milestones, and verification route."
+      ],
+      "notes": "Implementation remains future work. The default UI should not show raw logs automatically; it should require explicit sensitive-output acknowledgement before loading a bounded snapshot."
+    },
+    {
       "id": "rust-cli-conversion",
       "priority": 1,
       "area": "platform",

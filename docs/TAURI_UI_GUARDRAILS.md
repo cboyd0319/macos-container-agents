@@ -84,9 +84,10 @@ Current alpha launch gate:
 
 Remaining launch-readiness gaps before this flow is complete:
 
-- raw log feedback. Raw logs must not be stored in frontend state without a
-  dedicated design because agent output can contain secrets or workspace
-  content.
+- raw log snapshot implementation following
+  [`TAURI_LOG_VIEWING_DESIGN.md`](TAURI_LOG_VIEWING_DESIGN.md). Raw logs must
+  not be shown automatically or stored durably because agent output can contain
+  secrets or workspace content.
 
 Warnings:
 
@@ -99,8 +100,12 @@ The current dashboard command already returns setup, active-run, recent-run,
 agent, and warning summaries. Image and builder status are available through
 typed Rust commands. Launch resource warnings are computed in the Rust plan and
 launch-confirmation path. Live run status is exposed through a typed read-only
-Rust command that returns sanitized metadata only. Add dedicated typed Rust
-commands for maintenance status before parsing prose in the frontend.
+Rust command that returns sanitized metadata only. Log viewing should start
+with a bounded `get_log_snapshot` command that requires a sensitive-output
+acknowledgement, returns capped container stdio for one validated active run,
+and does not add live streaming until a separate event/channel design exists.
+Add dedicated typed Rust commands for maintenance status before parsing prose
+in the frontend.
 
 ## Approval Gates
 
@@ -113,12 +118,18 @@ Read-only by default:
 - `image doctor`;
 - `runs active`;
 - `runs status`;
-- `runs list/show/log`;
+- `runs list/show/log` for completed-run metadata, provider policy, and auth
+  broker records;
 - `network list`;
 - `state list`;
 - `auth status/explain/log`;
 - `why host`;
 - `egress log`.
+
+Sensitive read acknowledgement required:
+
+- bounded raw active-container stdio snapshots from `container logs`, exposed
+  only through a typed `get_log_snapshot` command outside `main-read`.
 
 Explicit confirmation required:
 

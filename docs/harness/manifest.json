@@ -48,6 +48,7 @@
     "docs/NON_UI_BACKLOG.md",
     "docs/TAURI_UI_RESEARCH_PLAN.md",
     "docs/TAURI_UI_GUARDRAILS.md",
+    "docs/TAURI_LOG_VIEWING_DESIGN.md",
     "ui/package.json",
     "ui/package-lock.json",
     "ui/src/app/App.svelte",
@@ -150,6 +151,13 @@
       "main-read",
       "folder-pick",
       "Explicit confirmation required"
+    ],
+    "docs/TAURI_LOG_VIEWING_DESIGN.md": [
+      "accepted implementation plan",
+      "bounded snapshot command",
+      "confirm_sensitive_output",
+      "container logs -n",
+      "Snapshot before stream"
     ],
     "ui/package.json": [
       "tauri:build",

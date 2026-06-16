@@ -88,10 +88,15 @@ tests are in place.
   reuses the existing sanitized active-run status payload and returns marker
   status, container state, resources, image, and network metadata without raw
   logs, raw Apple inspect payloads, command arguments, environment, or mounts.
+- Added `docs/TAURI_LOG_VIEWING_DESIGN.md` as the accepted raw-log viewing
+  plan. Desktop log viewing should start with status first, then an explicitly
+  requested bounded `get_log_snapshot` for one validated active run. The plan
+  keeps raw logs out of durable frontend storage, rejects automatic redaction
+  promises, and defers live streaming until a separate event/channel design.
 - Remaining launch-readiness gaps before the UI launch flow is complete are
-  raw log feedback and dedicated run controls. Stop, kill, attach, repair,
-  image build, state cleanup, network cleanup, and worktree review remain
-  CLI-first.
+  raw log snapshot implementation and dedicated run controls. Stop, kill,
+  attach, repair, image build, state cleanup, network cleanup, and worktree
+  review remain CLI-first.
 - Fixed the Svelte 5 blank-page runtime failure by replacing the old
   `new App(...)` entrypoint with `mount(App, ...)`.
 - Added exact-pinned Playwright browser coverage for the UI shell so runtime
@@ -215,6 +220,17 @@ tests are in place.
 
 ## Trusted Verification
 
+- Tauri raw-log design checks: macOS 26.5.1 arm64 host verified,
+  `container --version` returned Apple `container` CLI 1.0.0 build `release`
+  commit `ee848e3`, `container logs --help` confirmed
+  `container logs [--boot] [--follow] [-n <n>] <container-id>`, and the
+  existing `runs logs-follow` path was inspected in
+  `src/runhaven/runtime/active/mod.rs`.
+- Apple Container expert review completed for the log-viewing boundary and
+  supported bounded snapshot before live streaming.
+- Tauri raw-log design docs verification passed: `cargo run --locked --bin
+  runhaven-check-pins`, JSON validation, local Markdown link check, stale-text
+  scan, and `git diff --check`.
 - Tauri launch red checks failed first for missing launch contract pieces:
   `cargo test --manifest-path src-tauri/Cargo.toml launch_run` and
   `npm --prefix ui test -- --run`.
@@ -462,6 +478,7 @@ tests are in place.
 - `docs/ARCHITECTURE.md`
 - `docs/PINNING.md`
 - `docs/ROADMAP.md`
+- `docs/TAURI_LOG_VIEWING_DESIGN.md`
 - `docs/TAURI_UI_GUARDRAILS.md`
 - `docs/TAURI_UI_RESEARCH_PLAN.md`
 - `docs/harness/boundaries/component-inventory.md`
@@ -488,10 +505,11 @@ tests are in place.
 
 ## Next Step
 
-Choose the next Tauri/UI slice deliberately. The best next step is raw log
-viewing design or the first explicit run-control operation. Raw logs need a
-dedicated design because agent output can contain secrets or workspace content.
-For mutating controls, add stop, kill, attach, repair, image build, state
+Implement the first raw-log snapshot slice from
+`docs/TAURI_LOG_VIEWING_DESIGN.md`: add a typed `get_log_snapshot` command for
+one validated active run, require sensitive-output acknowledgement, cap lines
+and bytes, render only the current visible buffer, and keep live streaming out
+of scope. After that, add stop, kill, attach, repair, image build, state
 cleanup, network cleanup, and worktree review one at a time with typed Rust
 commands, explicit confirmation, focused tests, and narrow capabilities. Keep
 `--ssh` fail-closed until a no-secret non-root Apple `container` smoke proves
