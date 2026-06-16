@@ -29,11 +29,13 @@
         "Python package, scripts, tests, and packaging files are removed",
         "Cargo crate builds and tests with the locked dependency graph",
         "Pin policy is enforced by the Rust `runhaven-check-pins` binary",
+        "`runhaven doctor` enforces the reviewed Apple `container` runtime commit and helper pin surface",
         "Harness docs and current state route contributors through Rust verification"
       ],
       "evidence": [
         "2026-06-16: `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build --locked`, and `./init.sh` passed after the Rust conversion.",
-        "2026-06-16: direct CLI smokes passed for `target/debug/runhaven agents`, `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`, `target/debug/runhaven doctor`, and `target/debug/runhaven image build shell --dry-run`."
+        "2026-06-16: direct CLI smokes passed for `target/debug/runhaven agents`, `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`, `target/debug/runhaven doctor`, and `target/debug/runhaven image build shell --dry-run`.",
+        "2026-06-16: `runhaven doctor` gained JSON-backed checks for `container system version --format json` and `container system property list --format json`, failing closed on mismatched runtime commit, builder image, vminit image, or Kata kernel pins."
       ],
       "notes": "Historical feature evidence below still records the Python implementation that existed before the 2026-06-16 conversion."
     },

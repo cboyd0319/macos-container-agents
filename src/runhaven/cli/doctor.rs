@@ -1,5 +1,7 @@
 use std::process::Command;
 
+mod runtime_pins;
+
 pub const PINNED_APPLE_CONTAINER_VERSION: &str = "1.0.0";
 
 #[derive(Clone, Debug)]
@@ -55,12 +57,16 @@ pub fn collect_checks() -> Vec<Check> {
     checks.push(Check::new(
         "Apple container CLI",
         container_path.is_some(),
-        container_path.unwrap_or_else(|| "not found on PATH".to_string()),
+        container_path
+            .as_deref()
+            .unwrap_or("not found on PATH")
+            .to_string(),
         "Install Apple container 1.0.0 and run `container system start`.",
     ));
-    if find_on_path("container").is_some() {
+    if container_path.is_some() {
         checks.push(container_version_check());
         checks.push(container_status_check());
+        checks.extend(runtime_pins::container_runtime_pin_checks());
     }
     checks
 }

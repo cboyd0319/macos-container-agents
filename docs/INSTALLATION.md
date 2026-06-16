@@ -50,7 +50,8 @@ runhaven doctor
 ```
 
 `doctor` checks Rust, macOS, Apple silicon, the pinned Apple `container`
-version, and Apple container system status.
+version and commit, Apple container system status, and the reviewed runtime
+helper surface: builder image, vminit image, and Kata kernel.
 
 ## First Run
 

@@ -93,8 +93,10 @@ direction. The live feature status and verification evidence are tracked in
 - Action the coverage gaps in
   [`docs/APPLE_CONTAINER_GAP_ANALYSIS.md`](APPLE_CONTAINER_GAP_ANALYSIS.md)
   before starting Tauri/UI work.
-- Add opt-in live Apple `container` smoke coverage for command shapes and JSON
+- Keep opt-in live Apple `container` smoke coverage for command shapes and JSON
   parsing that unit tests cannot prove.
+- Keep `runhaven doctor` enforcing the reviewed Apple `container` runtime
+  commit, builder image, vminit image, and Kata kernel pins.
 - Review builder resource and lifecycle guidance for image builds before adding
   UI flows that trigger rebuilds.
 - Add UI-oriented resource guardrails for per-container VM memory behavior.

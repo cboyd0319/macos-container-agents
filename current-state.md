@@ -86,11 +86,19 @@ policy, and repo-owned verification route.
   trusts only actual image-name fields instead of all descriptor annotations,
   and active-run repair no longer removes markers for unrelated `not found`
   inspect failures.
+- Extended `runhaven doctor` with JSON-backed Apple `container` runtime pin
+  checks. It now fails closed on mismatched runtime commit, builder image,
+  vminit image, or Kata kernel fields from the structured
+  `container system version --format json` and
+  `container system property list --format json` probes.
+- Split the new doctor runtime-pin implementation into
+  `src/runhaven/cli/doctor/runtime_pins.rs` so the main doctor module stays
+  well under the repo's Rust file-size ceiling.
 
 ## Trusted Verification
 
 - `cargo fmt --check`: passed.
-- `cargo test --locked`: passed with 7 unit tests and 2 integration tests.
+- `cargo test --locked`: passed with 30 library tests and 2 integration tests.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo run --locked --bin runhaven-check-pins`: passed.
 - `cargo build --locked`: passed.
@@ -139,6 +147,15 @@ policy, and repo-owned verification route.
 - Apple Container JSON parser fixture checks passed: `cargo fmt --check` and
   `cargo test --locked` ran 22 library tests and 2 integration tests covering
   the fixture-backed parsers and existing CLI behavior.
+- Apple Container runtime pin enforcement checks passed: Apple Container expert
+  read-only review, `container system version --format json`,
+  `container system property list --format json`, focused doctor parser tests,
+  `cargo fmt --check`, `cargo test --locked`,
+  `cargo clippy --all-targets -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins`,
+  `cargo run --locked --bin runhaven -- doctor`,
+  `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
+  check, Rust source size scan, and `git diff --check`.
 
 ## Touched Surfaces
 
@@ -160,6 +177,7 @@ policy, and repo-owned verification route.
 - `images/`
 - `scripts/`
 - `src/`
+- `src/runhaven/cli/doctor/`
 - `tests/`
 
 ## Blockers
@@ -168,8 +186,7 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the remaining Apple Container P1 gaps before Tauri/UI planning: decide
-whether `doctor` should enforce the full runtime pin surface, then surface image
-builder lifecycle diagnostics. Keep verification local while alpha CI is
-disabled, and run the planned Rust expert plus Rust skill repo-wide review as a
-backlog task.
+Close the remaining Apple Container P1 gaps before Tauri/UI planning: surface
+image builder lifecycle diagnostics, then define Tauri-facing resource and
+approval guardrails. Keep verification local while alpha CI is disabled, and
+run the planned Rust expert plus Rust skill repo-wide review as a backlog task.

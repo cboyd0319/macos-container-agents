@@ -44,3 +44,7 @@ The source record for current-version checks is
 Apple `container` runtime helper images and the default Kata kernel are managed
 by Apple `container`, not by this repo. Record observed values in `pins.toml`
 and verify the signed installer before changing the minimum supported runtime.
+`runhaven doctor` compares the installed runtime commit and structured runtime
+helper properties with the recorded pins and fails closed on drift. Installer
+SHA-256, signing team ID, and kernel SHA-256 remain release-evidence fields
+unless a separate package or filesystem hash check is added.

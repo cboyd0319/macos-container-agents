@@ -29,10 +29,11 @@ how to choose a workspace without mounting host credential paths.
 runhaven doctor
 ```
 
-`doctor` checks macOS, Apple silicon, the pinned Apple `container` version, and
-the Apple container system status when the CLI is installed. A
-newer Apple `container` release should fail until this repo updates its reviewed
-pin.
+`doctor` checks macOS, Apple silicon, the pinned Apple `container` version and
+commit, the Apple container system status, and the reviewed runtime helper
+surface: builder image, vminit image, and Kata kernel. A newer Apple
+`container` release or helper drift should fail until this repo updates its
+reviewed pins.
 
 ## Build an Agent Image
 
