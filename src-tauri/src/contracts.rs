@@ -147,6 +147,27 @@ pub(crate) struct RunStatusResponse {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct LogSnapshotRequest {
+    pub run_id: String,
+    pub lines: Option<u32>,
+    pub confirm_sensitive_output: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LogSnapshotResponse {
+    pub run_id: String,
+    pub captured_at: String,
+    pub requested_lines: u32,
+    pub text: String,
+    pub returned_lines: usize,
+    pub truncated: bool,
+    pub source: String,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RunPlanRequest {
     pub agent: String,
     pub workspace_path: String,

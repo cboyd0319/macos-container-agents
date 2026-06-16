@@ -93,10 +93,15 @@ tests are in place.
   requested bounded `get_log_snapshot` for one validated active run. The plan
   keeps raw logs out of durable frontend storage, rejects automatic redaction
   promises, and defers live streaming until a separate event/channel design.
+- Implemented the first raw-log snapshot slice. `get_log_snapshot` lives behind
+  `run-control`, requires sensitive-output acknowledgement, validates the run
+  id and RunHaven-owned active container marker before invoking Apple
+  `container`, calls only `container logs -n`, drains stdout/stderr with fixed
+  memory, caps returned text, and renders only the current visible snapshot in
+  Svelte component state.
 - Remaining launch-readiness gaps before the UI launch flow is complete are
-  raw log snapshot implementation and dedicated run controls. Stop, kill,
-  attach, repair, image build, state cleanup, network cleanup, and worktree
-  review remain CLI-first.
+  dedicated run controls. Stop, kill, attach, repair, image build, state
+  cleanup, network cleanup, and worktree review remain CLI-first.
 - Fixed the Svelte 5 blank-page runtime failure by replacing the old
   `new App(...)` entrypoint with `mount(App, ...)`.
 - Added exact-pinned Playwright browser coverage for the UI shell so runtime
@@ -231,6 +236,31 @@ tests are in place.
 - Tauri raw-log design docs verification passed: `cargo run --locked --bin
   runhaven-check-pins`, JSON validation, local Markdown link check, stale-text
   scan, and `git diff --check`.
+- Tauri raw-log snapshot red checks failed first for missing typed log pieces:
+  `cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture`
+  and `npm --prefix ui test -- --run`.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture`:
+  passed with confirmation, line cap, byte cap, invalid run id, and
+  non-RunHaven container validation tests.
+- Live log snapshot proof passed: `scripts/apple_container_smoke.sh`, then an
+  ignored `log_snapshot_reads_live_active_run` test against a disposable active
+  shell container verified a unique marker and `truncated=true` for oversized
+  output.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 16
+  Tauri command tests plus one ignored live test.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --check`: passed.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
+  passed.
+- `cargo test --locked`: passed with 44 library tests and 6 integration tests.
+- `cargo clippy --all-targets --locked -- -D warnings`: passed.
+- `npm --prefix ui test -- --run`: passed with 15 frontend tests.
+- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
+- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
+  output reveal preview path.
+- `npm --prefix ui run build`: passed with Vite 8.0.16.
+- Browser screenshot review passed for desktop and mobile log snapshot layouts:
+  `/tmp/runhaven-log-snapshot-desktop.png` and
+  `/tmp/runhaven-log-snapshot-mobile.png`.
 - Tauri launch red checks failed first for missing launch contract pieces:
   `cargo test --manifest-path src-tauri/Cargo.toml launch_run` and
   `npm --prefix ui test -- --run`.
@@ -487,6 +517,7 @@ tests are in place.
 - `docs/harness/feedback/verification-matrix.md`
 - `docs/harness/manifest.json`
 - `docs/harness/state/roadmap.md`
+- `src/runhaven/runtime/active/logs.rs`
 - `src/runhaven/harness/pins.rs`
 - `src/runhaven/runtime/launch.rs`
 - `src/runhaven/runtime/lock.rs`
@@ -505,12 +536,10 @@ tests are in place.
 
 ## Next Step
 
-Implement the first raw-log snapshot slice from
-`docs/TAURI_LOG_VIEWING_DESIGN.md`: add a typed `get_log_snapshot` command for
-one validated active run, require sensitive-output acknowledgement, cap lines
-and bytes, render only the current visible buffer, and keep live streaming out
-of scope. After that, add stop, kill, attach, repair, image build, state
-cleanup, network cleanup, and worktree review one at a time with typed Rust
-commands, explicit confirmation, focused tests, and narrow capabilities. Keep
-`--ssh` fail-closed until a no-secret non-root Apple `container` smoke proves
-usable forwarding.
+Add the first explicit run-control operation. Start with `stop_run`: one typed
+Rust command for one validated active run id, separate confirmation, narrow
+capability coverage, frontend button state that does not imply success before
+the command returns, focused tests, and a live smoke only if needed. After that,
+add kill, attach, repair, image build, state cleanup, network cleanup, and
+worktree review one at a time. Keep `--ssh` fail-closed until a no-secret
+non-root Apple `container` smoke proves usable forwarding.

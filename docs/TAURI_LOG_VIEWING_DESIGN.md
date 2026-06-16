@@ -1,6 +1,6 @@
 # Tauri Log Viewing Design
 
-Status: accepted implementation plan.
+Status: first bounded snapshot implemented.
 
 RunHaven should make live agent output visible in the desktop app without
 turning the WebView into a generic terminal, filesystem reader, or persistent
@@ -58,6 +58,16 @@ Add a bounded snapshot command before any live stream:
 | Command | Capability | Request | Response |
 | --- | --- | --- | --- |
 | `get_log_snapshot` | `run-control` | `run_id`, optional `lines`, `confirm_sensitive_output` | `run_id`, `captured_at`, `requested_lines`, `text`, `returned_lines`, `truncated`, `source`, `warnings` |
+
+Implementation status:
+
+- `get_log_snapshot` is implemented as a typed Tauri command behind the
+  `run-control` capability.
+- Raw output remains hidden until the user acknowledges sensitive output.
+- The Rust path validates the active marker and RunHaven-owned container name,
+  calls only `container logs -n`, drains stdout/stderr with bounded memory, and
+  caps the returned text.
+- The Svelte UI stores only the current visible snapshot in component state.
 
 Default behavior:
 

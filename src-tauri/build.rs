@@ -6,6 +6,7 @@ fn main() {
             "get_dashboard_status",
             "get_image_status",
             "get_run_status",
+            "get_log_snapshot",
             "plan_run",
             "launch_run",
         ]),

@@ -108,6 +108,22 @@ export type RunStatusResponse = {
   container: RunStatusContainer;
 };
 
+export type LogSnapshotResponse = {
+  runId: string;
+  capturedAt: string;
+  requestedLines: number;
+  text: string;
+  returnedLines: number;
+  truncated: boolean;
+  source: string;
+  warnings: string[];
+};
+
+export type LogSnapshotOptions = {
+  lines?: number;
+  confirmSensitiveOutput: boolean;
+};
+
 export type RunPlanRequest = {
   agent: string;
   workspacePath: string;
@@ -310,6 +326,36 @@ export async function getRunStatus(runId: string): Promise<RunStatusResponse> {
       ]
     }
   }));
+}
+
+export async function getLogSnapshot(
+  runId: string,
+  options: LogSnapshotOptions
+): Promise<LogSnapshotResponse> {
+  if (!options.confirmSensitiveOutput) {
+    throw new Error("Confirm raw log viewing before loading output that may contain secrets.");
+  }
+  const requestedLines = options.lines ?? 200;
+  return call(
+    "get_log_snapshot",
+    {
+      request: {
+        runId,
+        lines: options.lines ?? null,
+        confirmSensitiveOutput: options.confirmSensitiveOutput
+      }
+    },
+    () => ({
+      runId,
+      capturedAt: "preview",
+      requestedLines,
+      text: "Preview log line one\nPreview log line two\n",
+      returnedLines: 2,
+      truncated: false,
+      source: "container-stdio",
+      warnings: ["Raw container output can contain secrets or workspace content."]
+    })
+  );
 }
 
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {

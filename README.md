@@ -28,8 +28,9 @@ supported runtimes or contributor verification targets.
 The CLI is the current working product surface. The desktop scaffold under
 `ui/` and `src-tauri/` is alpha UI work: it reads setup, dashboard, profile,
 folder-pick, and run-plan state, and it has a first explicitly confirmed
-launch path with sanitized live run status. Logs, stop, kill, repair, image
-build, state cleanup, and worktree review controls are still CLI-first.
+launch path with sanitized live run status plus opt-in bounded raw output
+snapshots. Stop, kill, repair, image build, state cleanup, and worktree review
+controls are still CLI-first.
 
 [Installation](docs/INSTALLATION.md) |
 [Capabilities](docs/CAPABILITIES.md) |

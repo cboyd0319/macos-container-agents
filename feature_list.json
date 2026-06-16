@@ -141,7 +141,7 @@
       "evidence": [
         "2026-06-16: Added active-run and material-memory warning codes to Tauri plan and launch confirmation, added a typed launch snapshot response, rendered the snapshot after launch, and covered the behavior with Rust/frontend/Playwright tests and browser screenshots."
       ],
-      "notes": "Raw log feedback remains future work because logs can contain secrets or workspace content and need a dedicated design. Live run status is tracked separately in `tauri-live-run-status`."
+      "notes": "Raw log snapshot feedback is tracked separately in `tauri-log-snapshot`. Live run status is tracked separately in `tauri-live-run-status`."
     },
     {
       "id": "tauri-live-run-status",
@@ -165,7 +165,7 @@
       "evidence": [
         "2026-06-16: Added `active_run_status_payload`, typed Tauri `get_run_status`, `main-read` permission for that command, frontend status helper, run-status UI, and Rust/frontend/Playwright tests proving sanitized fields and preview rendering."
       ],
-      "notes": "Raw log viewing remains a separate design because logs can contain secrets or workspace content. Mutating run-control operations remain CLI-first."
+      "notes": "Raw log snapshot viewing is tracked separately in `tauri-log-snapshot`. Mutating run-control operations remain CLI-first."
     },
     {
       "id": "tauri-log-viewing-design",
@@ -189,7 +189,33 @@
       "evidence": [
         "2026-06-16: Added `docs/TAURI_LOG_VIEWING_DESIGN.md` with the accepted `get_log_snapshot` implementation plan, Apple `container logs` constraints, trust boundary, milestones, and verification route."
       ],
-      "notes": "Implementation remains future work. The default UI should not show raw logs automatically; it should require explicit sensitive-output acknowledgement before loading a bounded snapshot."
+      "notes": "The first bounded snapshot implementation is tracked separately in `tauri-log-snapshot`. The default UI should not show raw logs automatically or store them durably."
+    },
+    {
+      "id": "tauri-log-snapshot",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri raw log snapshot",
+      "user_visible_behavior": "The alpha desktop app lets the user explicitly reveal a bounded latest-output snapshot for the most recently launched active run, after acknowledging that raw output may contain secrets or workspace content.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-log-viewing-design",
+        "tauri-live-run-status",
+        "run-observability"
+      ],
+      "verification": [
+        "`get_log_snapshot` uses a typed request and response and is granted through `run-control`, not `main-read`",
+        "Rust requires `confirm_sensitive_output` before loading raw output",
+        "Rust validates the run id, active marker, and RunHaven-owned container name before invoking Apple `container`",
+        "Rust invokes only `container logs -n`, never omits `-n`, and does not use `--follow` or `--boot`",
+        "Rust drains stdout and stderr with bounded memory and caps the returned text",
+        "The frontend keeps raw output hidden by default and stores only the current visible snapshot in component state",
+        "Frontend, Tauri, root Rust, Playwright, Apple container smoke, and a disposable live active-run snapshot test passed"
+      ],
+      "evidence": [
+        "2026-06-16: Added `active_run_log_snapshot_payload`, typed Tauri `get_log_snapshot`, `run-control` capability, frontend log snapshot helper and panel, confirmation/line/byte/container validation tests, browser coverage, and a live ignored test that read a bounded snapshot from a disposable active Apple container run."
+      ],
+      "notes": "Live streaming, boot logs, completed-run raw logs, save/export, automatic redaction, and terminal attach remain out of scope."
     },
     {
       "id": "rust-cli-conversion",

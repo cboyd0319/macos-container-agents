@@ -132,11 +132,10 @@ The consolidated non-UI backlog lives in
 - The dashboard can read a typed live run-status snapshot for the latest
   launched run, showing marker status, container state, resources, image, and
   network metadata without raw logs or raw Apple inspect payloads.
-- Raw log viewing has an accepted design in
+- Raw log viewing now follows
   [`TAURI_LOG_VIEWING_DESIGN.md`](TAURI_LOG_VIEWING_DESIGN.md): status first,
   then an explicitly requested bounded container-stdio snapshot, with no
-  automatic display, no durable frontend storage, and no live stream in the
-  first pass.
+  automatic display, no durable frontend storage, and no live stream.
 - Remaining UI controls should still be added one at a time with typed Rust
   commands, explicit confirmation, focused tests, and narrow capabilities.
 

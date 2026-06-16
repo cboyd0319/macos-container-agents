@@ -10,6 +10,7 @@ pub fn run() {
             commands::get_dashboard_status,
             commands::image_status::get_image_status,
             commands::run_status::get_run_status,
+            commands::log_snapshot::get_log_snapshot,
             commands::plan_run,
             commands::launch_run,
         ])

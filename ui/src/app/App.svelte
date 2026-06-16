@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ClipboardCheck, FolderOpen, Play, RefreshCw, ShieldCheck } from "@lucide/svelte";
+  import { ClipboardCheck, FileText, FolderOpen, Play, RefreshCw, ShieldCheck } from "@lucide/svelte";
   import StatusPill from "../components/StatusPill.svelte";
   import Metric from "../components/Metric.svelte";
   import {
@@ -8,6 +8,7 @@
     defaultRunPlanRequest,
     getDashboardStatus,
     getImageStatus,
+    getLogSnapshot,
     getRunStatus,
     isLaunchReady,
     launchRun,
@@ -16,6 +17,7 @@
     type AgentProfile,
     type DashboardStatus,
     type ImageStatusResponse,
+    type LogSnapshotResponse,
     type LaunchRunResponse,
     type RunStatusResponse,
     type RunPlanRequest,
@@ -38,6 +40,10 @@
   let runStatus: RunStatusResponse | null = null;
   let runStatusLoading = false;
   let runStatusError = "";
+  let logSnapshot: LogSnapshotResponse | null = null;
+  let logAcknowledged = false;
+  let logLoading = false;
+  let logError = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
@@ -111,6 +117,24 @@
     }
   }
 
+  async function loadLogSnapshot() {
+    if (!lastLaunch) {
+      return;
+    }
+    logLoading = true;
+    logError = "";
+    try {
+      logSnapshot = await getLogSnapshot(lastLaunch.runId, {
+        confirmSensitiveOutput: logAcknowledged
+      });
+    } catch (cause) {
+      logSnapshot = null;
+      logError = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      logLoading = false;
+    }
+  }
+
   async function pickFolder() {
     const selected = await chooseProjectFolder();
     if (selected) {
@@ -177,6 +201,9 @@
         confirmedWarnings
       });
       lastLaunch = started;
+      logSnapshot = null;
+      logAcknowledged = false;
+      logError = "";
       await loadRunStatus(started.runId);
       launchMessage = `Run started: ${started.runId}`;
       plan = null;
@@ -501,6 +528,41 @@
         {/if}
       {:else if runStatusError}
         <p class="notice">{runStatusError}</p>
+      {/if}
+    </section>
+  {/if}
+
+  {#if lastLaunch}
+    <section class="panel run-output-panel" aria-live="polite">
+      <h2>Run output</h2>
+      <p class="sensitive-note">Raw output can include secrets or workspace content.</p>
+      <div class="log-actions">
+        <label class="choice">
+          <input type="checkbox" bind:checked={logAcknowledged} />
+          <span>Show raw container output for this run.</span>
+        </label>
+        <button
+          class="secondary"
+          type="button"
+          disabled={!logAcknowledged || logLoading}
+          on:click={loadLogSnapshot}
+        >
+          <FileText size={18} />
+          <span>{logLoading ? "Loading..." : "View latest output"}</span>
+        </button>
+      </div>
+      {#if logError}
+        <p class="notice">{logError}</p>
+      {/if}
+      {#if logSnapshot}
+        <div class="log-meta">
+          <span>{logSnapshot.returnedLines} lines returned</span>
+          <span>{logSnapshot.requestedLines} lines requested</span>
+          {#if logSnapshot.truncated}
+            <span>truncated</span>
+          {/if}
+        </div>
+        <pre class="log-output">{logSnapshot.text || "No output returned."}</pre>
       {/if}
     </section>
   {/if}

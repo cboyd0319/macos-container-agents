@@ -278,6 +278,20 @@ legend {
   font-weight: 800;
 }
 
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.85rem;
+  color: #1c4f78;
+  background: #ffffff;
+  border: 1px solid #9fb3c8;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
 .notice,
 .warning-list {
   margin-top: 1rem;
@@ -306,7 +320,8 @@ legend {
 
 .plan-panel,
 .last-launch-panel,
-.run-status-panel {
+.run-status-panel,
+.run-output-panel {
   margin-top: 1rem;
 }
 
@@ -331,6 +346,43 @@ legend {
 .status-list span {
   color: #526173;
   font-weight: 650;
+}
+
+.sensitive-note {
+  margin: 0.5rem 0 0;
+  color: #7c4700;
+  font-weight: 700;
+}
+
+.log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+  color: #526173;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.log-output {
+  max-height: 18rem;
+  margin: 0.75rem 0 0;
+  padding: 0.85rem;
+  overflow: auto;
+  color: #102033;
+  background: #f7fafc;
+  border: 1px solid #d4dee8;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .launch-confirmation {
@@ -380,6 +432,11 @@ legend {
   }
 
   .launch-button {
+    width: 100%;
+  }
+
+  .log-actions,
+  .secondary {
     width: 100%;
   }
 }

@@ -78,16 +78,17 @@ Current alpha launch gate:
   network mode, and container name;
 - typed live run-status snapshot with marker status, container state,
   resources, image, and network metadata from sanitized Rust status payloads;
+- opt-in bounded raw-output snapshot for one validated active run, outside
+  `main-read`, after sensitive-output acknowledgement;
 - explicit confirmation of the reviewed plan;
 - explicit confirmation for every warning returned by the plan;
 - launch blocked when `runhaven doctor` fails.
 
 Remaining launch-readiness gaps before this flow is complete:
 
-- raw log snapshot implementation following
-  [`TAURI_LOG_VIEWING_DESIGN.md`](TAURI_LOG_VIEWING_DESIGN.md). Raw logs must
-  not be shown automatically or stored durably because agent output can contain
-  secrets or workspace content.
+- dedicated run controls. Raw logs must still not be shown automatically,
+  streamed, or stored durably because agent output can contain secrets or
+  workspace content.
 
 Warnings:
 
@@ -100,12 +101,11 @@ The current dashboard command already returns setup, active-run, recent-run,
 agent, and warning summaries. Image and builder status are available through
 typed Rust commands. Launch resource warnings are computed in the Rust plan and
 launch-confirmation path. Live run status is exposed through a typed read-only
-Rust command that returns sanitized metadata only. Log viewing should start
-with a bounded `get_log_snapshot` command that requires a sensitive-output
+Rust command that returns sanitized metadata only. Log viewing starts with a
+bounded `get_log_snapshot` command that requires a sensitive-output
 acknowledgement, returns capped container stdio for one validated active run,
-and does not add live streaming until a separate event/channel design exists.
-Add dedicated typed Rust commands for maintenance status before parsing prose
-in the frontend.
+and does not add live streaming. Add dedicated typed Rust commands for
+maintenance status before parsing prose in the frontend.
 
 ## Approval Gates
 

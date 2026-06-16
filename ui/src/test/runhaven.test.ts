@@ -3,6 +3,7 @@ import {
   defaultRunPlanRequest,
   getDashboardStatus,
   getImageStatus,
+  getLogSnapshot,
   getRunStatus,
   getSetupStatus,
   isLaunchReady,
@@ -112,6 +113,19 @@ describe("runhaven command helpers", () => {
     expect(status.run.runId).toBe("preview-run");
     expect(status.container.state).toBe("running");
     expect(status.container.resources.memoryBytes).toBe(4 * 1024 ** 3);
+  });
+
+  it("requires explicit confirmation before loading raw log preview data", async () => {
+    await expect(getLogSnapshot("preview-run", { confirmSensitiveOutput: false })).rejects.toThrow(
+      "Confirm raw log viewing"
+    );
+
+    const snapshot = await getLogSnapshot("preview-run", { confirmSensitiveOutput: true });
+
+    expect(snapshot.runId).toBe("preview-run");
+    expect(snapshot.requestedLines).toBe(200);
+    expect(snapshot.text).toContain("Preview log line");
+    expect(snapshot.truncated).toBe(false);
   });
 
   it("requires explicit confirmation before launch is available", async () => {

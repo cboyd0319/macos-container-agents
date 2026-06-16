@@ -5,9 +5,14 @@ use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
 mod inspect;
+mod logs;
 mod markers;
 mod repair;
 
+pub use logs::{
+    DEFAULT_LOG_SNAPSHOT_LINES, MAX_LOG_SNAPSHOT_BYTES, MAX_LOG_SNAPSHOT_LINES,
+    active_run_log_snapshot_payload, log_snapshot_payload_from_stdout, validate_log_snapshot_lines,
+};
 pub use markers::{
     active_run_terminal_status, find_active_run_record, read_active_run_records,
     remove_active_run_record, write_active_run_payload, write_active_run_record,
@@ -208,7 +213,7 @@ pub fn active_run_status_payload(run_id: &str) -> Result<Value> {
     active_run_status_payload_from_stdout(&record, &output.stdout)
 }
 
-fn active_run_record_and_container(run_id: &str) -> Result<(Value, String)> {
+pub(super) fn active_run_record_and_container(run_id: &str) -> Result<(Value, String)> {
     let record = find_active_run_record(run_id)?;
     let container_name = require_string(
         record.get("container_name"),
