@@ -448,7 +448,7 @@
       "priority": 9,
       "area": "usability",
       "title": "Image doctor and preflight recovery diagnostics",
-      "user_visible_behavior": "`runhaven image doctor [AGENT]` checks local Apple container image metadata for missing or stale bundled profile images, reports inactive RunHaven state volumes, and prints rebuild, network, and state-recovery guidance without mutating local resources.",
+      "user_visible_behavior": "`runhaven image doctor [AGENT]` checks local Apple container image metadata for missing or stale bundled profile images, reports sanitized Apple builder status, reports inactive RunHaven state volumes, and prints rebuild, builder, network, and state-recovery guidance without mutating local resources.",
       "status": "passing",
       "dependencies": [
         "image-network-repair-ux",
@@ -459,6 +459,7 @@
         "`runhaven image doctor` checks all bundled profiles and exits nonzero when any selected image is missing or stale",
         "Bundled image builds include RunHaven profile and source-digest labels",
         "`runhaven image doctor AGENT` reports stale images when source metadata differs from the checked-out bundled template inputs",
+        "`runhaven image doctor AGENT` reports sanitized `container builder status --format json` state, image, resources, Rosetta mode, start time, and network address without printing mounts or environment",
         "`runhaven image doctor AGENT` reports inactive RunHaven state volumes for the selected profile without deleting them",
         "The command reads Apple `container image list --format json` and does not build, delete, mount, or reset resources",
         "Invalid Apple image-list JSON fails closed with a CLI usage error",
@@ -470,9 +471,10 @@
         "2026-06-15: Full image doctor verification passed: `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 191 unit tests, pin check, ruff, mypy, and build. Manual `image doctor --help` and `image doctor shell` smokes, JSON validation, Markdown link check, and `git diff --check` also passed.",
         "2026-06-15: Focused stale-image and inactive-state tests first failed because `image doctor` did not check source metadata or state volumes, then passed after adding build source-digest labels, stale detection, and state-volume review.",
         "2026-06-15: Full image doctor source-metadata verification passed: `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests, pin check, ruff, mypy, and build. Manual `image doctor shell` and `image build shell --dry-run` smokes also passed.",
-        "2026-06-16: Added fixture tests for Apple `container image list --format json`, trusted image-name annotation keys, ignored non-name annotations, and source-digest label fallback paths."
+        "2026-06-16: Added fixture tests for Apple `container image list --format json`, trusted image-name annotation keys, ignored non-name annotations, and source-digest label fallback paths.",
+        "2026-06-16: Added sanitized builder-status diagnostics from `container builder status --format json`, fixture coverage for running and not-running builder states, and smoke-script assertions that `image doctor shell` reports builder status and resource guidance."
       ],
-      "notes": "`image doctor` detects missing local image tags, stale source metadata, and inactive state volumes. State-volume review is not yet workspace-aware because volume names intentionally store only a hashed project id."
+      "notes": "`image doctor` detects missing local image tags, stale source metadata, builder status/resource guidance, and inactive state volumes. State-volume review is not yet workspace-aware because volume names intentionally store only a hashed project id."
     },
     {
       "id": "repo-logo",

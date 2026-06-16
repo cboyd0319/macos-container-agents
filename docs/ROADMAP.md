@@ -97,8 +97,8 @@ direction. The live feature status and verification evidence are tracked in
   parsing that unit tests cannot prove.
 - Keep `runhaven doctor` enforcing the reviewed Apple `container` runtime
   commit, builder image, vminit image, and Kata kernel pins.
-- Review builder resource and lifecycle guidance for image builds before adding
-  UI flows that trigger rebuilds.
+- Keep `image doctor` surfacing read-only builder status and resource guidance
+  before adding UI flows that trigger rebuilds.
 - Add UI-oriented resource guardrails for per-container VM memory behavior.
 
 ## Phase 6: Repeatable Workflows

@@ -94,11 +94,18 @@ policy, and repo-owned verification route.
 - Split the new doctor runtime-pin implementation into
   `src/runhaven/cli/doctor/runtime_pins.rs` so the main doctor module stays
   well under the repo's Rust file-size ceiling.
+- Extended `runhaven image doctor` with read-only Apple builder diagnostics
+  from `container builder status --format json`. The output reports sanitized
+  builder state, image, CPU/memory allocation, Rosetta mode, start time, and
+  network address while avoiding builder mounts and environment.
+- Updated `scripts/apple_container_smoke.sh` to assert that
+  `image doctor shell` reports builder status and large-build resource
+  guidance.
 
 ## Trusted Verification
 
 - `cargo fmt --check`: passed.
-- `cargo test --locked`: passed with 30 library tests and 2 integration tests.
+- `cargo test --locked`: passed with 36 library tests and 2 integration tests.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo run --locked --bin runhaven-check-pins`: passed.
 - `cargo build --locked`: passed.
@@ -156,6 +163,14 @@ policy, and repo-owned verification route.
   `cargo run --locked --bin runhaven -- doctor`,
   `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
   check, Rust source size scan, and `git diff --check`.
+- Apple Container builder diagnostic checks passed: Apple Container CLI/source
+  review, focused image-doctor parser tests, `cargo fmt --check`,
+  `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins`,
+  `cargo run --locked --bin runhaven -- image doctor shell`,
+  `cargo run --locked --bin runhaven -- setup --agent shell`,
+  `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
+  check, Rust source size scan, and `git diff --check`.
 
 ## Touched Surfaces
 
@@ -179,6 +194,7 @@ policy, and repo-owned verification route.
 - `src/`
 - `src/runhaven/cli/doctor/`
 - `tests/`
+- `tests/fixtures/apple_container/`
 
 ## Blockers
 
@@ -186,7 +202,8 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the remaining Apple Container P1 gaps before Tauri/UI planning: surface
-image builder lifecycle diagnostics, then define Tauri-facing resource and
-approval guardrails. Keep verification local while alpha CI is disabled, and
-run the planned Rust expert plus Rust skill repo-wide review as a backlog task.
+Close the remaining Apple Container P1 gaps before Tauri/UI planning: define
+Tauri-facing resource and approval guardrails, then decide whether provider
+local-network/privacy troubleshooting needs a dedicated note. Keep verification
+local while alpha CI is disabled, and run the planned Rust expert plus Rust
+skill repo-wide review as a backlog task.

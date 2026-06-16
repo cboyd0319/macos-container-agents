@@ -74,10 +74,14 @@ runhaven image doctor claude
 `image doctor` reads `container image list --format json`, checks for expected
 bundled RunHaven image tags, compares RunHaven source-digest labels when
 available, and falls back to image/template timestamps for older unlabeled
-images. It exits nonzero when a selected image is missing or stale. It also
-reviews inactive RunHaven state volumes for the selected profile, prints
-rebuild, network, and state recovery commands, and does not build images,
-delete resources, mount workspaces, read credentials, or reset state.
+images. It also reads `container builder status --format json` and reports the
+builder state, image, CPU/memory allocation, Rosetta mode, start time, and
+network address without printing builder mounts or environment. It exits
+nonzero when a selected image is missing or stale. It also reviews inactive
+RunHaven state volumes for the selected profile, prints rebuild, builder,
+network, and state recovery commands, and does not build images, start, stop,
+or delete the builder, mount workspaces, read credentials, delete resources, or
+reset state.
 
 ## Preview a Run
 
@@ -387,7 +391,8 @@ volume-preparation network, per-project internal networks, and per-run provider
 networks. It does not delete Apple-managed networks, the default network,
 arbitrary user-created networks, workspaces, images, or state volumes.
 `image doctor` is read-only and reports missing or stale bundled images,
-inactive RunHaven state volumes, and copyable recovery commands.
+builder status and resource guidance, inactive RunHaven state volumes, and
+copyable recovery commands.
 
 ## Run History
 

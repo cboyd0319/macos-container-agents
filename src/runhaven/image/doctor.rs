@@ -4,6 +4,8 @@ use std::process::Command;
 use anyhow::{Result, bail};
 use serde_json::Value;
 
+mod builder;
+
 use crate::active::read_active_run_records;
 use crate::images::{RUNHAVEN_SOURCE_DIGEST_LABEL, image_source_digest};
 use crate::profiles::{AgentProfile, get_profile, profiles};
@@ -17,6 +19,7 @@ struct LocalImage {
 
 pub fn image_doctor(agent: Option<&str>) -> Result<i32> {
     let local_images = list_local_images()?;
+    let builder_diagnostics = builder::read_builder_diagnostics();
     let state_volumes = list_state_volume_names()?;
     let active_state_volumes = active_run_state_volumes();
     let selected = selected_profiles(agent)?;
@@ -46,6 +49,7 @@ pub fn image_doctor(agent: Option<&str>) -> Result<i32> {
             println!("fix: runhaven image rebuild {}", profile.name);
         }
     }
+    builder::print_builder_status(&builder_diagnostics);
     print_state_volume_review(&selected, &state_volumes, &active_state_volumes, agent);
     print_preflight_recovery(agent);
     Ok(if ok { 0 } else { 1 })

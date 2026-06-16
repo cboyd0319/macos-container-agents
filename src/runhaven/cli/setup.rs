@@ -31,6 +31,7 @@ pub fn print_setup_guide(agent: &str, checks: &[Check]) -> anyhow::Result<i32> {
     println!("Selected agent: {agent} - {}", profile.description);
     println!("\n2. Build the agent image");
     println!("   runhaven image build {agent}");
+    println!("   runhaven image doctor {agent}");
     println!("\n3. Preview the container boundary");
     println!("   runhaven plan {agent}");
     println!("\n4. Run from your project directory");
@@ -39,6 +40,7 @@ pub fn print_setup_guide(agent: &str, checks: &[Check]) -> anyhow::Result<i32> {
     println!("- One selected project is mounted at /workspace.");
     println!("- No host home, raw SSH keys, or cloud credential folders are mounted by default.");
     print_setup_workspace_and_credentials();
+    print_setup_builder_note(agent);
     print_setup_network_choices(agent);
     Ok(0)
 }
@@ -57,6 +59,16 @@ fn print_setup_workspace_and_credentials() {
     println!("- Use `--ssh` for SSH agent forwarding instead of mounting key files.");
     println!("- Use `--env NAME` only for a reviewed variable that the agent really needs.");
     println!("- Use `runhaven plan` to confirm the mounted host path.");
+}
+
+fn print_setup_builder_note(agent: &str) {
+    println!("\nImage builder");
+    println!(
+        "- Image builds use a separate Apple BuildKit builder VM with its own CPU and memory limits."
+    );
+    println!(
+        "- Inspect it with `runhaven image doctor {agent}` or `container builder status`; resize only with explicit Apple `container builder` commands."
+    );
 }
 
 fn print_setup_network_choices(agent: &str) {

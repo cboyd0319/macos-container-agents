@@ -235,6 +235,16 @@ if ! "$RUNHAVEN_BIN" image doctor shell >"$image_doctor_log" 2>&1; then
   rm -f "$image_doctor_log"
   fail "bundled shell image is missing or stale; run: $RUNHAVEN_BIN image build shell"
 fi
+grep -F "Builder status" "$image_doctor_log" >/dev/null 2>&1 || {
+  print_file "$image_doctor_log"
+  rm -f "$image_doctor_log"
+  fail "image doctor did not report builder status"
+}
+grep -F "large build resources:" "$image_doctor_log" >/dev/null 2>&1 || {
+  print_file "$image_doctor_log"
+  rm -f "$image_doctor_log"
+  fail "image doctor did not report builder resource guidance"
+}
 rm -f "$image_doctor_log"
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/runhaven-apple-container-smoke.XXXXXX")"

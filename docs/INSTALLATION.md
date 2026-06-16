@@ -66,6 +66,11 @@ the Mac is not ready, and shows the image build, plan, and run commands for
 the selected agent. It does not install Apple `container`, start services,
 build images, run agents, write state, or mount a workspace.
 
+Image builds use a separate Apple BuildKit builder VM with its own CPU and
+memory limits. Inspect it with `runhaven image doctor AGENT` or
+`container builder status`; resize it only with explicit Apple
+`container builder` commands.
+
 Build and preview a bundled image:
 
 ```bash
