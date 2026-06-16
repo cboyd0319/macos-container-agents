@@ -404,4 +404,20 @@ pub(super) enum WhyCommand {
         )]
         agent: Option<String>,
     },
+    #[command(about = "explain workspace mount validation")]
+    Workspace {
+        path: PathBuf,
+        #[arg(
+            long,
+            default_value = "current",
+            help = "workspace scope to evaluate: current or git-root"
+        )]
+        workspace_scope: String,
+        #[arg(long, help = "evaluate with the sensitive-workspace override enabled")]
+        allow_sensitive_workspace: bool,
+    },
+    #[command(about = "explain network mode behavior")]
+    Network { mode: String },
+    #[command(about = "explain agent state-volume isolation")]
+    State { agent: String },
 }

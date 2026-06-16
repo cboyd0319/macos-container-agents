@@ -51,7 +51,7 @@ requirements.
 - `accepted`: agreed work that is not started yet.
 - `candidate`: useful idea that still needs owner, scope, or evidence.
 - `debt`: recurring cleanup or drift that should become a sensor, test, or
-  release gate when stable.
+  stability gate when stable.
 - `completed`: shipped work whose durable behavior has moved into docs, tests,
   schemas, templates, or code.
 - `archived`: historical context kept for provenance, not restart priority.
@@ -64,7 +64,7 @@ requirements.
 - `in_progress`: currently owned.
 - `blocked`: cannot continue without named input or state change.
 - `validated`: implementation finished and evidence recorded.
-- `shipped`: adopted, released, or merged into the durable repo surface.
+- `shipped`: adopted, tagged, or merged into the durable repo surface.
 - `superseded`: replaced by another item or plan.
 - `abandoned`: intentionally dropped.
 
@@ -75,14 +75,14 @@ implementation starts.
 
 | Surface | Question |
 | --- | --- |
-| Local repo harness | Does this affect instructions, state files, harness docs, sensors, or release controls? |
+| Local repo harness | Does this affect instructions, state files, harness docs, sensors, or packaging controls? |
 | Generated or owned harness files | Should the project add or update a harness file, section, manifest rule, or review-required placeholder? |
 | CLI or tool runtime | Does this add or change a command, flag, JSON contract, exit code, report, or default behavior? |
 | Existing project files | Could this modify project-owned instructions, specs, workflows, scripts, docs, or image templates? |
 | CI or hosted automation | Should CI workflows, summaries, reports, permissions, or artifacts change? |
 | Optional workflow scaffolds | Should setup, teardown, push, PR, or other maintenance automation stay opt-in? |
 | Tests and fixtures | Which local checks, generated snapshots, fixtures, or representative task runs prove the change? |
-| Release surface | Does this affect packaging, tags, SBOM, provenance evidence, release notes, or rollback? |
+| Packaging surface | Does this affect packaging, tags, SBOM, provenance evidence, notes, or rollback? |
 | Research and source records | Does this need current primary-source evidence or project-owned source records? |
 | Security and privacy | Could this expose secrets, local paths, private code, tool permissions, network access, user data, or cost? |
 | Platform contracts | Does this affect macOS 26+, Rust, Apple `container`, future hosted-CI runner labels, or unsupported platform guardrails? |
@@ -97,10 +97,9 @@ other silently.
 | Item | Status | User Outcome | Surfaces In Scope | Execution Gate | Owner | Verification Evidence | Done Or Retire When |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Repo harness overhaul | validated | A new agent can understand RunHaven, improve the harness, choose checks, and preserve the macOS 26+ security boundary from repo files alone | Local repo harness, generated/owned harness files, docs, sensors, manifest, state | Documentation/configuration plus generated missing harness artifacts was sufficient | Maintainers | 2026-06-15: first-agent task retired, report/audit rerun, JSON validation, docs checks, and diff hygiene recorded in state and evidence files. 2026-06-16: state was consolidated into `current-state.md`. | Reopen only if report/audit, fresh-session review, or maintainer feedback finds stale routing |
-| Release evidence automation | accepted | Release prep has repeatable SBOM, provenance, dirty-tree, pin, and smoke evidence | Release surface, sensors, docs, CLI/runtime if a command is added | Start with docs and scripts before adding CLI surface | Maintainers | Pending | Release checklist can produce evidence without chat history |
 | Effectiveness evidence for agent runs | candidate | Claims about agent quality are backed by representative tasks, not structural audit | Evaluation, docs, sensors, future reports | Design evidence contract before automating | Maintainers | Pending | Adopt or retire after representative task set is defined |
 | Path-aware provider host policy | candidate | Broad hosts such as `github.com` can be constrained by verified path or brokered credential flow | Provider runtime, security, docs, tests, smokes | Do not build until source-backed paths and enforcement mechanism are clear | Maintainers | Pending | Accepted only with proof it avoids credential leakage and broad egress |
-| Extension and MCP boundary policy | accepted | Future MCP/extension support is deny-by-default and reviewable | Security, docs, CLI/runtime, tests | Document policy before implementation | Maintainers | Pending | A policy doc and tests exist before any support is added |
+| Extension and MCP boundary policy | validated | Future MCP/extension support is deny-by-default and reviewable | Security, docs, CLI/runtime, tests | Documentation before implementation was sufficient for this pass | Maintainers | `docs/EXTENSION_MCP_BOUNDARY.md` and `docs/SECURITY_MODEL.md` | Reopen only when implementation starts |
 | Image/state/network repair polish | accepted | Repair commands give exact safe next steps without mutating unrelated resources | CLI, docs, sensors, tests | Extend existing commands before new abstractions | Maintainers | Existing image doctor and network tests; more pending | UX gaps from `ux-research-ideas.md` are resolved or retired |
 
 ## Fresh-Session Test
@@ -112,7 +111,7 @@ Use this when reviewing whether the harness is actually useful to a new agent.
 | What is this system or package? | `README.md`, `AGENTS.md`, `docs/CAPABILITIES.md` | Keep product status and macOS 26+ boundary current |
 | How is the repo organized? | `docs/ARCHITECTURE.md`, `docs/harness/boundaries/component-inventory.md`, `docs/harness/state/modularization-plan.md` | Update after module extractions or new image/profile surfaces |
 | How does it start? | `docs/INSTALLATION.md`, `README.md`, `runhaven setup`, `init.sh` | Keep first-run setup and development setup aligned |
-| How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `init.sh` | CI is intentionally disabled during alpha/pre-release; add release evidence automation before shipping |
+| How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `init.sh` | CI is intentionally disabled during alpha/pre-release; local verification remains authoritative |
 | What work is current? | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, this roadmap | Keep objective and next-session guidance synchronized |
 
 ## Instruction Rule Lifecycle
@@ -134,7 +133,7 @@ instruction file as a router; move topic detail into focused docs.
 | --- | --- | --- |
 | Static | Any code, docs-link, config, schema, or template change | lint, type check, compile, schema validation, docs link check, platform wording scan |
 | Runtime/startup | The CLI, smoke script, Apple `container` boundary, image, or broker must start or execute | `runhaven doctor`, `runhaven plan`, image dry-run, provider smoke, broker smoke |
-| System/user flow | A change crosses components or affects user-visible behavior | run lifecycle scenario, worktree recovery flow, provider run, release dry run |
+| System/user flow | A change crosses components or affects user-visible behavior | run lifecycle scenario, worktree recovery flow, provider run |
 
 Skipping a required layer means the item is not complete. Record the reason,
 risk, and next best evidence when a layer cannot run.
@@ -143,8 +142,7 @@ risk, and next best evidence when a layer cannot run.
 
 | Item | Evidence | Risk | Next Step | Status |
 | --- | --- | --- | --- | --- |
-| Release evidence automation is still manual | Release controls and the Apple `container` update playbook are documented but not automated | Release prep could still rely on manually assembled evidence | Consider a release evidence script or command after Tauri/UI planning starts | accepted |
-| Script purpose header sensor is not enforced | Maintained scripts and image templates now carry top-of-file descriptions | New scripts could omit the convention | Add a lightweight sensor only if the convention drifts | debt |
+| Script purpose header sensor | Maintained scripts and image templates carry top-of-file descriptions, and `runhaven-check-pins` enforces the convention | New scripts fail the local pin check when the description is missing | Keep the sensor scoped to maintained scripts and image templates | validated |
 | Real-agent effectiveness evidence is absent | Repo docs intentionally block effectiveness claims without representative evidence | Structural score could be overclaimed | Define representative tasks before public claims | candidate |
 | Historical evidence includes old local HarnessForge invocation examples | Older evidence rows preserve exact commands | Active docs could copy stale sibling-checkout patterns | Keep active guidance self-contained; do not edit old evidence unless cleaning history is in scope | debt |
 
@@ -168,7 +166,7 @@ risk, and next best evidence when a layer cannot run.
 
 - Keep roadmap entries target-relative and portable.
 - Record accepted work here when it changes harness behavior, generated files,
-  CI behavior, release evidence, or recurring maintenance.
+  CI behavior, packaging evidence, or recurring maintenance.
 - Keep candidate ideas separate from accepted commitments.
 - Do not mark work passing, validated, shipped, or complete from agent
   assertion alone. Record verification evidence.

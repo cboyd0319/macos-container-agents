@@ -86,7 +86,8 @@
         "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
         "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction",
         "2026-06-16: Repo harness state was consolidated to current-state.md; progress.md and session-handoff.md were retired from the active startup contract; first-agent review evidence was recorded at docs/harness/evidence/first-agent-review.json; manifest and harness docs were updated to the reviewed current-state contract.",
-        "2026-06-16: Added `docs/harness/release/apple-container-update-playbook.md`, top-of-file descriptions for maintained scripts and image templates, and a refreshed `.gitignore` for Rust/macOS/local RunHaven artifacts."
+        "2026-06-16: Added `docs/harness/release/apple-container-update-playbook.md`, top-of-file descriptions for maintained scripts and image templates, and a refreshed `.gitignore` for Rust/macOS/local RunHaven artifacts.",
+        "2026-06-16: `runhaven-check-pins` now enforces top-of-file descriptions for maintained scripts and bundled image templates."
       ],
       "notes": "The active startup contract is AGENTS.md, feature_list.json, current-state.md, and focused docs under docs/harness/."
     },
@@ -124,7 +125,8 @@
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
         "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass",
         "2026-06-16: `--ssh` fails closed in planner and CLI paths while Apple `container` 1.0.0 non-root SSH forwarding is blocked; planner, CLI, and Apple container smoke guard checks cover the refusal.",
-        "2026-06-16: Rust expert review fixes keep standard and provider runs failure-safe: command launch failures remove active markers, write failed run records when a run started, and preserve cleanup evidence without widening the runtime boundary."
+        "2026-06-16: Rust expert review fixes keep standard and provider runs failure-safe: command launch failures remove active markers, write failed run records when a run started, and preserve cleanup evidence without widening the runtime boundary.",
+        "2026-06-16: Added `docs/EXTENSION_MCP_BOUNDARY.md` so future extension or MCP support stays deny-by-default and reviewable before implementation."
       ],
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },
@@ -411,6 +413,7 @@
         "`runhaven setup --agent AGENT` prints profile-specific image build, plan, and run commands when prerequisites pass",
         "`runhaven setup` prints local-only, provider-only, package install, and unrestricted internet network guidance",
         "`runhaven setup` explains smallest-project workspace scope, `/workspace` mounting, avoided credential paths, `--ssh`, and reviewed `--env NAME` usage",
+        "`runhaven why workspace`, `runhaven why network`, and `runhaven why state` explain safety decisions without mutating local resources",
         "`runhaven setup` does not install, start services, build images, run agents, or mount workspaces"
       ],
       "evidence": [
@@ -419,7 +422,8 @@
         "2026-06-15: Focused setup network guidance test first failed because `setup` did not print a network-choice section, then passed after adding local-only, provider-only, package install, and unrestricted internet guidance.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 155 unit tests, pin check, ruff, mypy, and build after adding setup network guidance.",
         "2026-06-15: Focused setup workspace and credential guidance test first failed because `setup` did not print that section, then passed after adding smallest-project workspace, avoided credential paths, `--ssh`, and reviewed `--env NAME` guidance.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit tests, pin check, ruff, mypy, and build after adding setup workspace and credential guidance."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit tests, pin check, ruff, mypy, and build after adding setup workspace and credential guidance.",
+        "2026-06-16: Focused CLI tests passed for `runhaven why workspace`, `runhaven why network`, and `runhaven why state`; usage docs now include task recipes for read-only review, local-only checks, provider-only runs, worktree review, and state reset."
       ],
       "notes": "`setup` intentionally does not call Apple `container system start`, build images, run agents, mount a workspace, read credential stores, or write state."
     },

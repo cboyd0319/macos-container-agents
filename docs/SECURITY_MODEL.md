@@ -92,6 +92,14 @@ provider action or short-lived run credential when that flow is explicitly
 implemented and verified. Broad host credential import, implicit environment
 passthrough, and host home or credential-folder mounts remain out of scope.
 
+## Extension And MCP Boundary
+
+RunHaven does not currently enable MCP servers, editor extensions, or plugin
+marketplaces inside managed agent runs. Future support is deny-by-default and
+must follow [`EXTENSION_MCP_BOUNDARY.md`](EXTENSION_MCP_BOUNDARY.md): no host
+socket, credential helper, extension, or MCP server is exposed unless the user
+explicitly enables it and the plan can show the exact access before launch.
+
 ## What This Does Not Solve Yet
 
 The default `internet` network mode should still be treated as unrestricted

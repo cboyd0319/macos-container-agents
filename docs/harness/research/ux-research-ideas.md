@@ -183,9 +183,8 @@ RunHaven direction:
   boundary.
 - Add clearer setup/docs language explaining why RunHaven uses task-scoped
   `container run` instead of persistent machine defaults.
-- Consider future diagnostics for host-service access from a guest, such as
-  `runhaven why network host-service` or `runhaven doctor dns`, without
-  claiming DNS is an egress-control boundary.
+- Keep host-service access diagnostics conceptual until a concrete network mode
+  or doctor check exists; do not claim DNS is an egress-control boundary.
 - Treat remote-editor and persistent-dev-environment workflows as explicit
   advanced modes only after workspace, SSH, and credential boundaries are
   verified.
@@ -232,7 +231,7 @@ selection in `runhaven setup`.
 
 ### Explain Commands
 
-Command shapes:
+Implemented command shapes:
 
 ```bash
 runhaven why host api.example.com
@@ -241,7 +240,7 @@ runhaven why network provider
 runhaven why state claude
 ```
 
-The output should answer:
+The output should keep answering:
 
 - what happened
 - which rule made the decision

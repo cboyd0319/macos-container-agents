@@ -14,7 +14,7 @@ use crate::active::{
 };
 use crate::diagnostics::{
     auth_explain, auth_log, auth_status, egress_log, read_auth_broker_log, read_egress_policy_log,
-    why_host,
+    why_host, why_network, why_state, why_workspace,
 };
 use crate::doctor::{collect_checks, find_on_path};
 use crate::git::{capture_git_snapshot, summarize_git_change};
@@ -91,6 +91,13 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
         },
         TopCommand::Why { command } => match command {
             WhyCommand::Host { host, port, agent } => why_host(&host, port, agent.as_deref()),
+            WhyCommand::Workspace {
+                path,
+                workspace_scope,
+                allow_sensitive_workspace,
+            } => why_workspace(&path, &workspace_scope, allow_sensitive_workspace),
+            WhyCommand::Network { mode } => why_network(&mode),
+            WhyCommand::State { agent } => why_state(&agent),
         },
     }
 }

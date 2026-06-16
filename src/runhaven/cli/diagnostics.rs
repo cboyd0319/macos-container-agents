@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
@@ -6,9 +8,13 @@ use crate::auth_profiles::{
 };
 use crate::egress::{EgressPolicy, is_ip_literal, normalize_host};
 use crate::paths::{auth_broker_log_path, egress_policy_log_path};
-use crate::profiles::{get_profile, profiles};
+use crate::plans::{
+    NetworkMode, SUPPORTED_NETWORK_MODES, WorkspaceScope, apply_workspace_scope, validate_workspace,
+};
+use crate::profiles::{AgentProfile, get_profile, profiles};
 use crate::provider_endpoints::{ProviderEndpoint, match_provider_endpoints};
 use crate::records::read_jsonl;
+use crate::session_state::SESSION_DEFAULT;
 
 pub fn egress_log(limit: usize, json_output: bool) -> Result<i32> {
     let entries = read_egress_policy_log(limit)?;
@@ -286,6 +292,125 @@ pub fn why_host(host: &str, port: u16, agent: Option<&str>) -> Result<i32> {
     }
     println!("DNS safety: checked at runtime before the proxy opens the connection.");
     Ok(0)
+}
+
+pub fn why_workspace(
+    workspace: &Path,
+    workspace_scope: &str,
+    allow_sensitive_workspace: bool,
+) -> Result<i32> {
+    let scope = WorkspaceScope::try_from(workspace_scope)?;
+    println!("Workspace input: {}", workspace.display());
+    println!("Workspace scope: {}", scope.as_str());
+    let Ok(resolved) = workspace.canonicalize() else {
+        println!("Mount decision: denied");
+        println!("Reason: workspace path does not exist or cannot be resolved.");
+        println!("Next action: pass an existing project directory.");
+        return Ok(0);
+    };
+    println!("Resolved path: {}", resolved.display());
+    if !resolved.is_dir() {
+        println!("Mount decision: denied");
+        println!("Reason: workspace path is not a directory.");
+        println!("Next action: pass a project directory, not a file.");
+        return Ok(0);
+    }
+    let (mounted, note) = match apply_workspace_scope(&resolved, scope) {
+        Ok(value) => value,
+        Err(error) => {
+            println!("Mount decision: denied");
+            println!("Reason: {error}");
+            println!("Next action: use --workspace-scope current or run from a git worktree.");
+            return Ok(0);
+        }
+    };
+    println!("Mounted path: {}", mounted.display());
+    if let Some(note) = note {
+        println!("Scope note: {note}");
+    }
+    match validate_workspace(&mounted, allow_sensitive_workspace) {
+        Ok(()) => {
+            println!("Mount decision: allowed");
+            if allow_sensitive_workspace && let Err(error) = validate_workspace(&mounted, false) {
+                println!("Default decision: denied");
+                println!("Override reason: {error}");
+            }
+            println!(
+                "Boundary: only the mounted path is exposed at /workspace; agent home stays in a RunHaven state volume."
+            );
+        }
+        Err(error) => {
+            println!("Mount decision: denied");
+            println!("Reason: {error}");
+            println!(
+                "Next action: choose a project subdirectory or pass --allow-sensitive-workspace intentionally."
+            );
+        }
+    }
+    Ok(0)
+}
+
+pub fn why_network(mode: &str) -> Result<i32> {
+    let network_mode = match NetworkMode::try_from(mode) {
+        Ok(mode) => mode,
+        Err(_) => bail!(
+            "invalid network mode: {mode:?}. Expected one of: {}",
+            SUPPORTED_NETWORK_MODES.join(", ")
+        ),
+    };
+    println!("Network mode: {}", network_mode.as_str());
+    match network_mode {
+        NetworkMode::Internet => {
+            println!("Behavior: uses Apple container's default internet networking.");
+            println!("Boundary: provider domain allowlisting is not enforced.");
+            println!("Use when: the task needs normal package installs or broad internet access.");
+        }
+        NetworkMode::Internal => {
+            println!("Behavior: creates a managed internal Apple container network.");
+            println!("Boundary: internet egress is disabled for the agent container.");
+            println!("Use when: the task can run from local files and existing dependencies.");
+        }
+        NetworkMode::Provider => {
+            println!(
+                "Behavior: creates a managed internal network and routes egress through RunHaven's allowlist proxy."
+            );
+            println!(
+                "Boundary: only bundled provider hosts and explicit --provider-host entries are eligible."
+            );
+            println!(
+                "DNS safety: IP literals, single-label names, and non-public resolved addresses are denied."
+            );
+            println!("Inspect: runhaven why host HOST --agent AGENT, then runhaven egress log.");
+        }
+    }
+    Ok(0)
+}
+
+pub fn why_state(agent: &str) -> Result<i32> {
+    let profile = get_profile(agent)?;
+    print_state_explanation(profile);
+    Ok(0)
+}
+
+fn print_state_explanation(profile: AgentProfile) {
+    println!("Profile: {}", profile.name);
+    println!("Default session: {SESSION_DEFAULT}");
+    println!("Home mount: /home/agent");
+    println!(
+        "State volume pattern: runhaven-{}-<project-id>-home",
+        profile.name
+    );
+    println!(
+        "Named session pattern: runhaven-{}-<project-id>-s-<session>-<digest>-home",
+        profile.name
+    );
+    println!("Boundary: workspace files are mounted separately at /workspace.");
+    println!(
+        "Project id: derived from the resolved workspace path; the path is not embedded in the volume name."
+    );
+    println!(
+        "Manage: runhaven state list, runhaven state reset AGENT --workspace PATH, runhaven state prune."
+    );
 }
 
 fn print_endpoint_matches(matches: &[ProviderEndpoint]) {

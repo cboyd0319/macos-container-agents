@@ -127,7 +127,7 @@ when available.
 | --- | --- |
 | Review completed runs | `runs list`, `runs show`, `runs log`, `runs diff` |
 | Inspect or control active runs | `runs active`, `runs status`, `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`, `runs repair` |
-| Review provider policy decisions | `egress log`, `why host` |
+| Review safety and policy decisions | `why host`, `why workspace`, `why network`, `why state`, `egress log` |
 | Inspect auth broker state | `auth status`, `auth explain`, `auth log` |
 | Repair bundled images and inspect builder state | `image doctor`, `image rebuild`, `image build --dry-run` |
 | Manage isolated state volumes | `state list`, `state reset`, `state prune` |

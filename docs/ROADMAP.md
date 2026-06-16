@@ -23,7 +23,7 @@ direction. The live feature status and verification evidence are tracked in
   package, and optional feature paths
 - DNS resolution and unsafe-address rejection inside the provider CONNECT proxy
 - provider proxy policy logs for allowed and denied CONNECT decisions
-- first `runhaven why host ...` diagnostic for provider-host decisions
+- `runhaven why host ...` diagnostic for provider-host decisions
 - grouped blocked-host review with rule, count, run id, and suggested next
   action
 - provider-profile smoke support for bundled source-backed hosts
@@ -38,12 +38,11 @@ direction. The live feature status and verification evidence are tracked in
 
 ## Phase 3: Beginner Install Flow
 
-- signed release artifacts
 - one-command bootstrap for Apple `container`
 - non-mutating guided first-run setup with exact prerequisite fixes
 - plain-language explanations for every requested permission
 - `runhaven why` diagnostics for blocked hosts, rejected mounts, sensitive
-  defaults, and validation failures
+  defaults, network modes, state volumes, and validation failures
 - guided `runhaven setup` first-run flow with profile-specific next commands
 - goal-based network selection copy for local-only, provider-only, package
   install, and unrestricted internet use cases
@@ -83,7 +82,7 @@ direction. The live feature status and verification evidence are tracked in
   run-state handling, and verification helpers remain reviewable.
 - run the `rust-expert` agent with the Rust skill across the entire repo to
   look for correctness, safety, idiomatic Rust, test, packaging, and
-  maintainability issues before release hardening.
+  maintainability issues before broadening the product surface.
 - use the `apple-container-expert` agent with the Apple Container skill for
   Apple `container` runtime, networking, source, service, registry, machine,
   and security-boundary work.
@@ -111,6 +110,7 @@ direction. The live feature status and verification evidence are tracked in
 - container-only setup, main, and teardown steps
 - workflow state, resume, and failure policy
 - read-only context overlays for docs, skills, prompts, and project memory
-- deny-by-default extension and MCP boundaries
+- deny-by-default extension and MCP boundary policy documented in
+  [`EXTENSION_MCP_BOUNDARY.md`](EXTENSION_MCP_BOUNDARY.md)
 - source-of-truth planner and policy objects reusable by future CLI, API, or
   GUI surfaces

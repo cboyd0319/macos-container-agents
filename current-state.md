@@ -4,16 +4,16 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-RunHaven has been converted from a Python project to a fully functional Rust
-CLI while preserving the macOS Apple `container` harness contract, exact pin
-policy, and repo-owned verification route.
+Finish the non-UI CLI, safety-policy, documentation, and harness cleanup pass
+for the Rust RunHaven CLI while preserving the macOS Apple `container`
+boundary, exact pin policy, and repo-owned verification route.
 
 ## State Contract
 
 - `feature_list.json`: machine-readable feature state and durable product
   evidence.
 - `docs/harness/evidence/evidence-log.md`: meaningful verification, source
-  review, release, or harness evidence.
+  review, packaging, or harness evidence.
 - `current-state.md`: current objective, trusted verification, touched
   surfaces, blockers, and next step.
 - Do not recreate separate root `progress.md` or `session-handoff.md` files.
@@ -37,10 +37,25 @@ policy, and repo-owned verification route.
   passthrough, explicit workspace scope, non-root bundled images, and
   provider egress allowlisting only through reviewed provider mode.
 - HarnessForge output is advisory unless a maintainer promotes a recommendation
-  into repo-owned docs, tests, policy, code, or release checks.
+  into repo-owned docs, tests, policy, code, or packaging checks.
 
 ## Latest Verified Work
 
+- Added non-mutating CLI explainers for `runhaven why workspace PATH`,
+  `runhaven why network MODE`, and `runhaven why state AGENT`; existing
+  `why host` remains the provider-host explainer.
+- Added focused integration tests and usage docs for the expanded `why`
+  commands.
+- Added task recipes for read-only review, local-only checks, provider-only
+  runs, worktree review, and exact state reset.
+- Added `docs/EXTENSION_MCP_BOUNDARY.md` and linked it from the security model
+  so future extension or MCP work has a deny-by-default policy before
+  implementation.
+- Added a `runhaven-check-pins` sensor that enforces top-of-file descriptions
+  for maintained shell scripts and bundled image templates.
+- Updated the active harness roadmap and source-mined UX notes so completed
+  CLI explainers, script-header enforcement, and extension/MCP policy do not
+  keep resurfacing as current backlog.
 - Rebuilt the CLI in Rust with exact-pinned Cargo dependencies and a checked-in
   `Cargo.lock`.
 - Replaced the Python pin checker with `runhaven-check-pins`.
@@ -55,7 +70,7 @@ policy, and repo-owned verification route.
   RunHaven/container, macOS, editor, and pre-Rust Python tooling artifacts.
 - Completed the final active-document accuracy sweep for the Rust conversion
   across product docs, GitHub instructions, harness boundaries, roadmap,
-  release controls, and source-mined ideas.
+  packaging controls, and source-mined ideas.
 - Removed ignored local cleanup artifacts from the working tree, including
   stale Python cache/build output and `.DS_Store` files.
 - Deduped the main README after the overview refresh so the top-level page now
@@ -139,7 +154,7 @@ policy, and repo-owned verification route.
 ## Trusted Verification
 
 - `cargo fmt --check`: passed.
-- `cargo test --locked`: passed with 41 library tests and 3 integration tests.
+- `cargo test --locked`: passed with 41 library tests and 6 integration tests.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo run --locked --bin runhaven-check-pins`: passed.
 - `cargo build --locked`: passed.
@@ -151,6 +166,10 @@ policy, and repo-owned verification route.
   `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`,
   `target/debug/runhaven doctor`, and
   `target/debug/runhaven image build shell --dry-run`.
+- Expanded `why` CLI smokes passed: `target/debug/runhaven why network
+  provider`, `target/debug/runhaven why workspace .`,
+  `target/debug/runhaven why state shell`, and
+  `target/debug/runhaven why host api.openai.com --agent codex`.
 - Active-doc stale-reference scan: passed for old Python project paths,
   Python-package guidance, and pre-Rust source paths.
 - Cleanup scan: passed; no Python project artifacts, Python caches, old Python
@@ -245,31 +264,21 @@ policy, and repo-owned verification route.
 
 ## Touched Surfaces
 
-- `AGENTS.md`
-- `.github/workflows/` active workflow removal
-- `.gitignore`
-- `Cargo.toml`
-- `Cargo.lock`
-- `rust-toolchain.toml`
-- `init.sh`
 - `current-state.md`
-- `pins.toml`
-- `README.md`
-- `CONTRIBUTING.md`
-- `docs/`
-- `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
-- `docs/harness/release/apple-container-update-playbook.md`
-- `docs/TAURI_UI_GUARDRAILS.md`
-- `docs/harness/`
 - `feature_list.json`
-- `images/`
-- `scripts/`
-- `src/`
-- `src/runhaven/cli/app/`
-- `src/runhaven/cli/doctor/`
-- `src/runhaven/provider/runtime/`
-- `tests/`
-- `tests/fixtures/apple_container/`
+- `docs/EXTENSION_MCP_BOUNDARY.md`
+- `docs/CAPABILITIES.md`
+- `docs/ROADMAP.md`
+- `docs/SECURITY_MODEL.md`
+- `docs/USAGE.md`
+- `docs/harness/evidence/evidence-log.md`
+- `docs/harness/research/ux-research-ideas.md`
+- `docs/harness/state/roadmap.md`
+- `src/runhaven/cli/app.rs`
+- `src/runhaven/cli/args.rs`
+- `src/runhaven/cli/diagnostics.rs`
+- `src/runhaven/harness/pins.rs`
+- `tests/cli.rs`
 
 ## Blockers
 
@@ -281,6 +290,7 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Start Tauri/UI planning from `docs/TAURI_UI_GUARDRAILS.md` and keep local
-verification authoritative while alpha CI is disabled. Keep `--ssh` fail-closed
-until a no-secret non-root Apple `container` smoke proves usable forwarding.
+No additional non-UI implementation task is currently accepted beyond known
+candidate research items that need a scoped design or representative evidence.
+Keep `--ssh` fail-closed until a no-secret non-root Apple `container` smoke
+proves usable forwarding.
