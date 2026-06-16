@@ -26,6 +26,7 @@ tauri-build = "2.6.2"
 tauri-plugin-dialog = "2.7.1"
 
 [frontend]
+"@playwright/test" = "1.61.0"
 "@lucide/svelte" = "1.20.0"
 "@sveltejs/vite-plugin-svelte" = "7.1.2"
 "@tauri-apps/api" = "2.11.0"

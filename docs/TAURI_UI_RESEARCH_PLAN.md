@@ -379,8 +379,8 @@ The first scaffold is acceptable only while all of these remain true:
 11. Rust command tests cover invalid input, missing confirmation, and denied
     capability assumptions where testable.
 12. Verification includes `cargo fmt --check`, `cargo test --locked`, frontend
-    typecheck/test/build, Tauri Rust checks, local Markdown link check, pin
-    policy, and `git diff --check`.
+    typecheck/unit/browser/build checks, Tauri Rust checks, local Markdown link
+    check, pin policy, and `git diff --check`.
 
 The scaffold used the current stable equivalent of:
 

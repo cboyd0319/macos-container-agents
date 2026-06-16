@@ -52,6 +52,8 @@
     "ui/package-lock.json",
     "ui/src/app/App.svelte",
     "ui/src/commands/runhaven.ts",
+    "ui/playwright.config.ts",
+    "ui/e2e/app.spec.ts",
     "src-tauri/Cargo.toml",
     "src-tauri/Cargo.lock",
     "src-tauri/build.rs",
@@ -153,7 +155,19 @@
       "tauri:build",
       "@tauri-apps/api",
       "@tauri-apps/plugin-dialog",
+      "@playwright/test",
       "@lucide/svelte"
+    ],
+    "ui/playwright.config.ts": [
+      "webServer",
+      "chromium",
+      "127.0.0.1:5173"
+    ],
+    "ui/e2e/app.spec.ts": [
+      "pageerror",
+      "console",
+      "Agent runs",
+      "Launch plan"
     ],
     "ui/src/app/App.svelte": [
       "Launch plan",

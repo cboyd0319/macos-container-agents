@@ -122,6 +122,7 @@ cargo test --locked
 cargo run --locked --bin runhaven-check-pins
 npm --prefix ui run check
 npm --prefix ui test
+npm --prefix ui run test:e2e
 git diff --check
 ```
 

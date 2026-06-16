@@ -57,6 +57,9 @@ if [ -f "ui/package.json" ]; then
 
   echo "== npm --prefix ui run build =="
   npm --prefix ui run build
+
+  echo "== npm --prefix ui run test:e2e =="
+  npm --prefix ui run test:e2e
 fi
 
 if [ -f "src-tauri/Cargo.toml" ]; then

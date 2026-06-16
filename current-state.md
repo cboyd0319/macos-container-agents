@@ -68,9 +68,14 @@ narrow capability review, and focused tests are in place.
   agent selection, folder selection, secure-default network choices, resource
   inputs, read-only workspace selection, and plan review. The UI does not
   launch or control runs yet.
+- Fixed the Svelte 5 blank-page runtime failure by replacing the old
+  `new App(...)` entrypoint with `mount(App, ...)`.
+- Added exact-pinned Playwright browser coverage for the UI shell so runtime
+  errors, console errors, and blank-page regressions are caught by
+  `npm --prefix ui run test:e2e`.
 - Updated the local harness so `./init.sh` now runs frontend npm ci, Svelte
-  typecheck, Vitest, Vite build, Tauri Rust fmt/test/clippy, and debug
-  no-bundle Tauri build in addition to the root Rust checks.
+  typecheck, Vitest, Playwright, Vite build, Tauri Rust fmt/test/clippy, and
+  debug no-bundle Tauri build in addition to the root Rust checks.
 - Added the project-wide secure-easy-path rule: the default and shortest path
   should be secure; supported advanced choices warn and require confirmation
   but are not hidden or blocked only because they are advanced.
@@ -194,6 +199,8 @@ narrow capability review, and focused tests are in place.
   build still passed with install scripts disabled.
 - `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
 - `npm --prefix ui test`: passed with 1 test file and 6 tests.
+- `npm --prefix ui run test:e2e`: passed with 1 Chromium browser test after
+  verifying the dashboard renders without page or console errors.
 - `npm --prefix ui run build`: passed with Vite 8.0.16.
 - `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 4
   Tauri command tests.

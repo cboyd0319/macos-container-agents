@@ -60,11 +60,12 @@
         "Capabilities explicitly allow only the four read-only scaffold commands plus native folder picking",
         "The WebView has no generic shell, filesystem, process, HTTP, or Apple `container` bridge",
         "Frontend helper tests cover secure defaults, warning previews, and read-only preview command paths",
+        "Playwright browser smoke catches blank-page and console-error regressions",
         "Tauri command tests cover profile listing, plan construction, advanced-choice warnings, and invalid workspace rejection",
         "`./init.sh` passes with root Rust checks, frontend checks, Tauri Rust checks, and debug no-bundle Tauri build"
       ],
       "evidence": [
-        "2026-06-16: Added exact-pinned Svelte + Vite + TypeScript UI under `ui/`, Tauri v2 shell under `src-tauri/`, narrow `main-read` and `folder-pick` capabilities, read-only command contracts, frontend tests, Tauri command tests, and an updated local harness. `./init.sh` passed after adding the scaffold checks."
+        "2026-06-16: Added exact-pinned Svelte + Vite + TypeScript UI under `ui/`, Tauri v2 shell under `src-tauri/`, narrow `main-read` and `folder-pick` capabilities, read-only command contracts, frontend tests, Playwright browser smoke, Tauri command tests, and an updated local harness. `./init.sh` passed after adding the scaffold checks."
       ],
       "notes": "This is not a run-control UI yet. Mutating commands remain deferred until each operation has typed Rust validation, explicit confirmation, and focused tests."
     },
