@@ -4,10 +4,11 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-Begin the Tauri/UI research phase from a clean Rust CLI core. The research must
-choose a source-backed Tauri v2 architecture, frontend framework, comparable UI
-patterns, and beginner-safe UX plan before any scaffold or frontend dependency
-is added.
+Prepare for the first Tauri/Svelte scaffold from completed UI research. The
+next implementation must start from `docs/TAURI_UI_RESEARCH_PLAN.md` and
+`docs/TAURI_UI_GUARDRAILS.md`, add exact-pinned dependencies, keep the WebView
+untrusted, and begin with read-only setup/dashboard behavior before mutating
+commands.
 
 ## State Contract
 
@@ -48,8 +49,16 @@ is added.
 - Added `docs/TAURI_UI_RESEARCH_PLAN.md` as the active research plan for Tauri
   architecture, frontend framework selection, comparable product analysis, UX
   questions, information architecture, command contracts, and scaffold gates.
-- Promoted Tauri/UI research and framework selection to the active harness
-  roadmap item.
+- Promoted and then validated Tauri/UI research and framework selection in the
+  active harness roadmap.
+- Completed the Tauri/UI research phase. The accepted direction is Tauri v2
+  with Svelte + Vite + TypeScript, npm lockfile, a separate `src-tauri` crate
+  calling the existing Rust library, narrow capabilities, typed command
+  contracts, a read-only first scaffold, and no generic shell/filesystem/process
+  bridge.
+- Added the project-wide secure-easy-path rule: the default and shortest path
+  should be secure; supported advanced choices warn and require confirmation
+  but are not hidden or blocked only because they are advanced.
 - Added non-mutating CLI explainers for `runhaven why workspace PATH`,
   `runhaven why network MODE`, and `runhaven why state AGENT`; existing
   `why host` remains the provider-host explainer.
@@ -275,6 +284,11 @@ is added.
   review, JSON validation for `feature_list.json` and
   `docs/harness/manifest.json`, local Markdown link check, stale-text scan,
   `cargo run --locked --bin runhaven-check-pins`, and `git diff --check`.
+- Tauri/UI research completion checks passed: Antigravity read-only research,
+  current official Tauri/Tauri plugin/Vite/Svelte/React/Solid/Vue/comparable UI
+  source review, current npm and Cargo package-version checks, JSON validation,
+  local Markdown link check, stale-text scan, `cargo run --locked --bin
+  runhaven-check-pins`, and `git diff --check`.
 
 ## Touched Surfaces
 
@@ -309,8 +323,9 @@ is added.
 
 ## Next Step
 
-Continue the Tauri/UI research phase in `docs/TAURI_UI_RESEARCH_PLAN.md`.
-Research current Tauri v2 architecture, frontend framework fit, comparable
-desktop/container/workspace UIs, and beginner-safe UX flows before adding a
-Tauri scaffold. Keep `--ssh` fail-closed until a no-secret non-root Apple
-`container` smoke proves usable forwarding.
+Start the first Tauri/Svelte scaffold only from the acceptance criteria in
+`docs/TAURI_UI_RESEARCH_PLAN.md`. Add `ui/` and `src-tauri/` with exact pins,
+commit lockfiles, create narrow capabilities, and implement read-only
+setup/dashboard commands before any mutating UI operation. Keep `--ssh`
+fail-closed until a no-secret non-root Apple `container` smoke proves usable
+forwarding.

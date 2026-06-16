@@ -115,11 +115,18 @@
       "Deferred Until End-Stage Packaging"
     ],
     "docs/TAURI_UI_RESEARCH_PLAN.md": [
+      "Decision Summary",
+      "Source Evidence",
+      "Architecture Decision",
+      "Frontend Framework Decision",
+      "Product Principle: Secure Easy Path",
+      "Comparable UI Patterns",
+      "Information Architecture",
       "Research Outcome",
-      "Framework Candidates",
-      "Comparable UI Analysis",
-      "Beginner-Safe UX Questions",
-      "Do Not Start Yet"
+      "Command Contract",
+      "Capability Map",
+      "First Scaffold Acceptance Criteria",
+      "Do Not Build Yet"
     ],
     "docs/harness/state/first-agent-task.md": [
       "First-Agent Harness Improvement Task",

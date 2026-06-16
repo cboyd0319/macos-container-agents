@@ -389,4 +389,5 @@ Add these as README or usage recipes before adding a larger UI.
 8. Project recommendation/import from manifests and devcontainer metadata.
 9. Auth status and Codex broker prototype are implemented; broader provider
    brokers remain future work.
-10. Tauri/UI research phase after the CLI planner and run records stabilize.
+10. First Tauri/Svelte scaffold after the CLI planner, run records, and Tauri
+    research plan stabilize.

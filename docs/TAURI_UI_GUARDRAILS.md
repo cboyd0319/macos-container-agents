@@ -37,6 +37,9 @@ control RunHaven operations.
   frontend state or browser storage.
 - Keep remote content out of privileged WebViews. If remote content is ever
   needed, it must live in a separate no-privilege window.
+- The secure path must be the default and easiest path. Supported advanced or
+  risky paths should warn in plain language and require confirmation, but should
+  not be hidden or blocked just because they are advanced.
 
 ## Initial Capability Shape
 

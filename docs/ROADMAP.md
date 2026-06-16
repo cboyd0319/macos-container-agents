@@ -113,17 +113,14 @@ The consolidated non-UI backlog lives in
 
 ## Tauri/UI Research Phase
 
-- Use [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md) as the
-  active research plan.
-- Research current Tauri v2 architecture, capabilities, permissions, command
-  IPC, frontend configuration, and test/build flow before scaffolding.
-- Compare Svelte, React, Solid, and Vue against RunHaven's beginner-safe,
-  low-maintenance desktop requirements.
-- Study Docker Desktop, Podman Desktop, DevPod Desktop, and GitHub Desktop for
-  setup, dashboard, logs, workspace, review, and recovery patterns.
-- Produce information architecture, screen responsibilities, command contract,
-  capability mapping, and UX copy before adding `src-tauri/` or frontend
-  dependencies.
+- Completed 2026-06-16 in
+  [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).
+- Decision: Tauri v2 with Svelte + Vite + TypeScript, npm lockfile, a separate
+  `src-tauri` crate that calls the existing Rust library, narrow capabilities,
+  and a secure default path with warning-confirmed advanced choices.
+- Next UI phase starts with the first scaffold acceptance criteria in the
+  research plan. Do not add mutating commands before the read-only setup and
+  dashboard shell is verified.
 
 ## Phase 6: Repeatable Workflows
 

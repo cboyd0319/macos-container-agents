@@ -64,6 +64,26 @@ checks expected bundled RunHaven image tags, compares RunHaven image source
 metadata, reviews inactive RunHaven state volume names, and does not build
 images, delete resources, mount workspaces, read credentials, or reset state.
 
+## Secure Easy Path And Explicit Overrides
+
+The default and easiest path must be the secure path. New CLI and UI workflows
+should make the narrow choice the shortest path: smallest selected workspace,
+non-root bundled image, no host credential mounts, no arbitrary environment
+passthrough, no raw SSH keys, explicit network choice, and visible plan output.
+
+Supported advanced choices should warn but not hide or block. When a user
+intentionally chooses full internet access, a sensitive workspace, root inside
+the container, a custom image, environment passthrough, an additional provider
+host, worktree merge or discard, state deletion, network pruning, or hard-stop
+recovery, RunHaven should show the tradeoff in plain language and require an
+explicit confirmation.
+
+Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
+failed setup checks, invalid input, missing confirmations, unsupported platform
+state, and `--ssh` while the verified Apple `container` non-root forwarding path
+does not work. This is not a policy block around a supported choice; it is a
+runtime correctness and safety failure.
+
 ## Why Not Container Machine
 
 RunHaven uses task-scoped `container run` commands instead of Apple's persistent
