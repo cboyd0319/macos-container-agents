@@ -129,6 +129,9 @@ The consolidated non-UI backlog lives in
 - Launch planning now warns when other RunHaven runs are active and when the
   selected memory limit plus active runs may be material on the host. The
   post-launch UI shows a sanitized run snapshot.
+- The dashboard can read a typed live run-status snapshot for the latest
+  launched run, showing marker status, container state, resources, image, and
+  network metadata without raw logs or raw Apple inspect payloads.
 - Remaining UI controls should still be added one at a time with typed Rust
   commands, explicit confirmation, focused tests, and narrow capabilities.
 

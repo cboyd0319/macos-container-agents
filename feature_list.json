@@ -93,7 +93,7 @@
       "evidence": [
         "2026-06-16: Added shared Rust launch runtime and state-volume lock modules, a typed Tauri `launch_run` command, a separate `launch-run` capability, Svelte launch confirmation controls, frontend command helpers, Rust/frontend/Playwright tests, and docs updates. Focused and broader verification passed before commit."
       ],
-      "notes": "Live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`; active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`."
+      "notes": "Live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`; active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`; live run status is tracked separately in `tauri-live-run-status`."
     },
     {
       "id": "tauri-image-readiness",
@@ -117,7 +117,7 @@
       "evidence": [
         "2026-06-16: Added structured image and builder status reports, typed Tauri `get_image_status`, image readiness launch enforcement, launch-panel readiness UI, and focused Rust/Tauri/frontend/Playwright tests."
       ],
-      "notes": "Live status/log feedback remains a launch-readiness gap. Active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`."
+      "notes": "Raw log feedback remains separate future work. Active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`; live run status is tracked separately in `tauri-live-run-status`."
     },
     {
       "id": "tauri-launch-resource-warnings",
@@ -141,7 +141,31 @@
       "evidence": [
         "2026-06-16: Added active-run and material-memory warning codes to Tauri plan and launch confirmation, added a typed launch snapshot response, rendered the snapshot after launch, and covered the behavior with Rust/frontend/Playwright tests and browser screenshots."
       ],
-      "notes": "Raw log feedback and deeper active-run status remain future work because logs can contain secrets or workspace content and need a dedicated design."
+      "notes": "Raw log feedback remains future work because logs can contain secrets or workspace content and need a dedicated design. Live run status is tracked separately in `tauri-live-run-status`."
+    },
+    {
+      "id": "tauri-live-run-status",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri live run status",
+      "user_visible_behavior": "The alpha desktop app can refresh a typed live status snapshot for the latest launched run, showing marker status, container state, resources, image, and network metadata without exposing raw logs or raw Apple inspect payloads.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-launch-execution",
+        "tauri-launch-resource-warnings",
+        "run-observability"
+      ],
+      "verification": [
+        "`get_run_status` uses a typed request and response and is granted only through `main-read`",
+        "The Rust status path reuses the existing sanitized active-run inspect payload",
+        "The Tauri conversion maps only known safe fields and drops raw command, environment, mount, and argument data",
+        "Frontend preview and Playwright coverage prove the run-status card renders after the launch path",
+        "Raw logs remain out of frontend state"
+      ],
+      "evidence": [
+        "2026-06-16: Added `active_run_status_payload`, typed Tauri `get_run_status`, `main-read` permission for that command, frontend status helper, run-status UI, and Rust/frontend/Playwright tests proving sanitized fields and preview rendering."
+      ],
+      "notes": "Raw log viewing remains a separate design because logs can contain secrets or workspace content. Mutating run-control operations remain CLI-first."
     },
     {
       "id": "rust-cli-conversion",

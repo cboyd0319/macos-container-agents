@@ -19,6 +19,7 @@ use crate::contracts::{
 };
 
 pub(crate) mod image_status;
+pub(crate) mod run_status;
 
 #[tauri::command]
 pub(crate) fn get_setup_status() -> SetupStatus {

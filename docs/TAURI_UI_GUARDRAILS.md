@@ -76,15 +76,17 @@ Current alpha launch gate:
   memory limit plus active runs could be material on the host;
 - sanitized post-launch snapshot with run id, profile, workspace, state volume,
   network mode, and container name;
+- typed live run-status snapshot with marker status, container state,
+  resources, image, and network metadata from sanitized Rust status payloads;
 - explicit confirmation of the reviewed plan;
 - explicit confirmation for every warning returned by the plan;
 - launch blocked when `runhaven doctor` fails.
 
 Remaining launch-readiness gaps before this flow is complete:
 
-- richer live status and log feedback. Raw logs must not be stored in frontend
-  state without a dedicated design because agent output can contain secrets or
-  workspace content.
+- raw log feedback. Raw logs must not be stored in frontend state without a
+  dedicated design because agent output can contain secrets or workspace
+  content.
 
 Warnings:
 
@@ -96,8 +98,9 @@ Warnings:
 The current dashboard command already returns setup, active-run, recent-run,
 agent, and warning summaries. Image and builder status are available through
 typed Rust commands. Launch resource warnings are computed in the Rust plan and
-launch-confirmation path. Add dedicated typed Rust commands for maintenance
-status before parsing prose in the frontend.
+launch-confirmation path. Live run status is exposed through a typed read-only
+Rust command that returns sanitized metadata only. Add dedicated typed Rust
+commands for maintenance status before parsing prose in the frontend.
 
 ## Approval Gates
 

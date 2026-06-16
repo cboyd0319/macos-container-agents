@@ -3,6 +3,7 @@ import {
   defaultRunPlanRequest,
   getDashboardStatus,
   getImageStatus,
+  getRunStatus,
   getSetupStatus,
   isLaunchReady,
   launchRun,
@@ -103,6 +104,14 @@ describe("runhaven command helpers", () => {
     expect(status.image.ready).toBe(true);
     expect(status.image.status).toBe("ok");
     expect(status.builder.status).toBe("preview");
+  });
+
+  it("returns run status preview data outside the Tauri runtime", async () => {
+    const status = await getRunStatus("preview-run");
+
+    expect(status.run.runId).toBe("preview-run");
+    expect(status.container.state).toBe("running");
+    expect(status.container.resources.memoryBytes).toBe(4 * 1024 ** 3);
   });
 
   it("requires explicit confirmation before launch is available", async () => {

@@ -31,5 +31,8 @@ test("reviews and starts a preview run", async ({ page }) => {
 
   await expect(page.getByText(/Run started: preview-/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Last launch" })).toBeVisible();
-  await expect(page.getByText("Container")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run status" })).toBeVisible();
+  await expect(page.getByText("Container state")).toBeVisible();
+  await expect(page.getByText("running").first()).toBeVisible();
+  await expect(page.getByText("Container", { exact: true })).toBeVisible();
 });

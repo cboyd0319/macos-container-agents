@@ -8,6 +8,7 @@
     defaultRunPlanRequest,
     getDashboardStatus,
     getImageStatus,
+    getRunStatus,
     isLaunchReady,
     launchRun,
     planRun,
@@ -16,6 +17,7 @@
     type DashboardStatus,
     type ImageStatusResponse,
     type LaunchRunResponse,
+    type RunStatusResponse,
     type RunPlanRequest,
     type RunPlanResponse
   } from "../commands/runhaven";
@@ -33,6 +35,9 @@
   let confirmedWarnings: string[] = [];
   let launchMessage = "";
   let lastLaunch: LaunchRunResponse | null = null;
+  let runStatus: RunStatusResponse | null = null;
+  let runStatusLoading = false;
+  let runStatusError = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
@@ -58,6 +63,9 @@
           sessionName: request.sessionName
         };
         await loadImageStatus(agent.name);
+      }
+      if (lastLaunch) {
+        await loadRunStatus(lastLaunch.runId);
       }
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
@@ -87,6 +95,19 @@
       imageError = cause instanceof Error ? cause.message : String(cause);
     } finally {
       imageLoading = false;
+    }
+  }
+
+  async function loadRunStatus(runId: string) {
+    runStatusLoading = true;
+    runStatusError = "";
+    try {
+      runStatus = await getRunStatus(runId);
+    } catch (cause) {
+      runStatus = null;
+      runStatusError = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      runStatusLoading = false;
     }
   }
 
@@ -156,6 +177,7 @@
         confirmedWarnings
       });
       lastLaunch = started;
+      await loadRunStatus(started.runId);
       launchMessage = `Run started: ${started.runId}`;
       plan = null;
       launchConfirmation = false;
@@ -166,6 +188,13 @@
     } finally {
       launching = false;
     }
+  }
+
+  function formatMemory(bytes: number | null): string {
+    if (bytes === null) {
+      return "unknown";
+    }
+    return `${Math.round(bytes / 1024 ** 2)} MiB`;
   }
 </script>
 
@@ -438,6 +467,41 @@
         <Metric label="Network" value={lastLaunch.snapshot.networkMode} />
         <Metric label="Container" value={lastLaunch.snapshot.containerName} />
       </dl>
+    </section>
+  {/if}
+
+  {#if lastLaunch}
+    <section class="panel run-status-panel" aria-live="polite">
+      <h2>Run status</h2>
+      {#if runStatusLoading}
+        <p class="muted">Refreshing status...</p>
+      {:else if runStatus}
+        <dl class="plan-grid">
+          <Metric label="Marker status" value={runStatus.run.status} />
+          <Metric label="Container state" value={runStatus.container.state} />
+          <Metric label="Image" value={runStatus.container.image ?? "-"} />
+          <Metric label="Started" value={runStatus.container.startedAt ?? "-"} />
+          <Metric label="CPU" value={runStatus.container.resources.cpus ?? "unknown"} />
+          <Metric label="Memory" value={formatMemory(runStatus.container.resources.memoryBytes)} />
+        </dl>
+        {#if runStatus.container.networks.length > 0}
+          <div class="status-list">
+            {#each runStatus.container.networks as network}
+              <p>
+                {network.network ?? "network"}
+                {#if network.ipv4Address}
+                  <span>ipv4={network.ipv4Address}</span>
+                {/if}
+                {#if network.hostname}
+                  <span>host={network.hostname}</span>
+                {/if}
+              </p>
+            {/each}
+          </div>
+        {/if}
+      {:else if runStatusError}
+        <p class="notice">{runStatusError}</p>
+      {/if}
     </section>
   {/if}
 </main>

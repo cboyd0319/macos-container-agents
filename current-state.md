@@ -84,9 +84,14 @@ tests are in place.
   confirmation rechecks those dynamic warning codes before start. The UI shows
   a sanitized run snapshot after launch and still keeps raw logs out of
   frontend state.
+- Added typed live run-status feedback for the Tauri app. `get_run_status`
+  reuses the existing sanitized active-run status payload and returns marker
+  status, container state, resources, image, and network metadata without raw
+  logs, raw Apple inspect payloads, command arguments, environment, or mounts.
 - Remaining launch-readiness gaps before the UI launch flow is complete are
-  richer live status/log feedback. Stop, kill, attach, repair, image build,
-  state cleanup, network cleanup, and worktree review remain CLI-first.
+  raw log feedback and dedicated run controls. Stop, kill, attach, repair,
+  image build, state cleanup, network cleanup, and worktree review remain
+  CLI-first.
 - Fixed the Svelte 5 blank-page runtime failure by replacing the old
   `new App(...)` entrypoint with `mount(App, ...)`.
 - Added exact-pinned Playwright browser coverage for the UI shell so runtime
@@ -258,6 +263,32 @@ tests are in place.
 - `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
   frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
   fmt/test/clippy checks, and debug no-bundle Tauri build.
+- Tauri live-status red checks failed first for missing typed status pieces:
+  `cargo test --manifest-path src-tauri/Cargo.toml --locked run_status -- --nocapture`
+  and `npm --prefix ui test -- --run`.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked run_status -- --nocapture`:
+  passed with the sanitized status conversion test.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 12
+  Tauri command tests.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --check`: passed.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
+  passed.
+- `npm --prefix ui test -- --run`: passed with 14 frontend tests.
+- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
+- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
+  run-status preview path.
+- `npm --prefix ui run build`: passed with Vite 8.0.16.
+- Browser screenshot review passed for desktop and mobile run-status layouts:
+  `/tmp/runhaven-live-status-desktop.png` and
+  `/tmp/runhaven-live-status-mobile.png`.
+- `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
+  frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
+  fmt/test/clippy checks, and debug no-bundle Tauri build.
+- `python3 -m json.tool feature_list.json`: passed.
+- `python3 -m json.tool src-tauri/capabilities/main-read.json`: passed.
+- Source-size guard passed; the largest Rust file remains
+  `src/runhaven/provider/auth_broker.rs` at 499 lines.
+- `git diff --check`: passed.
 - `cargo fmt`: passed.
 - `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
 - `npm --prefix ui test -- --run`: passed with 1 test file and 9 tests.
@@ -457,11 +488,11 @@ tests are in place.
 
 ## Next Step
 
-Choose the next Tauri/UI slice deliberately. The best next step is deeper
-read-only run feedback before broader controls: add a typed live run-status
-snapshot that does not expose raw logs or workspace contents, then design raw
-log viewing separately because logs can contain secrets. After that, add stop,
-kill, attach, repair, image build, state cleanup, network cleanup, and worktree
-review one at a time with typed Rust commands, explicit confirmation, focused
-tests, and narrow capabilities. Keep `--ssh` fail-closed until a no-secret
-non-root Apple `container` smoke proves usable forwarding.
+Choose the next Tauri/UI slice deliberately. The best next step is raw log
+viewing design or the first explicit run-control operation. Raw logs need a
+dedicated design because agent output can contain secrets or workspace content.
+For mutating controls, add stop, kill, attach, repair, image build, state
+cleanup, network cleanup, and worktree review one at a time with typed Rust
+commands, explicit confirmation, focused tests, and narrow capabilities. Keep
+`--ssh` fail-closed until a no-secret non-root Apple `container` smoke proves
+usable forwarding.

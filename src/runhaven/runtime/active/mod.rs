@@ -180,28 +180,49 @@ fn validate_attach_command(command: &[String]) -> Result<()> {
 }
 
 pub fn runs_status(run_id: &str, json_output: bool) -> Result<i32> {
-    let record = find_active_run_record(run_id)?;
-    let container_name = require_string(
-        record.get("container_name"),
-        "active run record is missing container name",
-    )?;
-    validate_runhaven_container_name(container_name)?;
+    let (record, container_name) = active_run_record_and_container(run_id)?;
     let output = Command::new("container")
-        .args(["inspect", container_name])
+        .args(["inspect", container_name.as_str()])
         .output()?;
     if !output.status.success() {
         eprintln!("runhaven: container inspect failed for run {run_id} ({container_name})");
         return Ok(output.status.code().unwrap_or(1));
     }
-    let container = summarize_container_inspect(load_container_inspect(&output.stdout)?);
-    let payload = json!({
-        "active_run": public_active_run_record(&record),
-        "container": container,
-    });
+    let payload = active_run_status_payload_from_stdout(&record, &output.stdout)?;
     if json_output {
         println!("{}", serde_json::to_string_pretty(&payload)?);
         return Ok(0);
     }
     print_runs_status(&payload);
     Ok(0)
+}
+
+pub fn active_run_status_payload(run_id: &str) -> Result<Value> {
+    let (record, container_name) = active_run_record_and_container(run_id)?;
+    let output = Command::new("container")
+        .args(["inspect", container_name.as_str()])
+        .output()?;
+    if !output.status.success() {
+        bail!("container inspect failed for run {run_id} ({container_name})");
+    }
+    active_run_status_payload_from_stdout(&record, &output.stdout)
+}
+
+fn active_run_record_and_container(run_id: &str) -> Result<(Value, String)> {
+    let record = find_active_run_record(run_id)?;
+    let container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )?
+    .to_string();
+    validate_runhaven_container_name(&container_name)?;
+    Ok((record, container_name))
+}
+
+fn active_run_status_payload_from_stdout(record: &Value, stdout: &[u8]) -> Result<Value> {
+    let container = summarize_container_inspect(load_container_inspect(stdout)?);
+    Ok(json!({
+        "active_run": public_active_run_record(record),
+        "container": container,
+    }))
 }

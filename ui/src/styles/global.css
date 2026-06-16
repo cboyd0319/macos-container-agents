@@ -305,8 +305,32 @@ legend {
 }
 
 .plan-panel,
-.last-launch-panel {
+.last-launch-panel,
+.run-status-panel {
   margin-top: 1rem;
+}
+
+.status-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #d7e0ea;
+}
+
+.status-list p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  color: #344254;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.status-list span {
+  color: #526173;
+  font-weight: 650;
 }
 
 .launch-confirmation {

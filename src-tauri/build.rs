@@ -5,6 +5,7 @@ fn main() {
             "list_agents",
             "get_dashboard_status",
             "get_image_status",
+            "get_run_status",
             "plan_run",
             "launch_run",
         ]),

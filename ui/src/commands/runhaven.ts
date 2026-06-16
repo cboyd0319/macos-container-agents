@@ -70,6 +70,44 @@ export type ImageStatusResponse = {
   builder: BuilderStatus;
 };
 
+export type RunStatusRun = {
+  runId: string;
+  profile: string;
+  workspace: string;
+  networkMode: string;
+  status: string;
+  timestamp: string;
+  stateVolume: string;
+  session: string;
+  containerName: string;
+};
+
+export type RunStatusResources = {
+  cpus: string | null;
+  memoryBytes: number | null;
+};
+
+export type RunStatusNetwork = {
+  network: string | null;
+  hostname: string | null;
+  ipv4Address: string | null;
+  ipv4Gateway: string | null;
+  ipv6Address: string | null;
+};
+
+export type RunStatusContainer = {
+  state: string;
+  image: string | null;
+  startedAt: string | null;
+  resources: RunStatusResources;
+  networks: RunStatusNetwork[];
+};
+
+export type RunStatusResponse = {
+  run: RunStatusRun;
+  container: RunStatusContainer;
+};
+
 export type RunPlanRequest = {
   agent: string;
   workspacePath: string;
@@ -236,6 +274,40 @@ export async function getImageStatus(agent: string): Promise<ImageStatusResponse
       startedDate: null,
       ipv4Address: null,
       warning: null
+    }
+  }));
+}
+
+export async function getRunStatus(runId: string): Promise<RunStatusResponse> {
+  return call("get_run_status", { request: { runId } }, () => ({
+    run: {
+      runId,
+      profile: "claude",
+      workspace: "/tmp/runhaven-preview",
+      networkMode: "provider",
+      status: "running",
+      timestamp: "preview",
+      stateVolume: "preview",
+      session: "default",
+      containerName: "preview"
+    },
+    container: {
+      state: "running",
+      image: "runhaven/preview:0.1.0",
+      startedAt: "preview",
+      resources: {
+        cpus: "4",
+        memoryBytes: 4 * 1024 ** 3
+      },
+      networks: [
+        {
+          network: "preview-network",
+          hostname: "preview",
+          ipv4Address: "192.0.2.10/24",
+          ipv4Gateway: "192.0.2.1",
+          ipv6Address: null
+        }
+      ]
     }
   }));
 }
