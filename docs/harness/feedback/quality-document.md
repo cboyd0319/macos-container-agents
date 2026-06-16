@@ -1,6 +1,6 @@
 # Quality Document
 
-Last Updated: 2026-06-15
+Last Updated: 2026-06-16
 
 Use this as a periodic codebase health snapshot. It is separate from the
 evaluator rubric: the rubric scores one work session, while this document scores
@@ -10,7 +10,7 @@ the repo over time.
 
 | Domain | Grade | Verification Status | Agent Legibility | Key Gaps |
 | --- | --- | --- | --- | --- |
-| Harness | A | Repo-owned docs and state are current; HarnessForge audit reports 100/100 as an advisory structural signal | Strong startup path, state files, roadmap, retired first-agent task, and sensors | Keep evidence fresh and treat new HarnessForge suggestions as candidates until repo-owned contracts accept them |
+| Harness | A | Repo-owned docs and state are current; HarnessForge audit is treated as an advisory structural signal | Strong startup path, compact state file, roadmap, retired first-agent task, and sensors | Keep evidence fresh and treat new HarnessForge suggestions as candidates until repo-owned contracts accept them |
 | Product security boundary | A- | Unit tests, pin checks, docs, and runtime smokes cover core boundaries | Security model is explicit and repeated in product docs | Live Apple `container` smokes remain required for boundary changes |
 | Provider egress and auth broker | B+ | Proxy, endpoint, auth broker, and smoke scripts exist | Good diagnostics through `why host`, `egress log`, and `auth` commands | Broader path-sensitive hosts and non-Codex brokers need explicit design and evidence |
 | Worktree/session/run observability | A- | Focused tests and run-history docs cover lifecycle behavior | Recovery commands and secret-free records are discoverable | Keep data-loss checks tight as lifecycle commands evolve |
@@ -27,7 +27,7 @@ unsafe to rely on without repair.
 | Instructions | Root instructions are compact and route to harness docs, product docs, roadmap, and state | Root file grows beyond router role, platform routers duplicate rules, or agents miss current work |
 | Tools | `init.sh`, focused Python commands, smoke scripts, advisory HarnessForge reports, and CI are discoverable | New command surface, CI behavior, or runtime smoke changes |
 | Environment | Python, macOS, Apple `container`, pins, image manifests, and component boundaries are documented | Version, runner, image, dependency, or platform contract changes |
-| State | `feature_list.json`, `progress.md`, `session-handoff.md`, product roadmap, and harness roadmap exist | Current objective changes, release prep starts, or planning decisions move from chat to repo |
+| State | `feature_list.json`, `current-state.md`, product roadmap, and harness roadmap exist | Current objective changes, release prep starts, or planning decisions move from chat to repo |
 | Feedback | Verification matrix, sensor registry, evidence log, repo-policy tests, and pin checks exist | Repeated misses, vague failures, new release gates, or real-agent effectiveness claims |
 
 ## Architecture Layers

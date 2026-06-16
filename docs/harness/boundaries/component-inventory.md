@@ -57,7 +57,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Pin policy | `scripts/check_pins.py`, `scripts/npm_pin_policy.py`, `pins.toml`, `requirements-dev.txt` | Pin checks are a release gate. Dependency and runner changes need primary-source evidence. |
 | Runtime smoke scripts | `scripts/provider_egress_smoke.py`, `scripts/codex_broker_smoke.py` | Live smokes may use network or disposable credentials. Keep defaults safe and clearly skipped when required inputs are absent. |
 | Test suite | `tests/` | Focused `unittest` modules cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. Do not add pytest-only assumptions. |
-| Harness operating layer | `AGENTS.md`, `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
+| Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |
 | Project asset | `docs/assets/logo.png` | Required README asset and manifest entry. |
 

@@ -16,8 +16,7 @@ the effective agent. Treat those as product changes.
 Startup path:
 
 1. Confirm the working directory and inspect `git status --short --branch`.
-2. Read this file, `feature_list.json`, `progress.md`, and
-   `session-handoff.md`.
+2. Read this file, `feature_list.json`, and `current-state.md`.
 3. Read `README.md` for product, install, usage, or public-doc changes.
 4. Read `docs/harness/README.md` and
    `docs/harness/authoritative-facts.md` for harness-doc, generated-output,
@@ -94,16 +93,16 @@ not commit machine-specific checkout paths for local tooling.
 - Do not claim done without fresh verification evidence.
 - Add or update focused tests for changed command construction, security
   boundaries, pins, or docs routing when practical.
-- Record skipped checks with reason and risk in `progress.md` or
-  `session-handoff.md`.
+- Record skipped checks with reason and risk in `current-state.md` when the
+  skip changes restart state, blockers, trusted verification, or the next step.
 - Definition Of Done: target behavior or documentation change is complete,
   acceptance criteria are satisfied, relevant repo-owned checks ran, local
   Markdown links resolve, harness report/audit were considered when available
   for harness changes, and the next session can restart from the harness files.
-- End of Session: update `progress.md` and `session-handoff.md` with current
-  state, verification evidence, blockers, touched files, and the recommended
-  next step. Use `docs/harness/state/clean-state-checklist.md` before claiming the
-  session is complete.
+- End of Session: update `current-state.md` with current state, verification
+  evidence, blockers, touched files, and the recommended next step. Use
+  `docs/harness/state/clean-state-checklist.md` before claiming the session is
+  complete.
 
 ## Security considerations
 

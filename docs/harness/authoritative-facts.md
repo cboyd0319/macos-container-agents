@@ -27,7 +27,7 @@ HarnessForge output is advisory unless a maintainer promotes it.
 
 | Change | Update First | Usually Skip |
 | --- | --- | --- |
-| Small internal fix | `progress.md` or no durable doc if state already covers it | README, manifest, roadmap |
+| Small internal fix | `current-state.md` or no durable doc if state already covers it | README, manifest, roadmap |
 | User-facing CLI behavior | `docs/USAGE.md`, tests, relevant help text | Harness research notes |
 | Security boundary | `docs/SECURITY_MODEL.md`, `docs/harness/boundaries/security-boundary-map.md`, tests | Marketing copy until behavior is proven |
 | Platform/runtime assumption | `README.md`, `docs/INSTALLATION.md`, platform evidence, pins | Unrelated harness state |

@@ -50,23 +50,13 @@ user requirements.
   verification target.
 - Project-owned instructions remain compact and route durable detail into
   focused docs.
-- Relevant feature, progress, handoff, evidence, and roadmap state agree.
+- Relevant feature, current-state, evidence, and roadmap state agree.
 
 ## Verification
 
-Detected baseline commands:
-
-- `python3 -m compileall src tests scripts`
-- `PYTHONPATH=src python3 -m unittest discover -s tests`
-- `python3 scripts/check_pins.py`
-- `python3 -m ruff check .`
-- `python3 -m mypy src`
-- `python3 -m build`
-
-Advisory HarnessForge review commands, when the package is available:
-
-- `python3 -m harnessforge report --target .`
-- `python3 -m harnessforge audit --target . --min-score 85`
+Choose checks from `docs/harness/feedback/verification-matrix.md`; that file
+owns command routing, advisory HarnessForge review commands, and escalation
+rules.
 
 Required evidence:
 

@@ -2,16 +2,17 @@
 
 Status: retired
 
-Review required: completed on 2026-06-15 during repo-specific harness review.
-Keep this file as a lifecycle record for HarnessForge audit compatibility. Do
-not treat it as an active task unless a maintainer resets this status.
+Review status: completed during repo-specific harness review and refreshed on
+2026-06-16 when active state moved to `current-state.md`. Keep this file as a
+lifecycle record for HarnessForge audit compatibility. Do not treat it as an
+active task unless a maintainer resets this status.
 
 The accepted harness state now lives in `AGENTS.md`, `docs/harness/README.md`,
 `docs/harness/boundaries/component-inventory.md`, `docs/harness/feedback/verification-matrix.md`,
 `docs/harness/feedback/sensor-registry.md`, `docs/harness/evidence/evidence-log.md`,
-`docs/harness/state/roadmap.md`, `feature_list.json`, `progress.md`, and
-`session-handoff.md`. Remaining product and harness work is tracked in
-`docs/ROADMAP.md`, `docs/harness/state/roadmap.md`, and the handoff files.
+`docs/harness/state/roadmap.md`, `feature_list.json`, and
+`current-state.md`. Remaining product and harness work is tracked in
+`docs/ROADMAP.md`, `docs/harness/state/roadmap.md`, and `current-state.md`.
 
 ## Goal
 
@@ -31,8 +32,7 @@ improve guidance, readiness signals, checks, ownership, and review boundaries.
 - `docs/harness/boundaries/security-boundary-map.md`
 - `docs/harness/state/roadmap.md`
 - `feature_list.json`
-- `progress.md`
-- `session-handoff.md`
+- `current-state.md`
 
 ## Work
 
@@ -96,5 +96,5 @@ improve guidance, readiness signals, checks, ownership, and review boundaries.
   what failed, why the boundary matters, and where to repair.
 - `docs/harness/evidence/evidence-log.md` records what was reviewed, what changed, what
   checks ran, and what still needs maintainer review.
-- `progress.md` and `session-handoff.md` capture the current objective,
-  blockers, verification evidence, and recommended next step.
+- `current-state.md` captures the current objective, blockers, verification
+  evidence, and recommended next step.

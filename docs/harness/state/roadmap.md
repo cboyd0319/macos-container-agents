@@ -7,7 +7,8 @@ feature direction lives in `docs/ROADMAP.md`; this file records harness,
 planning, evidence, and maintenance boundaries so decisions do not live only in
 chat, issue comments, or one-off research notes.
 
-Update `progress.md` and `session-handoff.md` when roadmap state changes.
+Update `current-state.md` when roadmap state changes the active objective,
+trusted verification, blockers, or next step.
 
 ## Source And Evidence Weighting
 
@@ -95,7 +96,7 @@ other silently.
 
 | Item | Status | User Outcome | Surfaces In Scope | Execution Gate | Owner | Verification Evidence | Done Or Retire When |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Repo harness overhaul | validated | A new agent can understand RunHaven, improve the harness, choose checks, and preserve the macOS 26+ security boundary from repo files alone | Local repo harness, generated/owned harness files, docs, sensors, manifest, state | Documentation/configuration plus generated missing harness artifacts was sufficient | Maintainers | 2026-06-15: first-agent task retired, report/audit rerun, JSON validation, docs checks, and diff hygiene recorded in `progress.md`, `session-handoff.md`, and `evidence-log.md` | Reopen only if report/audit, fresh-session review, or maintainer feedback finds stale routing |
+| Repo harness overhaul | validated | A new agent can understand RunHaven, improve the harness, choose checks, and preserve the macOS 26+ security boundary from repo files alone | Local repo harness, generated/owned harness files, docs, sensors, manifest, state | Documentation/configuration plus generated missing harness artifacts was sufficient | Maintainers | 2026-06-15: first-agent task retired, report/audit rerun, JSON validation, docs checks, and diff hygiene recorded in state and evidence files. 2026-06-16: state was consolidated into `current-state.md`. | Reopen only if report/audit, fresh-session review, or maintainer feedback finds stale routing |
 | Release evidence automation | accepted | Release prep has repeatable SBOM, provenance, dirty-tree, pin, and smoke evidence | Release surface, sensors, docs, CLI/runtime if a command is added | Start with docs and scripts before adding CLI surface | Maintainers | Pending | Release checklist can produce evidence without chat history |
 | Effectiveness evidence for agent runs | candidate | Claims about agent quality are backed by representative tasks, not structural audit | Evaluation, docs, sensors, future reports | Design evidence contract before automating | Maintainers | Pending | Adopt or retire after representative task set is defined |
 | Path-aware provider host policy | candidate | Broad hosts such as `github.com` can be constrained by verified path or brokered credential flow | Provider runtime, security, docs, tests, smokes | Do not build until source-backed paths and enforcement mechanism are clear | Maintainers | Pending | Accepted only with proof it avoids credential leakage and broad egress |
@@ -112,7 +113,7 @@ Use this when reviewing whether the harness is actually useful to a new agent.
 | How is the repo organized? | `docs/ARCHITECTURE.md`, `docs/harness/boundaries/component-inventory.md`, `docs/harness/state/modularization-plan.md` | Update after module extractions or new image/profile surfaces |
 | How does it start? | `docs/INSTALLATION.md`, `README.md`, `runhaven setup`, `init.sh` | Keep first-run setup and development setup aligned |
 | How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `.github/workflows/ci.yml` | Add release evidence automation before shipping |
-| What work is current? | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, this roadmap | Keep objective and next-session guidance synchronized |
+| What work is current? | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, this roadmap | Keep objective and next-session guidance synchronized |
 
 ## Instruction Rule Lifecycle
 
@@ -150,11 +151,11 @@ risk, and next best evidence when a layer cannot run.
 
 | Failure Mode | First Artifact To Check |
 | --- | --- |
-| Cold-start confusion | `progress.md` and `session-handoff.md` |
+| Cold-start confusion | `current-state.md` |
 | Scope sprawl | `feature_list.json`, `docs/ROADMAP.md`, and this roadmap |
 | Premature completion | `clean-state-checklist.md`, `verification-matrix.md`, and `sensor-registry.md` |
 | Fragile startup | `init.sh`, `docs/INSTALLATION.md`, and `docs/harness/README.md` |
-| Weak handoff | `session-handoff.md` |
+| Weak handoff | `current-state.md` |
 | Subjective review | `evaluator-rubric.md` and recorded evidence |
 | Overbuilt solution | smallest-correct work gate and change contract |
 | Knowledge visibility gap | fresh-session test and component inventory |

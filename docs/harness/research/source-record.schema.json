@@ -100,7 +100,7 @@
     "reviewStatus": {
       "type": "string",
       "enum": [
-        "REVIEW REQUIRED",
+        "review_required",
         "reviewed",
         "stale",
         "retired",

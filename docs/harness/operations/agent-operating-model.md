@@ -6,7 +6,7 @@ task, explicit evidence, and a clean handoff.
 ## Start
 
 - Read `AGENTS.md`.
-- Read `feature_list.json`, `progress.md`, and any active plan.
+- Read `feature_list.json`, `current-state.md`, and any active plan.
 - Identify the current objective and non-goals.
 - Choose the verification path before editing.
 

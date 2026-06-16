@@ -5,10 +5,10 @@ description: Use when maintaining, reviewing, or improving this repository's age
 
 # Harness Skill
 
-Status: REVIEW REQUIRED
+Status: active for this repository.
 
-Use when changing or reviewing instructions, generated harness docs, state,
-verification routing, agent tools, CI/workflows, release controls, or evidence.
+Use when changing or reviewing instructions, harness docs, state, verification
+routing, agent tools, CI/workflows, release controls, or evidence.
 
 ## Zero-Install Rule
 
@@ -41,7 +41,8 @@ Maintain the harness from repo files alone. HarnessForge CLI and the HarnessForg
 3. Prefer deleting stale guidance, merging duplicates, or tightening checks.
 4. Make the smallest harness change that prevents the miss.
 5. Run repo-owned commands from the verification matrix.
-6. Record pass/fail, skipped checks, risk, and next step in evidence or handoff.
+6. Record pass/fail, skipped checks, risk, and next step in evidence or
+   `current-state.md`.
 7. Retire first-agent or review placeholders after accepted guidance moves into
    durable docs, tests, policy, or state.
 

@@ -1,7 +1,7 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-15",
+  "last_updated": "2026-06-16",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -59,9 +59,10 @@
       "evidence": [
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
         "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
-        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
+        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction",
+        "2026-06-16: Repo harness state was consolidated to current-state.md; progress.md and session-handoff.md were retired from the active startup contract; first-agent review evidence was recorded at docs/harness/evidence/first-agent-review.json; manifest and harness docs were updated to the reviewed current-state contract."
       ],
-      "notes": "This feature addresses the audit bottleneck reported before harness adoption."
+      "notes": "The active startup contract is AGENTS.md, feature_list.json, current-state.md, and focused docs under docs/harness/."
     },
     {
       "id": "runtime-hardening-macos-only-boundary",
@@ -166,15 +167,15 @@
         "Smoke harness proves host allowlist proxy on an internal Apple container network",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
-                "Docs state exact limitations",
-                "Blocked provider hosts are surfaced to the user",
-                "Allowed hosts resolving to unsafe local addresses are denied",
-                "Provider policy decisions are persisted for later review",
-                "Host allowlist decisions can be explained before rerun",
-                "Provider endpoint matrix backs bundled hosts and known explicit-review hosts",
-                "Blocked-host review groups run id, rule, count, reason, and suggested next action",
-                "Live smoke harness can test bundled provider hosts for a selected profile",
-                "Empty allowlist behavior is regression-tested for internet, internal, provider, and proxy policy paths"
+        "Docs state exact limitations",
+        "Blocked provider hosts are surfaced to the user",
+        "Allowed hosts resolving to unsafe local addresses are denied",
+        "Provider policy decisions are persisted for later review",
+        "Host allowlist decisions can be explained before rerun",
+        "Provider endpoint matrix backs bundled hosts and known explicit-review hosts",
+        "Blocked-host review groups run id, rule, count, reason, and suggested next action",
+        "Live smoke harness can test bundled provider hosts for a selected profile",
+        "Empty allowlist behavior is regression-tested for internet, internal, provider, and proxy policy paths"
       ],
       "evidence": [
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
@@ -202,23 +203,23 @@
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests and passed after provider blocked-host diagnostics.",
         "2026-06-15: focused proxy and CLI tests passed after adding provider DNS unsafe-address rejection, policy logs, and `runhaven why host ...`.",
         "2026-06-15: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 68 tests and passed after provider diagnostics.",
-                "2026-06-15: `ruff check src/runhaven/egress.py src/runhaven/cli.py src/runhaven/plans.py tests/test_egress.py tests/test_cli.py` passed.",
-                "2026-06-15: `uvx --from mypy==2.1.0 mypy src` passed.",
-                "2026-06-15: `python3.14 -m compileall src tests scripts` passed.",
-                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 68 unit tests, pin check, ruff, mypy, and build after provider diagnostics.",
-                "2026-06-15: provider endpoint matrix added with source-backed bundled hosts and explicit-review candidates.",
-                "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 71 tests and passed after provider endpoint matrix integration.",
-                "2026-06-15: `python3 -m compileall src tests scripts`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed after provider endpoint matrix integration.",
-                "2026-06-15: `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py` passed.",
-                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 71 unit tests, pin check, ruff, mypy, and build after provider endpoint matrix integration.",
-                "2026-06-15: grouped blocked-host review added with run id, reason, count, matched rule, and suggested next action.",
-                "2026-06-15: provider egress smoke harness added `--agent AGENT` profile-host mode.",
-                "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76 tests and passed after grouped blocked-host review and smoke profile support.",
-                "2026-06-15: `python3 -m compileall src tests scripts`, `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`, `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed.",
-                "2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com` passed with proxied `api.openai.com` and `chatgpt.com` allowed, denied host and proxied IP literal blocked, and direct DNS/IP paths blocked.",
-                "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
-                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage."
-            ],
+        "2026-06-15: `ruff check src/runhaven/egress.py src/runhaven/cli.py src/runhaven/plans.py tests/test_egress.py tests/test_cli.py` passed.",
+        "2026-06-15: `uvx --from mypy==2.1.0 mypy src` passed.",
+        "2026-06-15: `python3.14 -m compileall src tests scripts` passed.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 68 unit tests, pin check, ruff, mypy, and build after provider diagnostics.",
+        "2026-06-15: provider endpoint matrix added with source-backed bundled hosts and explicit-review candidates.",
+        "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 71 tests and passed after provider endpoint matrix integration.",
+        "2026-06-15: `python3 -m compileall src tests scripts`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed after provider endpoint matrix integration.",
+        "2026-06-15: `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py` passed.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 71 unit tests, pin check, ruff, mypy, and build after provider endpoint matrix integration.",
+        "2026-06-15: grouped blocked-host review added with run id, reason, count, matched rule, and suggested next action.",
+        "2026-06-15: provider egress smoke harness added `--agent AGENT` profile-host mode.",
+        "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76 tests and passed after grouped blocked-host review and smoke profile support.",
+        "2026-06-15: `python3 -m compileall src tests scripts`, `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`, `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed.",
+        "2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com` passed with proxied `api.openai.com` and `chatgpt.com` allowed, denied host and proxied IP literal blocked, and direct DNS/IP paths blocked.",
+        "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage."
+      ],
       "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
     },
     {

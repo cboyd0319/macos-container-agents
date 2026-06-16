@@ -35,8 +35,10 @@ representative agent-workload evaluation.
 
 ## What Changed
 
-- Added durable state files: `feature_list.json`, `progress.md`, and
-  `session-handoff.md`.
+- Added durable state files. The active contract now uses `feature_list.json`
+  and `current-state.md`; earlier split `progress.md` and
+  `session-handoff.md` files were retired after the 2026-06-16 harness
+  refresh.
 - Added local macOS verification entrypoint: `init.sh`.
 - Added the harness operating layer under `docs/harness/`.
 - Updated `AGENTS.md` with Startup, Verification, Definition Of Done, state

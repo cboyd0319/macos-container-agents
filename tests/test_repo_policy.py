@@ -18,8 +18,7 @@ class RepoPolicyTests(unittest.TestCase):
             ROOT / "docs/harness/boundaries/component-inventory.md",
             ROOT / "docs/harness/manifest.json",
             ROOT / "docs/harness/feedback/verification-matrix.md",
-            ROOT / "progress.md",
-            ROOT / "session-handoff.md",
+            ROOT / "current-state.md",
         )
         text = "\n".join(path.read_text(encoding="utf-8") for path in checked_paths)
 

@@ -4,6 +4,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 
 | Date | Scope | Command Or Review | Result | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-16 | Repo harness contract cleanup | pin check, JSON validation, Markdown link check, platform scan, diff check, advisory HarnessForge report/audit, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Consolidated active state into `current-state.md`, retired `progress.md` and `session-handoff.md`, wired the repo-local harness skill, recorded first-agent and high-risk surface review evidence, and refreshed manifest metadata. HarnessForge audit reported 100/100; report drift actionable was 0. Report readiness remains `warning` because current HarnessForge logic does not consume target-side high-risk surface acceptance evidence. |
 | 2026-06-14 | Harness initialization | `harnessforge init --target .` | passed | Existing `AGENTS.md` was preserved; missing harness files were created. |
 | 2026-06-14 | Harness audit | `python3 -m harnessforge audit --target . --min-score 85` | passed | Reported 100/100 after the macOS-only correction. |
 | 2026-06-14 | POSIX entrypoint | `PYTHON=<temporary-venv-python> ./init.sh` | passed | Ran compileall, unit tests, pin policy, ruff, mypy, and build. |

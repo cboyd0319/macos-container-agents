@@ -7,8 +7,7 @@ skill root.
 
 - `../../../AGENTS.md`
 - `../../../feature_list.json`
-- `../../../progress.md`
-- `../../../session-handoff.md`
+- `../../../current-state.md`
 
 ## Harness Docs
 
@@ -25,6 +24,7 @@ Then load only the focused file needed for the surface:
 - `../../../docs/harness/feedback/verification-matrix.md`
 - `../../../docs/harness/feedback/sensor-registry.md`
 - `../../../docs/harness/evidence/evidence-log.md`
+- `../../../docs/harness/evidence/first-agent-review.json`
 - `../../../docs/harness/state/roadmap.md`
 
 ## Zero-Install Reminder
