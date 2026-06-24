@@ -6,20 +6,20 @@ Use this after activating the repo `harness` skill.
 
 Startup context is limited to:
 
-- `../../../AGENTS.md`
-- `../../../feature_list.json`
-- `../../../current-state.md`
+- `../../../../AGENTS.md`
+- `../../../../feature_list.json`
+- `../../../../current-state.md`
 
 `current-state.md` is the repo progress and handoff file.
 
 ## Load On Demand
 
-- Harness overview: `../../../docs/harness/README.md`
-- Verification routing: `../../../docs/harness/feedback/verification-matrix.md`
-- Component boundaries: `../../../docs/harness/boundaries/component-inventory.md`
-- Security boundaries: `../../../docs/harness/boundaries/security-boundary-map.md`
-- Release controls: `../../../docs/harness/release/release-controls.md`
-- Historical evidence: `../../../docs/harness/evidence/evidence-log.md`
+- Harness overview: `../../../../docs/harness/README.md`
+- Verification routing: `../../../../docs/harness/feedback/verification-matrix.md`
+- Component boundaries: `../../../../docs/harness/boundaries/component-inventory.md`
+- Security boundaries: `../../../../docs/harness/boundaries/security-boundary-map.md`
+- Release controls: `../../../../docs/harness/release/release-controls.md`
+- Historical evidence: `../../../../docs/harness/evidence/evidence-log.md`
 
 Do not read these unless the task touches that surface.
 

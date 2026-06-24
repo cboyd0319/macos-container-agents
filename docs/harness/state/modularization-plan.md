@@ -1,7 +1,7 @@
 # Modularization Plan
 
 Status: active
-Last reviewed: 2026-06-16
+Last reviewed: 2026-06-24
 
 RunHaven is now a Rust CLI. Keep the crate organized by ownership boundary,
 not as a flat `src/` directory. Root `src/` should stay limited to entrypoints
@@ -12,8 +12,8 @@ and the crate module root.
 | Area | Primary Files | Boundary |
 | --- | --- | --- |
 | Entrypoints | `src/main.rs`, `src/lib.rs`, `src/bin/runhaven-check-pins.rs` | Binary startup and exported crate surface |
-| CLI | `src/runhaven/cli/app.rs`, `src/runhaven/cli/args.rs`, `src/runhaven/cli/diagnostics.rs`, `src/runhaven/cli/doctor.rs`, `src/runhaven/cli/lock.rs`, `src/runhaven/cli/setup.rs` | Clap schema, command dispatch, diagnostics, prerequisite UX, state-volume locking |
-| Runtime planning | `src/runhaven/runtime/plans/`, `src/runhaven/runtime/profiles.rs`, `src/runhaven/runtime/session_state.rs`, `src/runhaven/runtime/state.rs`, `src/runhaven/runtime/network.rs` | Command construction, profiles, state volumes, managed networks |
+| CLI | `src/runhaven/cli/app.rs`, `src/runhaven/cli/args.rs`, `src/runhaven/cli/diagnostics.rs`, `src/runhaven/cli/doctor.rs`, `src/runhaven/cli/setup.rs` | Clap schema, command dispatch, diagnostics, prerequisite UX |
+| Runtime planning | `src/runhaven/runtime/plans/`, `src/runhaven/runtime/profiles.rs`, `src/runhaven/runtime/session_state.rs`, `src/runhaven/runtime/state.rs`, `src/runhaven/runtime/lock.rs`, `src/runhaven/runtime/network.rs` | Command construction, profiles, state volumes, state-volume locks, managed networks |
 | Active runs and worktrees | `src/runhaven/runtime/active/`, `src/runhaven/runtime/worktrees/` | Active markers, attach/log/status/repair, worktree lifecycle |
 | Provider boundary | `src/runhaven/provider/egress.rs`, `src/runhaven/provider/egress/`, `src/runhaven/provider/runtime.rs`, `src/runhaven/provider/auth_broker.rs`, `src/runhaven/provider/auth_broker/`, `src/runhaven/provider/auth_profiles.rs`, `src/runhaven/provider/endpoints.rs`, `src/runhaven/provider/observability.rs` | Provider proxy, internal network runtime, auth broker, logs |
 | Images | `src/runhaven/image/assets.rs`, `src/runhaven/image/build.rs`, `src/runhaven/image/doctor.rs`, `images/` | Bundled image assets, build plans, stale/missing image review |
@@ -27,14 +27,14 @@ Prefer files under roughly 500 lines. A file may exceed that only when it is a
 cohesive command surface or boundary implementation and splitting would make
 the behavior harder to follow.
 
-Current largest Rust files after the 2026-06-16 conversion:
+Current largest Rust files in `src/` (2026-06-24):
 
-- `src/runhaven/cli/app.rs`: 494 lines, dispatcher and command orchestration.
-- `src/runhaven/provider/egress.rs`: 492 lines, synchronous CONNECT proxy.
-- `src/runhaven/provider/auth_broker.rs`: 473 lines, Codex API-key broker
+- `src/runhaven/provider/auth_broker.rs`: 499 lines, Codex API-key broker
   lifecycle.
-- `src/runhaven/cli/args.rs`: 407 lines, Clap schema.
-- `src/runhaven/provider/runtime.rs`: 383 lines, provider run lifecycle.
+- `src/runhaven/provider/egress.rs`: 495 lines, synchronous CONNECT proxy.
+- `src/runhaven/harness/pins.rs`: 473 lines, repo pin policy logic.
+- `src/runhaven/provider/runtime.rs`: 433 lines, provider run lifecycle.
+- `src/runhaven/cli/app.rs`: 431 lines, dispatcher and command orchestration.
 
 No Rust source file is currently over the size guard.
 

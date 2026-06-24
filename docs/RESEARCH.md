@@ -199,7 +199,7 @@ Reviewed on 2026-06-15 for the bundled provider endpoint matrix:
 
 Pinned package scan on 2026-06-18:
 
-- Scanned npm tarballs matching current image pins:
+- Scanned npm tarballs matching the image pins at that date:
   `@anthropic-ai/claude-code@2.1.181`, `@openai/codex@0.140.0`,
   `@google/gemini-cli@0.46.0`, and `@github/copilot@1.0.63`.
 - Package strings were used only as weak supporting evidence. Hosts were not
@@ -211,6 +211,13 @@ Pinned package scan on 2026-06-18:
   current image template downloads the pinned CLI archive from
   `storage.googleapis.com/antigravity-public`, but no source-backed runtime host
   list was found.
+
+Pinned package scan refresh on 2026-06-24:
+
+- Current image pins are now `@anthropic-ai/claude-code@2.1.190`,
+  `@openai/codex@0.142.0`, `@google/gemini-cli@0.47.0`, and
+  `@github/copilot@1.0.64`. The 2026-06-18 host evidence above remains
+  historical; `pins.toml` is the source of truth for current agent CLI pins.
 
 Local reference harness:
 
@@ -252,7 +259,8 @@ Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
   <http://snapshot.debian.org/archive/debian-security/20260614T000000Z>
 - Docker image digests checked with `docker buildx imagetools inspect`:
   `debian:trixie-slim` and `node:26.3.0-trixie-slim`.
-- GitHub Actions release API:
+- GitHub Actions release API (retained for reference only; no workflows
+  currently exist, so no action pins are tracked — see `docs/PINNING.md`):
   <https://api.github.com/repos/actions/checkout/releases/latest>.
 
 Current reviewed pins are recorded in [`../pins.toml`](../pins.toml). The

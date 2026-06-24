@@ -84,6 +84,17 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-24: Ran a repo-wide docs accuracy audit across all 54 tracked
+  Markdown files against the canonical current state. Root, core-product, and
+  most harness docs were already accurate. Fixed: `docs/RESEARCH.md` reframed
+  its 2026-06-18 "current image pins" line as dated and added a 2026-06-24
+  current-pins note plus a no-workflows qualifier on the Actions source;
+  `docs/harness/state/modularization-plan.md` dropped the removed
+  `cli/lock.rs` pointer (locking lives in `runtime/lock.rs`) and refreshed the
+  largest-file line counts; `.agents/skills/harness/references/repo-harness.md`
+  corrected relative paths that were one level too shallow. Verified with a
+  repo-wide relative Markdown link check (0 broken), path-resolution checks,
+  pin check, JSON validation, and `git diff --check`.
 - 2026-06-24: Ran a full dependency pin audit triggered by the `glib`
   Dependabot alert. Confirmed every Cargo, npm, image-CLI, base-image, and
   Debian pin is hard-pinned and that `.github/workflows/` is empty (no actions
@@ -303,16 +314,17 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
-- Pins/manifests/lockfiles: `Cargo.toml`, `Cargo.lock`, `src-tauri/Cargo.lock`,
-  `pins.toml`, `ui/package.json`, `ui/package-lock.json`, and
-  `images/{claude,codex,copilot,gemini}/package.json` plus their lockfiles.
-- Docs/state: `docs/PINNING.md` (glib not-affected note), `current-state.md`.
-- External: dismissed Dependabot alert #1 (`glib`) as not-affected on GitHub.
+- Docs accuracy: `docs/RESEARCH.md`,
+  `docs/harness/state/modularization-plan.md`,
+  `.agents/skills/harness/references/repo-harness.md`, plus this state file and
+  `docs/harness/evidence/evidence-log.md`.
 
-Prior harness gap-analysis pass (also 2026-06-24) touched `AGENTS.md`,
-`feature_list.json`, the change-contract/security-boundary/verification-matrix/
-sensor-registry/quality-document/roadmap harness docs, and added
-`src-tauri/src/capability_guard.rs`.
+Earlier 2026-06-24 passes (already committed): dependency pin refresh
+(`Cargo.toml`/`pins.toml`/ui + image manifests and lockfiles, `docs/PINNING.md`
+glib note, dismissed Dependabot alert #1) and the harness gap-analysis pass
+(`AGENTS.md`, `feature_list.json`, the change-contract/security-boundary/
+verification-matrix/sensor-registry/quality-document/roadmap harness docs, and
+`src-tauri/src/capability_guard.rs`).
 
 ## Next Step
 
