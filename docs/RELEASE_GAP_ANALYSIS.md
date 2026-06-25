@@ -1,6 +1,6 @@
 # RunHaven v0.5.0 And v1.0.0 Gap Analysis
 
-Last updated: 2026-06-18
+Last updated: 2026-06-24
 
 Status: active release-gap tracker.
 
@@ -104,10 +104,17 @@ clear known limits.
 
 ### Summary
 
-The CLI already has most of the expected command families. The remaining
-`v0.5.0` work is mainly contract closure: prove current behavior, decide data
-stability, document support tiers, run live runtime evidence, and avoid
-carrying CLI maintainability debt into the desktop phase.
+As of 2026-06-24 the v0.5.0 CLI contract gaps are closed: runtime evidence is
+current on macOS 27.0 (G4); CLI help and docs agree, including the previously
+undocumented `--user` and `runs attach` overrides (G1); the local JSONL records
+are documented as best-effort/pre-stable (G2); the profile support matrix is
+published (G3); the `--ssh` fail-closed posture is consistent across docs,
+behavior, and tests (G5); the CLI now prints plain-language security notices for
+every lower-security choice (G6); and touched modules stay under the size guard
+with no new duplication (G7). One product decision remains open: whether to flip
+the `internet` network default to a stricter mode before `v1.0.0` (it is warned
+but still the default). Tagged release notes are deferred to the
+release-readiness cut.
 
 ### Blocking Gaps
 
@@ -267,13 +274,14 @@ accessibility, and release-trust work remains.
 
 ## Immediate Next Actions
 
-1. Close V05-G1 through V05-G4 before expanding the desktop surface.
-2. Add the profile support matrix and JSON/data contract decision to active
-   docs before tagging `v0.5.0`.
-3. Split the largest desktop files before adding multiple new v1 GUI command
-   families.
-4. Implement `tauri-stop-run-control` as the first v1 desktop slice after the
-   `v0.5.0` CLI-complete scope is closed or explicitly accepted.
+1. Decide whether to keep the warned `internet` default or flip it to a stricter
+   default before `v1.0.0` (see V05-G6 and `SECURITY_MODEL.md`).
+2. Implement `tauri-stop-run-control` as the first v1 desktop slice now that the
+   v0.5.0 CLI-complete scope is closed or explicitly accepted.
+3. Split the largest desktop files (`src-tauri/src/commands/mod.rs`,
+   `ui/src/commands/runhaven.ts`, `ui/src/app/App.svelte`) before adding many
+   new v1 GUI command families.
+4. Cut tagged `v0.5.0` release notes at the release-readiness step.
 
 ## Decision Log
 

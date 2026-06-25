@@ -23,6 +23,7 @@ The active release gap tracker lives in
 | `v0.5.0` | CLI-complete release: command set, docs, JSON/data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, secure-easy defaults, and maintainable module boundaries are complete and verified. | Current objective; gaps tracked in `RELEASE_GAP_ANALYSIS.md` |
 | `v1.0.0` | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. | Planned after `v0.5.0` |
 | `v1.x` | New provider credential brokers, broader provider policy, extension/MCP surfaces, updater/installer automation, and other larger surfaces. | Follow-up only |
+| Post-`v1.0.0` | Terminal UI (TUI) over the same planner and policy objects as the CLI and desktop app. | Deferred; revisited well after the desktop app ships |
 
 Design rule for every phase: the secure path must be the easy path. Supported
 lower-security choices should warn and require explicit intent; unsupported or

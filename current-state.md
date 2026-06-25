@@ -39,6 +39,9 @@ Load deeper docs only when the task touches that surface.
 - RunHaven remains alpha/pre-release until after `v0.5.0` is cut.
 - The proposed v1.0.0 release boundary now requires the desktop app to become
   first-class, with the CLI as the stable backend and automation surface.
+- The product sequence is CLI-complete (`v0.5.0`), then the first-class desktop
+  app (`v1.0.0`), then a terminal UI (TUI) much later over the same planner and
+  policy objects (2026-06-24 user directive).
 - Above all else, secure defaults must be the easiest path. Supported
   lower-security choices should warn and require explicit intent; unsupported
   or hard-boundary violations still fail closed.
@@ -96,6 +99,24 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-24: Closed the `cli-complete-v0.5.0` contract gaps (G1-G7) in one
+  pass. Added plain-language security notices to standard error for every
+  lower-security run choice (internet default, `--env`, custom or root `--user`,
+  extra `--provider-host`, `--allow-sensitive-workspace`, `--image`), computed
+  once in `build_run_plan`, carried on `AgentRunPlan`, and emitted at plan and
+  run time; secure defaults stay silent (G6). Documented the previously
+  undocumented `--user` and `runs attach` `--user`/`--workdir`/`--tty` overrides
+  (G1), published the per-profile support matrix (G3), documented the
+  runs/egress/auth JSONL records as best-effort/pre-stable, append-only,
+  metadata-only with `--json` as the supported read path (G2), confirmed `--ssh`
+  fail-closed posture is consistent across docs, behavior, and tests with no
+  raw-key workaround (G5), and kept touched modules under the size guard with no
+  new duplication (G7; `auth_broker.rs` 499 and `egress.rs` 495 remain watched,
+  untouched). Verified with root cargo fmt/test (47 unit + 6 integration)/clippy,
+  Tauri test (19, 1 ignored)/clippy, and a live `plan` security-notice check. One
+  product decision is open: whether to flip the warned `internet` default to a
+  stricter mode before `v1.0.0`. Tagged release notes are deferred to the
+  release-readiness step. Status in `docs/RELEASE_GAP_ANALYSIS.md`.
 - 2026-06-24: Proved the Apple `container` runtime on the current host. The
   session host moved to macOS 27.0 (build 26A5368g); prior runtime evidence was
   macOS 26.5.1. Started the Apple `container` system service (it was stopped at
@@ -375,28 +396,24 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
-- DRY/documentation-first rule lock-in: `AGENTS.md` (Working Rules, Definition
-  Of Done), `docs/harness/boundaries/change-contract.md` (Build Necessity Gate,
-  Acceptance Criteria), `CONTRIBUTING.md` (new Development Principles section;
-  folded the overlapping duplication bullet), plus this state file. Kept the
-  rule canonical in the harness and surfaced once in `CONTRIBUTING.md` rather
-  than copied across docs (DRY + YAGNI).
-
-Earlier 2026-06-24 passes (already committed): the docs accuracy audit
-(`docs/RESEARCH.md`, `docs/harness/state/modularization-plan.md`,
-`.agents/skills/harness/references/repo-harness.md`, this state file,
-`docs/harness/evidence/evidence-log.md`); the dependency pin refresh
-(`Cargo.toml`/`pins.toml`/ui + image manifests and lockfiles, `docs/PINNING.md`
-glib note, dismissed Dependabot alert #1); and the harness gap-analysis pass
-(`AGENTS.md`, `feature_list.json`, the change-contract/security-boundary/
-verification-matrix/sensor-registry/quality-document/roadmap harness docs, and
-`src-tauri/src/capability_guard.rs`).
+- v0.5.0 CLI contract closure (code): `src/runhaven/runtime/plans/types.rs`
+  (`security_notices` field), `validation.rs` (`security_notices` function),
+  `mod.rs` (compute + carry + focused tests), and `src/runhaven/cli/app.rs`
+  (`eprint_security_notices` emitted from `plan` and `run`).
+- v0.5.0 CLI contract closure (docs/state): `docs/CAPABILITIES.md` (profile
+  support matrix, lower-security overrides, local record files), `docs/USAGE.md`,
+  `docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/ROADMAP.md` (deferred
+  TUI phase), `docs/RELEASE_GAP_ANALYSIS.md`, `feature_list.json`, and this
+  state file.
+- Earlier this session (already committed): macOS 27 runtime evidence
+  (`current-state.md`, `docs/harness/evidence/evidence-log.md`).
 
 ## Next Step
 
-Close or explicitly accept the `cli-complete-v0.5.0` scope before broad v1 GUI
-expansion. Apply the secure-easy and maintainability gates to every remaining
-CLI gap. Use `docs/RELEASE_GAP_ANALYSIS.md` for current blockers and
-deferrals, and `docs/V1_RELEASE_PLAN.md` for the durable release contract.
-`tauri-stop-run-control` remains the first GUI slice toward
-`desktop-first-class-v1`, not the whole desktop release requirement.
+The `cli-complete-v0.5.0` contract gaps (G1-G7) are closed. One product decision
+remains before marking the slice passing: keep the warned `internet` default or
+flip it to a stricter default before `v1.0.0` (see V05-G6 and
+`SECURITY_MODEL.md`). After that decision, `tauri-stop-run-control` is the first
+GUI slice toward `desktop-first-class-v1`; a terminal UI (TUI) is deferred until
+well after the desktop app ships. Use `docs/RELEASE_GAP_ANALYSIS.md` for status
+and `docs/V1_RELEASE_PLAN.md` for the durable release contract.
