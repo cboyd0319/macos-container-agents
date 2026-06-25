@@ -96,6 +96,23 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-24: Proved the Apple `container` runtime on the current host. The
+  session host moved to macOS 27.0 (build 26A5368g); prior runtime evidence was
+  macOS 26.5.1. Started the Apple `container` system service (it was stopped at
+  session start), confirmed `runhaven doctor` is green for every pinned
+  prerequisite on macOS 27.0 (Rust 1.96.0, container CLI/apiserver 1.0.0 commit
+  ee848e3, builder 0.12.0, vminit 0.33.3, Kata kernel 6.18.15-186), verified the
+  bundled shell image (`runhaven/base:0.1.0`, digest `818ed6181723`), and ran
+  `scripts/apple_container_smoke.sh --with-provider --with-ssh` to completion.
+  The smoke exercised an internal read-only `/workspace` run with the full
+  active/status/logs-follow/stop/show lifecycle, the live provider allowlist
+  (allowed `example.com`; denied non-allowlisted host, proxied IP literal,
+  direct egress, and direct IP egress), and SSH fail-closed at plan and run,
+  then cleaned up with no stale active marker. No code bug surfaced; the only
+  friction was the stopped system service, which `doctor` reports. This refreshes
+  the V05-G4 runtime evidence on the current host. Static baseline (root and
+  Tauri fmt/test/clippy, pin check, UI check/test) was green first. Command
+  detail is in `docs/harness/evidence/evidence-log.md`.
 - 2026-06-24: Locked the DRY and documentation-first development rule into the
   harness per user directive. Reframed the `AGENTS.md` build-necessity bullet as
   the named DRY ladder (YAGNI, standard library, native platform, installed
@@ -199,6 +216,25 @@ evidence and a recorded reason.
 
 ## Trusted Verification
 
+- 2026-06-24 Apple container runtime smoke (macOS 27.0):
+  - `sw_vers` reported macOS 27.0 build 26A5368g; `uname -m` reported `arm64`.
+  - `container --version` reported Apple `container` CLI 1.0.0 commit `ee848e3`.
+  - `container system status` reported the apiserver not running at session
+    start; `container system start` brought it to `status running`.
+  - `runhaven doctor` returned ok for Rust 1.96.0, macOS 27.0, arm64, the
+    container CLI/runtime commit ee848e3, builder image 0.12.0, vminit 0.33.3,
+    and the Kata 6.18.15-186 kernel.
+  - `runhaven image doctor shell` reported `ok shell: runhaven/base:0.1.0`.
+  - `scripts/apple_container_smoke.sh --with-provider --with-ssh` printed
+    "Apple container smoke checks passed." and exited 0.
+  - Static baseline before runtime work passed: root `cargo fmt --check`,
+    `cargo build --locked`, `cargo test --locked` (46 unit + 6 integration),
+    `cargo clippy --all-targets --locked -- -D warnings`, and
+    `cargo run --locked --bin runhaven-check-pins`; Tauri `cargo fmt --check`,
+    `cargo test --locked` (19 passed, 1 ignored), and
+    `cargo clippy --all-targets --locked -- -D warnings`; and
+    `npm --prefix ui run check` (0 errors) with `npm --prefix ui test`
+    (15 passed).
 - 2026-06-18 README and Container Machine policy docs checks:
   - `sw_vers` reported macOS 26.5.1 build 25F80.
   - `uname -m` reported `arm64`.
