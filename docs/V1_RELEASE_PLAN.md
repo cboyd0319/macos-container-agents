@@ -228,8 +228,9 @@ Unsupported or intentionally limited users:
 
 ### Security And Credentials
 
-- Default internet mode is unrestricted egress. Provider mode is the constrained
-  path, but only for hostnames it can enforce.
+- The default network mode is profile-aware: provider for profiles with bundled
+  hosts, internet for those without. Internet mode is unrestricted egress;
+  provider mode is the constrained path, but only for hostnames it can enforce.
 - Provider mode permits a bundled host and its subdomains. That subdomain rule
   must remain visible in plans, docs, and UI warnings.
 - Copilot needs path-sensitive GitHub hosts for some flows. v1 should document

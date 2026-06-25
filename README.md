@@ -69,13 +69,13 @@ credentials, browser profiles, and unrelated repositories.
 | Know what will run | `runhaven plan` prints the workspace, state volume, network mode, egress status, preflight, and Apple `container run` command before execution. |
 | Avoid broad host access | Runs mount one selected workspace, not your whole home directory or credential folders. |
 | Keep agent state separated | Each project/profile/session gets an isolated agent home volume. |
-| Choose network scope | Use default internet, local-only `internal`, or provider allowlist proxy mode. |
+| Choose network scope | Secure default per profile (provider allowlist where the agent's hosts are bundled, otherwise internet), plus local-only `internal` and explicit `--network` override. |
 | Review risky edits | `--worktree` runs in a RunHaven-owned git worktree that you can merge, keep, recover, or discard. |
 | Recover local resources | RunHaven-owned images, volumes, networks, runs, egress logs, and auth broker state have explicit inspection and cleanup commands. |
 
 RunHaven is not a complete data-loss or exfiltration solution. The selected
 agent can still read the mounted workspace and its isolated home volume, and
-default internet mode is not domain-restricted. See the
+internet mode is not domain-restricted. See the
 [security model](docs/SECURITY_MODEL.md) for the full boundary.
 
 ## Quick Start

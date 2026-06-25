@@ -81,10 +81,12 @@ worktree merge or discard, hard-stop recovery) require explicit confirmation suc
 as `--yes`. Apple `container machine` use is warned and explicit rather than
 blocked.
 
-The `internet` network mode is the one lower-security choice still active by
-default rather than behind an explicit flag. It prints a security notice and
-remains a candidate for a stricter default before `v1.0.0`; choose `--network
-internal` or `--network provider` for the restricted path today.
+The default network mode is profile-aware so the secure path is also the default
+path: profiles with bundled provider hosts default to `provider` (egress limited
+to the agent's own API), and profiles without bundled hosts default to `internet`
+because provider mode would have an empty allowlist there. Internet mode prints a
+security notice and is never blocked; choose it explicitly with `--network
+internet` when a run needs package installs or other hosts.
 
 Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
 failed setup checks, invalid input, missing confirmations, unsupported platform
@@ -138,10 +140,12 @@ explicitly enables it and the plan can show the exact access before launch.
 
 ## What This Does Not Solve Yet
 
-The default `internet` network mode should still be treated as unrestricted
-egress within the host's network policy. Use `internal` for local-only runs.
+Internet mode is unrestricted egress within the host's network policy. It is the
+default only for profiles without bundled provider hosts, and is available to any
+profile with `--network internet`. Use `internal` for local-only runs.
 
-`--network provider` is now the constrained egress path for normal agent runs.
+`--network provider` is the constrained egress path and the default for profiles
+with bundled provider hosts.
 It runs the agent on an internal Apple `container` network, starts a host-side
 CONNECT proxy, injects proxy environment variables at runtime, and deletes the
 managed provider network after the run. Apple `container` 1.0.0 exposes an

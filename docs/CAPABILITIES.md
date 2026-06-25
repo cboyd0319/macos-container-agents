@@ -21,7 +21,7 @@ use [Security model](SECURITY_MODEL.md).
 | --- | --- |
 | Runtime boundary | One selected workspace, one isolated agent home volume, non-root bundled images, read-only root filesystem, dropped Linux capabilities, and explicit command preview. |
 | Agent profiles | Bundled Claude, Codex, Gemini, Antigravity, Copilot, and shell profiles, plus custom images through the `shell` profile. |
-| Network modes | Broad default internet, local-only internal networking, or provider allowlist proxy mode. |
+| Network modes | Secure profile-aware default (provider allowlist where the agent's hosts are bundled, otherwise internet), plus local-only internal networking and explicit override. |
 | Workspace safety | Current-directory mounts by default, explicit git-root expansion, sensitive-path rejection, and optional RunHaven-owned git worktrees. |
 | Credentials | No host home, raw SSH key, browser profile, cloud credential folder, or arbitrary environment passthrough by default. |
 | Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, and recovery commands. |
@@ -82,9 +82,17 @@ for the source-backed detail.
 
 | Mode | Use it for | Egress behavior |
 | --- | --- | --- |
-| `internet` | Normal hosted-agent runs, package managers, registries, CDNs, and dependency updates. | Broad default internet access. Provider-domain allowlisting is not enforced. |
+| `internet` | Hosted-agent runs that need package managers, registries, CDNs, or arbitrary hosts. | Unrestricted outbound access. Provider-domain allowlisting is not enforced. |
 | `internal` | Local-only analysis, offline tests, and custom images that do not need internet. | Host-only Apple `container` network. |
-| `provider` | Agent runs that should be limited to reviewed provider hosts. | Managed internal network plus RunHaven's host-side allowlist CONNECT proxy. |
+| `provider` | Agent runs limited to the agent's own reviewed provider hosts. | Managed internal network plus RunHaven's host-side allowlist CONNECT proxy. |
+
+When you do not pass `--network`, RunHaven picks the secure default that still
+works: `provider` for profiles with bundled provider hosts (`claude`, `codex`,
+`copilot`, `gemini`) and `internet` for profiles without them (`shell`,
+`antigravity`), where provider mode would have an empty allowlist. Pass
+`--network` to override. A provider-default run reaches the agent's own API but
+not arbitrary hosts; add `--provider-host HOST` or use `--network internet` when
+the run needs more.
 
 Provider mode allows bundled provider hosts for the selected profile, their
 subdomains, and reviewed fully qualified `--provider-host HOST` additions. The
@@ -105,7 +113,7 @@ each active one. Hard-boundary violations still fail closed.
 
 | Override | What it lowers | Default |
 | --- | --- | --- |
-| `--network internet` | Unrestricted outbound egress with no domain allowlist. This is the current default mode, so it is the one override active without a flag. | default mode |
+| `--network internet` | Unrestricted outbound egress with no domain allowlist. The default only for profiles without bundled provider hosts (`shell`, `antigravity`). | profile-aware |
 | `--env NAME` | Exposes one host environment variable to the agent; a secret there can be read by workspace code. `NAME=value` is rejected. | none |
 | `--user USER` / `--allow-root-user` | Runs the agent as a different or root container user instead of the non-root `agent` user. Root or UID 0 fails closed without `--allow-root-user`. | `agent` |
 | `--provider-host HOST` | Widens the provider allowlist with one reviewed fully qualified host. | bundled hosts only |
@@ -208,7 +216,7 @@ command arguments.
 
 RunHaven is not a complete data-loss or exfiltration solution.
 
-- Default internet mode does not restrict outbound domains.
+- Internet mode does not restrict outbound domains.
 - Provider mode uses conservative host allowlists; some provider features may
   need additional reviewed fully qualified hosts.
 - The selected agent can still read files inside `/workspace` and its isolated

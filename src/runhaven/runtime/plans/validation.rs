@@ -5,6 +5,7 @@ use anyhow::{Result, bail};
 use super::{NetworkMode, RunOptions, WorkspaceScope};
 use crate::egress::{is_ip_literal, normalize_host};
 use crate::git::git_repo_root;
+use crate::profiles::AgentProfile;
 use crate::session_state::{SESSION_DEFAULT, validate_session_name};
 
 pub fn apply_workspace_scope(
@@ -224,7 +225,7 @@ pub fn security_notices(options: &RunOptions) -> Vec<String> {
     let mut notices = Vec::new();
     if options.network == NetworkMode::Internet {
         notices.push(
-            "Unrestricted internet egress is enabled (the default network mode); untrusted workspace code can reach any host. Use --network internal or --network provider to restrict egress."
+            "Unrestricted internet egress is enabled; untrusted workspace code can reach any host. Use --network provider (the agent's own hosts) or --network internal to restrict egress."
                 .to_string(),
         );
     }
@@ -264,6 +265,18 @@ pub fn security_notices(options: &RunOptions) -> Vec<String> {
         );
     }
     notices
+}
+
+/// Default network mode when the user does not pass `--network`: provider where
+/// the agent's own hosts are bundled (the secure path that still works out of
+/// the box), internet where no hosts are bundled so provider would be an
+/// empty-allowlist dead end.
+pub fn default_network_mode(profile: &AgentProfile) -> NetworkMode {
+    if profile.provider_hosts.is_empty() {
+        NetworkMode::Internet
+    } else {
+        NetworkMode::Provider
+    }
 }
 
 pub fn uses_root_identity(user: &str) -> bool {

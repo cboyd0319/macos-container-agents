@@ -111,10 +111,9 @@ pub(super) struct RunArgs {
     pub(super) no_interactive: bool,
     #[arg(
         long,
-        default_value = "internet",
-        help = "internet uses unrestricted default networking; internal creates a host-only network; provider routes through a runtime allowlist proxy"
+        help = "egress mode: provider routes through a runtime allowlist proxy, internal is host-only, internet is unrestricted. Default is provider for profiles with bundled provider hosts, otherwise internet"
     )]
-    pub(super) network: String,
+    pub(super) network: Option<String>,
     #[arg(
         long,
         value_name = "HOST",

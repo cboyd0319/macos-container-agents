@@ -16,9 +16,10 @@ pub use types::{
     WorkspaceScope, WorktreeRun,
 };
 pub use validation::{
-    apply_workspace_scope, network_egress_summary, normalize_provider_hosts, normalize_session,
-    provider_hosts_for_options, security_notices, sensitive_workspace_paths, uses_root_identity,
-    validate_env_name, validate_image_reference, validate_resource_options, validate_workspace,
+    apply_workspace_scope, default_network_mode, network_egress_summary, normalize_provider_hosts,
+    normalize_session, provider_hosts_for_options, security_notices, sensitive_workspace_paths,
+    uses_root_identity, validate_env_name, validate_image_reference, validate_resource_options,
+    validate_workspace,
 };
 
 use crate::session_state::state_volume_name;
@@ -407,6 +408,26 @@ mod tests {
                 .security_notices
                 .iter()
                 .any(|notice| notice.contains("custom --image"))
+        );
+    }
+
+    #[test]
+    fn default_network_mode_is_provider_for_bundled_hosts_else_internet() {
+        assert_eq!(
+            default_network_mode(&get_profile("claude").expect("profile")),
+            NetworkMode::Provider
+        );
+        assert_eq!(
+            default_network_mode(&get_profile("codex").expect("profile")),
+            NetworkMode::Provider
+        );
+        assert_eq!(
+            default_network_mode(&get_profile("shell").expect("profile")),
+            NetworkMode::Internet
+        );
+        assert_eq!(
+            default_network_mode(&get_profile("antigravity").expect("profile")),
+            NetworkMode::Internet
         );
     }
 

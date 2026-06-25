@@ -4,20 +4,13 @@ Last Updated: 2026-06-24 UTC
 
 ## Current Objective
 
-Next release objective: close the `cli-complete-v0.5.0` scope.
+The `cli-complete-v0.5.0` scope is complete and verified (`passing` in
+`feature_list.json`). RunHaven remains alpha/pre-release until the `v0.5.0` tag is
+cut at the release-readiness step.
 
-Scope for that slice:
-
-- confirm remaining CLI gaps against `docs/V1_RELEASE_PLAN.md`;
-- use `docs/RELEASE_GAP_ANALYSIS.md` as the active v0.5/v1 gap tracker;
-- finish or explicitly defer any CLI-only product behavior before `v0.5.0`;
-- lock CLI docs, output, JSON/data lifecycle, diagnostics, cleanup, and
-  profile support tiers;
-- apply the secure-easy and maintainability gates to every remaining CLI gap;
-- run focused CLI verification and Apple `container` smokes for any claims.
-
-First GUI slice after the `v0.5.0` CLI-complete scope is closed:
-`tauri-stop-run-control`.
+Next phase: build the first-class desktop app toward `desktop-first-class-v1`,
+starting with the `tauri-stop-run-control` slice. A terminal UI (TUI) is deferred
+until well after the desktop app ships.
 
 ## Startup State Contract
 
@@ -92,6 +85,13 @@ evidence and a recorded reason.
   behavior is treated as not shipped. Boring-over-clever and the edge-case
   tiebreaker (between equally small standard-library options, take the one
   correct on edge cases) resolve style and algorithm choices.
+- The default `--network` mode is profile-aware so the secure path is also the
+  default path (2026-06-25 user directive: the secure path must be the easiest
+  path, inform rather than block, do not restrict where a restriction cannot be
+  made easy). Profiles with bundled provider hosts default to `provider`;
+  profiles without them default to `internet` because provider mode would be an
+  empty-allowlist dead end. Internet mode is never blocked, only warned. Revisit
+  only if a broader safe default becomes both more secure and as usable.
 - The `glib` advisory GHSA-wrw7-89jp-8q8g is treated as not-affected because
   `glib` enters only through Tauri's Linux GTK backend and is absent from the
   macOS build graph; it is capped at 0.18.x by `gtk 0.18.2`. Dependabot alert
@@ -99,6 +99,20 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-25: Made the network mode secure-by-default per the user directive
+  that the secure path must be the easiest path. `--network` is now optional and
+  resolves profile-aware in `make_run_plan` via `default_network_mode`: provider
+  for profiles with bundled provider hosts (claude, codex, copilot, gemini) and
+  internet for those without (shell, antigravity), where provider would be an
+  empty allowlist. A provider-default run reaches the agent's own API but not
+  arbitrary hosts; `plan` and `run` inform the `--provider-host` / `--network
+  internet` escape hatch and never block. Updated CLI plus `CAPABILITIES`,
+  `USAGE`, `ARCHITECTURE`, `SECURITY_MODEL`, `README`, `V1_RELEASE_PLAN`, and the
+  harness security-boundary map; added a focused `default_network_mode` test.
+  Verified with cargo fmt/test (48 unit + 6 integration)/clippy, Tauri test
+  (19, 1 ignored)/clippy, and live plan checks (claude defaults to provider,
+  shell to internet, explicit `--network internet` override works). This resolves
+  the last open v0.5.0 decision, so `cli-complete-v0.5.0` is now `passing`.
 - 2026-06-24: Closed the `cli-complete-v0.5.0` contract gaps (G1-G7) in one
   pass. Added plain-language security notices to standard error for every
   lower-security run choice (internet default, `--env`, custom or root `--user`,
@@ -396,6 +410,13 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
+- Secure-by-default network (code): `src/runhaven/cli/args.rs` (`--network`
+  optional), `src/runhaven/runtime/plans/validation.rs` (`default_network_mode`),
+  `mod.rs` (re-export + focused test), `src/runhaven/cli/app.rs` (resolve default
+  + provider escape-hatch info line). Docs: `CAPABILITIES`, `USAGE`,
+  `ARCHITECTURE`, `SECURITY_MODEL`, `README`, `V1_RELEASE_PLAN`,
+  `docs/harness/boundaries/security-boundary-map.md`, `docs/RELEASE_GAP_ANALYSIS.md`,
+  `feature_list.json`, and this state file.
 - v0.5.0 CLI contract closure (code): `src/runhaven/runtime/plans/types.rs`
   (`security_notices` field), `validation.rs` (`security_notices` function),
   `mod.rs` (compute + carry + focused tests), and `src/runhaven/cli/app.rs`
@@ -410,10 +431,9 @@ evidence and a recorded reason.
 
 ## Next Step
 
-The `cli-complete-v0.5.0` contract gaps (G1-G7) are closed. One product decision
-remains before marking the slice passing: keep the warned `internet` default or
-flip it to a stricter default before `v1.0.0` (see V05-G6 and
-`SECURITY_MODEL.md`). After that decision, `tauri-stop-run-control` is the first
-GUI slice toward `desktop-first-class-v1`; a terminal UI (TUI) is deferred until
-well after the desktop app ships. Use `docs/RELEASE_GAP_ANALYSIS.md` for status
-and `docs/V1_RELEASE_PLAN.md` for the durable release contract.
+`cli-complete-v0.5.0` is `passing`: all contract gaps closed and the network
+default is now secure-by-default. Begin the desktop phase with the
+`tauri-stop-run-control` slice toward `desktop-first-class-v1`. A terminal UI
+(TUI) is deferred until well after the desktop app ships. Tagged `v0.5.0` release
+notes are cut at the release-readiness step. Use `docs/RELEASE_GAP_ANALYSIS.md`
+for status and `docs/V1_RELEASE_PLAN.md` for the durable release contract.

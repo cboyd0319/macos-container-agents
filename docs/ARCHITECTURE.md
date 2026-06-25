@@ -84,8 +84,11 @@ runhaven plan shell --image my/agent:2026.06.14 -- my-agent --help
 
 ## Network Model
 
-`internet` is the default because most hosted AI CLIs need model-provider
-network access to run. It uses Apple container's default network.
+The default network mode is profile-aware: profiles with bundled provider hosts
+default to `provider` so the agent reaches its own API but not arbitrary hosts,
+and profiles without bundled hosts default to `internet`, where provider mode
+would have an empty allowlist. `internet` uses Apple container's default network
+and is unrestricted; pass `--network internet` for any profile that needs it.
 
 `internal` creates a per-project `container network create --internal` network
 and runs the agent there. Use it for local-only analysis, offline tests, or

@@ -21,6 +21,7 @@ use crate::launch::run_standard_agent;
 use crate::launch::{launch_run_plan, require_container_cli};
 use crate::plans::{
     AgentRunPlan, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
+    default_network_mode,
 };
 use crate::profiles::{get_profile, profiles};
 use crate::provider_runtime;
@@ -352,6 +353,10 @@ fn make_run_plan(
         "auto" => std::io::stdin().is_terminal() && std::io::stdout().is_terminal(),
         other => bail!("invalid --tty value: {other:?}"),
     };
+    let network = match &args.network {
+        Some(value) => network_mode(value)?,
+        None => default_network_mode(&profile),
+    };
     build_run_plan(RunOptions {
         profile,
         workspace: workspace_override.unwrap_or(&args.workspace).to_path_buf(),
@@ -359,7 +364,7 @@ fn make_run_plan(
         image: args.image.clone(),
         cpus: args.cpus.clone(),
         memory: args.memory.clone(),
-        network: network_mode(&args.network)?,
+        network,
         workspace_scope: workspace_scope(&args.workspace_scope)?,
         session: args.session.clone(),
         read_only_workspace: args.read_only_workspace,
@@ -399,6 +404,9 @@ fn print_run_plan(plan: &AgentRunPlan) {
     if plan.network_mode == NetworkMode::Provider {
         println!("Provider hosts: {}", plan.provider_allowed_hosts.join(", "));
         println!("Provider proxy: RunHaven injects proxy environment variables at runtime.");
+        println!(
+            "Provider egress is limited to these hosts. For package installs or other hosts, add --provider-host HOST or use --network internet."
+        );
     }
     if let Some(name) = &plan.codex_api_key_broker_env {
         println!(

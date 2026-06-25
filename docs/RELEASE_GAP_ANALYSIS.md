@@ -111,10 +111,10 @@ are documented as best-effort/pre-stable (G2); the profile support matrix is
 published (G3); the `--ssh` fail-closed posture is consistent across docs,
 behavior, and tests (G5); the CLI now prints plain-language security notices for
 every lower-security choice (G6); and touched modules stay under the size guard
-with no new duplication (G7). One product decision remains open: whether to flip
-the `internet` network default to a stricter mode before `v1.0.0` (it is warned
-but still the default). Tagged release notes are deferred to the
-release-readiness cut.
+with no new duplication (G7). The `internet`-default question is resolved: the
+default network mode is now profile-aware (provider where the agent's own hosts
+are bundled, otherwise internet), so the secure path is also the default. Tagged
+release notes are deferred to the release-readiness cut.
 
 ### Blocking Gaps
 
@@ -125,7 +125,7 @@ release-readiness cut.
 | V05-G3 | Profile support matrix | Bundled images and provider metadata exist, but support claims are not yet split into tiers. | Each profile states bundled image availability, basic CLI start, provider mode source backing, interactive auth path, headless broker availability, and known limits. | Image dry-runs or builds; `image doctor`; source-backed provider review; disposable credential smokes only where claimed. |
 | V05-G4 | Runtime evidence refresh | Prior Apple `container` smokes exist, but release evidence must be current for the tag. | `doctor`, default runtime smoke, provider smoke, and SSH fail-closed smoke are current for the release candidate. Cleanup evidence is recorded. | `runhaven doctor`; `scripts/apple_container_smoke.sh`; `scripts/apple_container_smoke.sh --with-provider`; `scripts/apple_container_smoke.sh --with-ssh`; cleanup commands. |
 | V05-G5 | SSH fail-closed release posture | `--ssh` is blocked because non-root Apple `container` forwarding is not proven. | Docs, CLI behavior, tests, and release notes all say SSH forwarding is unavailable until no-secret non-root proof exists. | Planner/run tests; `scripts/apple_container_smoke.sh --with-ssh`; docs scan for raw-key workaround language. |
-| V05-G6 | Secure-easy CLI review | Secure defaults are documented, but `internet` remains a broad CLI network mode and lower-security choices need clear warnings. | CLI docs and help make the safe path clear; supported lower-security choices are visible, warned, and explicit. Hard-boundary violations still fail closed. | CLI help/docs audit; focused validation tests for sensitive workspace, env, root, provider host, and SSH paths. |
+| V05-G6 | Secure-easy CLI review | Closed: the default network mode is profile-aware (provider where the agent's hosts are bundled, otherwise internet), and `plan`/`run` print plain-language security notices for every lower-security choice. | CLI docs and help make the safe path clear; supported lower-security choices are visible, warned, and explicit. Hard-boundary violations still fail closed. | CLI help/docs audit; focused validation tests for sensitive workspace, env, root, provider host, and SSH paths. |
 | V05-G7 | CLI maintainability gate | No major CLI file is far beyond the size guard, but provider egress and auth broker are near it. | Touched CLI/runtime/auth files remain cohesive; no known large-file or duplication debt is intentionally deferred into v1 desktop work. | File-size scan; focused module review; Rust checks. |
 | V05-G8 | Release documentation and state closure | Release ladder exists, but v0.5-specific release notes and final state are not cut. | `README.md`, roadmap, `feature_list.json`, `current-state.md`, and release notes agree on alpha/pre-release status and v0.5 CLI-complete scope. | Docs link check; stale wording scan; JSON validation. |
 
@@ -274,14 +274,12 @@ accessibility, and release-trust work remains.
 
 ## Immediate Next Actions
 
-1. Decide whether to keep the warned `internet` default or flip it to a stricter
-   default before `v1.0.0` (see V05-G6 and `SECURITY_MODEL.md`).
-2. Implement `tauri-stop-run-control` as the first v1 desktop slice now that the
-   v0.5.0 CLI-complete scope is closed or explicitly accepted.
-3. Split the largest desktop files (`src-tauri/src/commands/mod.rs`,
+1. Implement `tauri-stop-run-control` as the first v1 desktop slice now that the
+   v0.5.0 CLI-complete scope is closed.
+2. Split the largest desktop files (`src-tauri/src/commands/mod.rs`,
    `ui/src/commands/runhaven.ts`, `ui/src/app/App.svelte`) before adding many
    new v1 GUI command families.
-4. Cut tagged `v0.5.0` release notes at the release-readiness step.
+3. Cut tagged `v0.5.0` release notes at the release-readiness step.
 
 ## Decision Log
 

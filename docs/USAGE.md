@@ -315,16 +315,21 @@ useful for local commands and custom images.
 ## Package Install Or Unrestricted Internet
 
 ```bash
-runhaven plan claude
-runhaven run claude
+runhaven run claude --network internet
 ```
 
-Default internet mode is intentionally broad. Use it when package managers,
-dependency updates, model traffic, or other tools need registry and CDN access.
-Review `runhaven plan` first because this mode does not enforce provider-domain
-allowlisting.
+Profiles with bundled provider hosts default to `provider`, which limits egress
+to the agent's own API. Pass `--network internet` when package managers,
+dependency updates, or other tools need registry and CDN access, or add specific
+`--provider-host HOST` entries to stay on the allowlist. Review `runhaven plan`
+first: internet mode does not enforce provider-domain allowlisting and prints a
+security notice.
 
 ## Provider Network
+
+Provider mode is the default for profiles with bundled provider hosts, so
+`runhaven run claude` already uses it. Pass `--network provider` explicitly for
+other profiles or to be unambiguous.
 
 ```bash
 runhaven plan claude --network provider
