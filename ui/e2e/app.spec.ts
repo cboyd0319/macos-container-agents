@@ -45,4 +45,12 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByLabel("Confirm stopping this run.").check();
   await page.getByRole("button", { name: "Stop run" }).click();
   await expect(page.getByText(/Stop requested for preview-/)).toBeVisible();
+
+  await page.getByLabel("Confirm hard-stopping this run.").check();
+  await page.getByRole("button", { name: "Hard stop" }).click();
+  await expect(page.getByText(/Hard stop requested for preview-/)).toBeVisible();
+
+  await page.getByLabel("Confirm clearing this run's stale marker.").check();
+  await page.getByRole("button", { name: "Repair marker" }).click();
+  await expect(page.getByText(/Stale marker cleared for preview-/)).toBeVisible();
 });

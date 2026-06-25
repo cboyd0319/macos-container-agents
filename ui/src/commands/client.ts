@@ -12,6 +12,8 @@ import type {
   LogSnapshotResponse,
   RunPlanRequest,
   RunPlanResponse,
+  KillRunResponse,
+  RepairRunResponse,
   RunStatusResponse,
   SetupStatus,
   StopRunResponse
@@ -241,6 +243,23 @@ export async function stopRun(runId: string): Promise<StopRunResponse> {
     runId,
     containerName: "preview",
     status: "stop-requested"
+  }));
+}
+
+export async function killRun(runId: string): Promise<KillRunResponse> {
+  return call("kill_run", { request: { runId, confirmKill: true } }, () => ({
+    runId,
+    containerName: "preview",
+    status: "kill-requested"
+  }));
+}
+
+export async function repairRun(runId: string): Promise<RepairRunResponse> {
+  return call("repair_run", { request: { runId, confirmRepair: true } }, () => ({
+    runId,
+    containerName: "preview",
+    status: "removed",
+    markerRemoved: true
   }));
 }
 

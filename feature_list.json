@@ -82,6 +82,28 @@
       "notes": "First GUI implementation slice after the CLI-complete v0.5.0 scope is closed or explicitly accepted. Add broader run recovery, image, diagnostics, cleanup, and worktree review as separate GUI slices."
     },
     {
+      "id": "tauri-kill-repair-run-control",
+      "priority": 1,
+      "area": "ui",
+      "title": "Tauri kill and repair run control",
+      "user_visible_behavior": "The desktop app can hard-stop a validated active run and clear a stale active marker, each only after explicit user confirmation. Completes the V1-G3 desktop run-control surface (stop, kill, repair).",
+      "status": "passing",
+      "dependencies": [
+        "tauri-stop-run-control"
+      ],
+      "verification": [
+        "`kill_run` and `repair_run` use typed requests/responses and require explicit confirmation",
+        "Rust validates the run id, active marker, and RunHaven-owned container before mutation",
+        "Both commands live behind the narrow run-control capability (`allow-kill-run`, `allow-repair-run`)",
+        "Frontend state does not imply success before the command returns",
+        "Focused Rust, Tauri, frontend, and Playwright checks pass"
+      ],
+      "evidence": [
+        "2026-06-25: Implemented kill_run and repair_run mirroring stop_run. Shared library cores kill_active_run and repair_active_run validate the run id, active marker, and RunHaven-owned container before container kill / stale-marker repair, and back both the CLI runs_kill/runs_repair and the typed Tauri commands. Both require confirmation and sit behind the run-control capability (allow-kill-run, allow-repair-run added to build.rs and run-control.json; capability_guard confirms allow-* scope). RunStatusPanel gained Hard stop and Repair marker controls with per-action confirm checkboxes over shared control state; success messages set only after the command returns. Verified: main cargo test (49), Tauri cargo test (27, incl. 4 new kill/repair tests + capability_guard)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (2, extended to stop+kill+repair a preview run). Completes V1-G3."
+      ],
+      "notes": "Run-control mutations (stop/kill/repair) all share one validated library core per action and the narrow run-control capability. Image, state/network cleanup, diagnostics, and worktree review remain separate GUI slices."
+    },
+    {
       "id": "cli-complete-v0.5.0",
       "priority": 0,
       "area": "cli",

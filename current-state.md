@@ -105,6 +105,19 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-25: Completed the V1-G3 desktop run-control surface by adding GUI
+  `kill_run` and `repair_run`, mirroring `stop_run`. Shared library cores
+  `kill_active_run` and `repair_active_run` validate the run id, active marker,
+  and RunHaven-owned container before `container kill` / stale-marker repair, and
+  back both the CLI `runs_kill`/`runs_repair` and the typed Tauri commands. Both
+  require confirmation and sit behind the `run-control` capability
+  (`allow-kill-run`, `allow-repair-run`). `RunStatusPanel` now has Hard stop and
+  Repair marker controls with per-action confirm checkboxes over consolidated
+  `controlBusy`/`controlError`/`controlMessage` state and a shared `runControl`
+  helper in `App.svelte` (DRY across stop/kill/repair). Verified: main
+  `cargo test` (49), Tauri `cargo test` (27, incl. 4 new kill/repair tests +
+  `capability_guard`)/clippy, svelte-check, 15 unit tests, build, and Playwright
+  e2e (2, extended to stop+kill+repair a preview run).
 - 2026-06-25: Implemented `tauri-stop-run-control`, the first v1 desktop GUI
   feature. Added a shared library core `stop_active_run` that validates the run
   id, active marker, and RunHaven-owned container before `container stop`, and
@@ -454,6 +467,12 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
+- tauri-kill-repair-run-control: `src/runhaven/runtime/active/mod.rs`
+  (`kill_active_run` + thin `runs_kill`), `active/repair.rs` (`repair_active_run`);
+  `src-tauri/src/commands/run_control.rs` (kill_run/repair_run + tests),
+  `lib.rs`, `build.rs`, `contracts.rs`, `capabilities/run-control.json`;
+  `ui/src/commands/{types.ts,client.ts}`, `ui/src/components/RunStatusPanel.svelte`,
+  `ui/src/app/App.svelte` (shared `runControl`), `ui/e2e/app.spec.ts`.
 - tauri-stop-run-control: `src/runhaven/runtime/active/mod.rs` (`stop_active_run`
   core + thin `runs_stop`); `src-tauri/src/commands/run_control.rs` (new),
   `commands/mod.rs`, `lib.rs`, `build.rs`, `contracts.rs`,
@@ -497,11 +516,11 @@ evidence and a recorded reason.
 `cli-complete-v0.5.0` is `passing` (all contract gaps closed, secure-by-default
 network, all CLI surfaces confirmed in `docs/CLI_SURFACE_COVERAGE.md`). The
 desktop phase is underway: the maintainability split (milestone 1 / V1-G10) and
-`tauri-stop-run-control` (first GUI feature) are both done. Next desktop slices,
-as separate features: GUI kill and repair (completing V1-G3), then the
-maintenance slice (image rebuild, state/network cleanup) and diagnostics slice
-(`why`, egress, auth). A terminal UI (TUI) is deferred until well after the
-desktop app ships.
+the full desktop run-control surface (V1-G3: stop, kill, repair) are done. Next
+desktop slices, as separate features: the maintenance slice (image rebuild,
+state/network cleanup; V1-G2/G6) and the diagnostics slice (`why`, egress, auth;
+V1-G5), then worktree review (V1-G7). A terminal UI (TUI) is deferred until well
+after the desktop app ships.
 Tagged `v0.5.0` release notes are cut at the release-readiness step. Use
 `docs/RELEASE_GAP_ANALYSIS.md` for status and `docs/V1_RELEASE_PLAN.md` for the
 durable release contract.

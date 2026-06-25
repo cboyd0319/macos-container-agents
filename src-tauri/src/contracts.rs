@@ -262,3 +262,34 @@ pub(crate) struct StopRunResponse {
     pub container_name: String,
     pub status: String,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct KillRunRequest {
+    pub run_id: String,
+    pub confirm_kill: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct KillRunResponse {
+    pub run_id: String,
+    pub container_name: String,
+    pub status: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepairRunRequest {
+    pub run_id: String,
+    pub confirm_repair: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepairRunResponse {
+    pub run_id: String,
+    pub container_name: String,
+    pub status: String,
+    pub marker_removed: bool,
+}

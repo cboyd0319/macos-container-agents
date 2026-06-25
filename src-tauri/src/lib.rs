@@ -14,6 +14,8 @@ pub fn run() {
             commands::run_status::get_run_status,
             commands::log_snapshot::get_log_snapshot,
             commands::run_control::stop_run,
+            commands::run_control::kill_run,
+            commands::run_control::repair_run,
             commands::plan_run,
             commands::launch_run,
         ])

@@ -19,6 +19,8 @@
     planRun,
     secureNetworkDefault,
     stopRun,
+    killRun,
+    repairRun,
     type DashboardStatus,
     type ImageStatusResponse,
     type LogSnapshotResponse,
@@ -48,9 +50,9 @@
   let logAcknowledged = false;
   let logLoading = false;
   let logError = "";
-  let stopping = false;
-  let stopError = "";
-  let stopMessage = "";
+  let controlBusy = false;
+  let controlError = "";
+  let controlMessage = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
@@ -142,22 +144,45 @@
     }
   }
 
-  async function stopActiveRun() {
+  async function runControl(action: (runId: string) => Promise<string>) {
     if (!lastLaunch) {
       return;
     }
-    stopping = true;
-    stopError = "";
-    stopMessage = "";
+    const runId = lastLaunch.runId;
+    controlBusy = true;
+    controlError = "";
+    controlMessage = "";
     try {
-      const result = await stopRun(lastLaunch.runId);
-      stopMessage = `Stop requested for ${result.runId}.`;
-      await loadRunStatus(lastLaunch.runId);
+      controlMessage = await action(runId);
+      await loadRunStatus(runId);
     } catch (cause) {
-      stopError = cause instanceof Error ? cause.message : String(cause);
+      controlError = cause instanceof Error ? cause.message : String(cause);
     } finally {
-      stopping = false;
+      controlBusy = false;
     }
+  }
+
+  function stopActiveRun() {
+    void runControl(async (runId) => {
+      const result = await stopRun(runId);
+      return `Stop requested for ${result.runId}.`;
+    });
+  }
+
+  function killActiveRun() {
+    void runControl(async (runId) => {
+      const result = await killRun(runId);
+      return `Hard stop requested for ${result.runId}.`;
+    });
+  }
+
+  function repairActiveRun() {
+    void runControl(async (runId) => {
+      const result = await repairRun(runId);
+      return result.markerRemoved
+        ? `Stale marker cleared for ${result.runId}.`
+        : `Repair for ${result.runId}: ${result.status}.`;
+    });
   }
 
   async function pickFolder() {
@@ -426,10 +451,12 @@
       {runStatus}
       {runStatusLoading}
       {runStatusError}
-      {stopping}
-      {stopError}
-      {stopMessage}
+      {controlBusy}
+      {controlError}
+      {controlMessage}
       onStop={stopActiveRun}
+      onKill={killActiveRun}
+      onRepair={repairActiveRun}
     />
   {/if}
 

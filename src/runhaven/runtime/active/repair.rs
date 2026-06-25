@@ -124,6 +124,15 @@ fn is_missing_container_stderr(stderr: &[u8]) -> bool {
         || (stderr.contains("container with id ") && stderr.contains(" not found"))
 }
 
+/// Repair the stale active marker for a single run, returning the result value
+/// (`run_id`, `container_name`, `status`, `marker_removed`). Backs the Tauri
+/// `repair_run` command; the CLI `runs_repair` keeps its own summary output.
+pub fn repair_active_run(run_id: &str) -> Result<Value> {
+    validate_run_id(run_id)?;
+    let record = find_active_run_record(run_id)?;
+    repair_one_marker(&record)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -193,3 +193,16 @@ export type StopRunResponse = {
   containerName: string;
   status: string;
 };
+
+export type KillRunResponse = {
+  runId: string;
+  containerName: string;
+  status: string;
+};
+
+export type RepairRunResponse = {
+  runId: string;
+  containerName: string;
+  status: string;
+  markerRemoved: boolean;
+};

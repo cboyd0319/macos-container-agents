@@ -8,6 +8,8 @@ fn main() {
             "get_run_status",
             "get_log_snapshot",
             "stop_run",
+            "kill_run",
+            "repair_run",
             "plan_run",
             "launch_run",
         ]),

@@ -17,7 +17,7 @@ pub use markers::{
     active_run_terminal_status, find_active_run_record, read_active_run_records,
     remove_active_run_record, write_active_run_payload, write_active_run_record,
 };
-pub use repair::runs_repair;
+pub use repair::{repair_active_run, runs_repair};
 
 use crate::plans::{uses_root_identity, validate_resource_options};
 use crate::validators::{require_string, validate_run_id, validate_runhaven_container_name};
@@ -171,7 +171,11 @@ pub fn runs_stop(run_id: &str) -> Result<i32> {
     Ok(code)
 }
 
-pub fn runs_kill(run_id: &str) -> Result<i32> {
+/// Validate and hard-stop one active RunHaven run, returning a structured
+/// outcome. Shares the same checks as `stop_active_run` and backs both the CLI
+/// `runs_kill` and the Tauri `kill_run` command.
+pub fn kill_active_run(run_id: &str) -> Result<Value> {
+    validate_run_id(run_id)?;
     let record = find_active_run_record(run_id)?;
     let container_name = require_string(
         record.get("container_name"),
@@ -182,12 +186,31 @@ pub fn runs_kill(run_id: &str) -> Result<i32> {
     let status = Command::new("container")
         .args(["kill", container_name])
         .status()?;
+    let code = status.code().unwrap_or(1);
     if !status.success() {
         let _ = markers::clear_active_run_kill_requested(run_id, &record);
-        return Ok(status.code().unwrap_or(1));
     }
-    println!("Kill requested for run {run_id} ({container_name}).");
-    Ok(0)
+    Ok(json!({
+        "run_id": run_id,
+        "container_name": container_name,
+        "return_code": code,
+    }))
+}
+
+pub fn runs_kill(run_id: &str) -> Result<i32> {
+    let payload = kill_active_run(run_id)?;
+    let code = payload
+        .get("return_code")
+        .and_then(Value::as_i64)
+        .unwrap_or(1) as i32;
+    if code == 0 {
+        let container = payload
+            .get("container_name")
+            .and_then(Value::as_str)
+            .unwrap_or("-");
+        println!("Kill requested for run {run_id} ({container}).");
+    }
+    Ok(code)
 }
 
 fn validate_attach_workdir(workdir: &str) -> Result<()> {
