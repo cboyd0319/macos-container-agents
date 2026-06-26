@@ -133,10 +133,23 @@ evidence and a recorded reason.
   `paths::login_workspace_dir` (a stable read-only login workspace), command +
   allowlist unit tests, and `AUTH_BROKER`/`USAGE` docs. Verified: cargo fmt,
   `cargo test --locked` (63 lib incl. 2 new login tests + 6 integration), clippy
-  `-D warnings`, `git diff --check`. Live test pending: the user runs
-  `runhaven login codex` and `runhaven login copilot` to confirm each device
-  flow reaches its auth hosts and persists. Antigravity login is next (its hosts
-  are reverse-engineered, so observe real egress before pinning an allowlist).
+  `-D warnings`, `git diff --check`. Live-verified 2026-06-26: `runhaven login
+  codex` reached `auth.openai.com/codex/device` and returned "Successfully
+  logged in"; `runhaven login copilot` reached `github.com/login/device` and
+  returned "Signed in successfully", both persisted in the shared home volume.
+  Two verified gotchas: Codex needs the ChatGPT account "device code
+  authorization" setting on (OpenAI gates it, not RunHaven); Copilot has no
+  in-container keychain so it prompts "Store token in plaintext config file?
+  (y/N)" defaulting to N, the user must answer y (the token lands in the
+  isolated volume, the same model as every other in-container login). Prereqs
+  that bit during verification: the agent image must be built first
+  (`runhaven image build <agent>`; an unbuilt image fails with a cryptic
+  registry-1.docker.io 401), and Apple container DNS had gone stale after a host
+  network change (fixed with `container system stop && container system start`).
+  The user flagged that these friction points need much friendlier UX/phrasing
+  (image-not-built message, Copilot keychain heads-up, Codex toggle heads-up) as
+  the next thread. Antigravity login is the last of the four (its hosts are
+  reverse-engineered, so observe real egress before pinning an allowlist).
 - 2026-06-26: Built `runhaven login claude`, the Claude setup-token opt-in (the
   zero-friction path the user chose; Claude has no in-container device login at
   the pinned version). It runs Anthropic's `claude setup-token` on the host
