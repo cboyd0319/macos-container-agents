@@ -88,8 +88,10 @@ Current behavior, for every brokered provider:
 wants a token value inside the guest, but it is not the preferred headless path.
 
 Provider egress controls are separate. `--network provider` limits CONNECT
-targets by host, records policy decisions, and groups blocked-host reviews. It
-does not authenticate to the provider and it does not see HTTPS URL paths.
+targets by host and records policy decisions; after a run that blocked any
+target it prints a calm two-line notice and keeps the per-host detail in
+`runhaven egress log`. It does not authenticate to the provider and it does not
+see HTTPS URL paths.
 
 ## OAuth And Subscription Logins
 

@@ -99,7 +99,9 @@ network inspection output and requires `configuration.mode` to be `hostOnly`.
 `provider` creates a managed internal Apple `container` network, inspects that
 network for its IPv4 gateway and subnet, starts a host-side CONNECT proxy, and
 injects proxy environment variables into the agent run. The proxy allows only
-the bundled provider hosts for the selected profile, their subdomains, and
+the bundled provider hosts for the selected profile, their subdomains,
+maintainer-curated domain-family patterns (for example
+`*-cloudcode-pa.googleapis.com`, anchored inside one registrable domain), and
 explicit fully qualified `--provider-host HOST` additions. Bundled hosts are
 maintained in the reviewed
 [`PROVIDER_ENDPOINTS.md`](PROVIDER_ENDPOINTS.md) matrix and mirrored into the
@@ -117,8 +119,9 @@ The enforcement pattern is:
 - resolve allowed hosts before connecting and reject non-public resolved
   addresses
 - aggregate allowed and denied proxy policy decisions for the run
-- group blocked targets with run id, reason, count, rule, and suggested next
-  action after the run
+- after a run that denied any target, print a calm two-line notice naming the
+  agent and the count of blocked destinations, pointing to `runhaven egress log`
+  for the per-host detail
 - append provider policy decisions to the RunHaven cache log after the run
 - append a secret-free run record with provider policy, auth broker, and cleanup
   summaries
@@ -198,8 +201,9 @@ arguments, environment, and mount fields.
 ## Auth Broker Model
 
 Auth brokering is a separate host-side boundary from provider egress. The
-current implementation includes an opt-in Codex API-key broker prototype and
-static inspection commands:
+current implementation includes a host-side API-key broker for Codex, Claude,
+and Gemini (Copilot and Antigravity are not brokered) and static inspection
+commands:
 
 ```bash
 runhaven auth status

@@ -1,6 +1,6 @@
 # Research And Source Ledger
 
-Last reviewed: 2026-06-18
+Last reviewed: 2026-06-26
 
 This file records sources used for product, security, runtime, and pinning
 decisions. Update it whenever a dependency pin, runtime assumption, security
@@ -219,6 +219,25 @@ Pinned package scan refresh on 2026-06-24:
   `@github/copilot@1.0.64`. The 2026-06-18 host evidence above remains
   historical; `pins.toml` is the source of truth for current agent CLI pins.
 
+Live agent egress observation on 2026-06-26:
+
+- `runhaven login <agent>` was built and live-verified for Claude (host
+  `claude setup-token`), Codex (`codex login --device-auth`, reaches
+  `auth.openai.com`), Copilot (`copilot login`, reaches `github.com` and
+  `api.github.com`), and Antigravity (agy first-run Google OAuth). The Codex and
+  Copilot login/refresh hosts were flipped from candidate to bundled in the
+  endpoint matrix; the Copilot widening is deliberate and documented.
+- Antigravity now has an observation-backed runtime host set from real egress:
+  `oauth2.googleapis.com`, `www.googleapis.com`, `cloudcode-pa.googleapis.com`,
+  and `daily-cloudcode-pa.googleapis.com`. `accounts.google.com` and
+  `antigravity.google` are browser-side only. This supersedes the 2026-06-18
+  "no source-backed runtime host list" note for Antigravity.
+- The egress matcher now supports maintainer-curated domain-family wildcard
+  patterns (`*-name.domain.tld`, anchored to one registrable domain,
+  default-deny preserved). Antigravity's `daily-cloudcode-pa` pin became
+  `*-cloudcode-pa.googleapis.com` so region or channel prefixes need no re-pin
+  while `storage.googleapis.com` and other googleapis.com services stay denied.
+
 Local reference harness:
 
 - A local reference harness repo was consulted for instruction, pin-check, and
@@ -260,7 +279,7 @@ Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
 - Docker image digests checked with `docker buildx imagetools inspect`:
   `debian:trixie-slim` and `node:26.3.0-trixie-slim`.
 - GitHub Actions release API (retained for reference only; no workflows
-  currently exist, so no action pins are tracked — see `docs/PINNING.md`):
+  currently exist, so no action pins are tracked, see `docs/PINNING.md`):
   <https://api.github.com/repos/actions/checkout/releases/latest>.
 
 Current reviewed pins are recorded in [`../pins.toml`](../pins.toml). The

@@ -117,6 +117,10 @@ plain-language `Security notices` to standard error. See
 runhaven run claude
 ```
 
+A run first checks that the agent image is built. If it is not, RunHaven stops
+before starting the sandbox and tells you to build it once with
+`runhaven image build <agent>`.
+
 `runhaven` allows one active run per project/profile/session state volume. If
 another run is already using the same isolated home volume, `runhaven` fails
 before starting Apple `container` and tells you to wait or use a different
@@ -201,13 +205,13 @@ runhaven auth log --limit 20
 runhaven auth log --json
 ```
 
-The Codex API-key broker is an opt-in prototype. Other agent auth brokers remain
-design-only. These commands describe the host-side broker boundary and the
-current safe paths for each profile. They do not inspect Keychain, browser
-profiles, provider login caches, cloud credential files, or environment variable
-values, and they do not print secrets.
+The host-side API-key broker covers Codex, Claude, and Gemini. Copilot and
+Antigravity are not brokered. These commands describe the host-side broker
+boundary and the current safe paths for each profile. They do not inspect
+Keychain, browser profiles, provider login caches, cloud credential files, or
+environment variable values, and they do not print secrets.
 
-After a brokered Codex run, `runhaven auth log` shows secret-free broker
+After a brokered run, `runhaven auth log` shows secret-free broker
 decisions: method, sanitized path, allow/deny outcome, reason, upstream status,
 count, and run id. It never records request bodies, token values, or environment
 variable names.
@@ -402,11 +406,11 @@ internal-network gateway is inspected.
 
 If provider mode fails, separate allowlist denials from proxy reachability:
 
-- A grouped blocked-host review after the run means the proxy was reachable and
-  denied a hostname by policy.
+- A blocked-destinations notice after the run means the proxy was reachable and
+  denied one or more hostnames by policy; `runhaven egress log` has the detail.
 - Connection-refused, timeout, or "could not connect to proxy" failures before
-  any blocked-host review usually mean the guest could not reach RunHaven's
-  host-side proxy on the Apple `container` host-only network.
+  any blocked-destinations notice usually mean the guest could not reach
+  RunHaven's host-side proxy on the Apple `container` host-only network.
 
 For proxy reachability failures, run:
 
@@ -428,10 +432,12 @@ variables, or switching to unrestricted internet unless that is the intended
 security tradeoff.
 
 If a provider run tries to reach a host outside the allowlist, RunHaven prints a
-grouped blocked-host review after the agent exits. The review includes the run
-id, host, port, count, denial reason, matched rule, and suggested next action.
-Review each blocked hostname before adding it with `--provider-host`; IP
-literal targets cannot be allowed.
+calm two-line notice after the agent exits: it names the agent, says RunHaven
+kept it inside its provider's network and blocked N other destinations to protect
+your data, and points to `runhaven egress log`. The per-host detail (host, port,
+count, denial reason, matched rule) lives in that log. Review each blocked
+hostname before adding it with `--provider-host`; IP literal targets cannot be
+allowed.
 
 Explain safety decisions before changing flags:
 

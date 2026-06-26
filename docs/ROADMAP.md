@@ -73,6 +73,13 @@ current-stable pins, and keep the harness state current.
 - clear offline and package-install network modes
 - live provider auth-flow smokes for optional feature paths
 - path-aware provider policy for broad hosts such as `github.com`
+- maintainer-curated domain-family egress patterns (`*-name.domain.tld`,
+  anchored to one registrable domain, default-deny preserved), used for
+  Antigravity so users manage no hosts
+- `runhaven login <agent>` isolated per-agent login, live-verified for claude
+  (host `claude setup-token`), codex (`codex login --device-auth`), copilot
+  (`copilot login`), and antigravity (agy first-run Google OAuth), with
+  `--clear`; gemini stays on the API-key broker
 
 ## v0.5.0 CLI-Complete Scope
 
@@ -90,6 +97,9 @@ current-stable pins, and keep the harness state current.
 
 ## v1.x Or Design-First Product Candidates
 
+- signed, auto-updating per-agent provider policy (antivirus-definitions
+  model) so new provider endpoints need no release or user action, building on
+  the shipped domain-family egress patterns
 - custom profile file support
 - per-agent policy presets
 - MCP allowlists
@@ -151,7 +161,11 @@ current-stable pins, and keep the harness state current.
   contract for UI resource warnings, approval gates, typed Rust commands, and
   narrow Tauri capabilities.
 
-## v1.0.0 Desktop-First Implementation
+## Desktop Surface: Shipped Slices, Re-Sequenced To Roadmap End
+
+These slices are complete and verified. Per the 2026-06-26 directive they are
+re-sequenced behind runtime/security hardening, remaining non-UI product scope,
+and a CLI public release; the desktop release version label is open.
 
 - Completed 2026-06-16 in
   [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).
@@ -179,9 +193,9 @@ current-stable pins, and keep the harness state current.
 - After the `v0.5.0` CLI-complete scope is closed or explicitly accepted, add
   first-class desktop controls for stop, kill, repair, image build/rebuild,
   diagnostics, worktree review, and safe cleanup.
-- Before `v1.0.0`, the desktop app must be keyboard navigable, accessible at
-  the minimum supported window size, signed, notarized, checksummed, and backed
-  by release provenance.
+- Before the desktop release, the desktop app must be keyboard navigable,
+  accessible at the minimum supported window size, signed, notarized,
+  checksummed, and backed by release provenance.
 - Remaining UI controls should still be added one at a time with typed Rust
   commands, explicit confirmation, focused tests, and narrow capabilities.
 

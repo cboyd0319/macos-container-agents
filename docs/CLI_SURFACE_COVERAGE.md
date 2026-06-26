@@ -34,12 +34,18 @@ Last full run: 2026-06-25 on macOS 27.0 (build 26A5368g), Apple `container`
 | `runs logs-follow` / `stop` | smoke | streams active output, then graceful stop |
 | `egress log` | surface check + smoke | provider proxy decisions |
 | `auth status` / `explain` / `log` | surface check | broker boundary, no secrets |
+| `login <agent>` / `login --clear` | live login smokes | per-agent isolated login (claude, codex, copilot, antigravity); needs real provider auth, so it is not in the self-cleaning breadth check |
 | `why host` / `workspace` / `network` / `state` | surface check | safety explanations |
 
 The deep provider egress-denial path (allowlist plus rejection of
 non-allowlisted hosts, proxied IP literals, and direct egress) and the `--ssh`
 fail-closed boundary are verified by the smoke. The surface check covers breadth
 and the worktree and attach/kill/repair lifecycles the smoke does not exercise.
+
+`runhaven login <agent>` requires a real provider OAuth flow or a host
+setup-token, so it cannot run in the self-cleaning breadth check. It is confirmed
+by live per-agent login smokes (claude, codex, copilot, and antigravity were
+live-verified on 2026-06-26).
 
 ## Confirmation gates and safety
 

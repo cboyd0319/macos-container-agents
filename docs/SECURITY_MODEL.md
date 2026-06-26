@@ -128,11 +128,11 @@ without a reviewed approval gate.
 ## Auth Broker Boundary
 
 `runhaven auth status` and `runhaven auth explain AGENT` describe the host-side
-provider credential broker boundary. The current broker status is a Codex
-API-key prototype with all other agent brokers design-only. Those commands read
-static profile metadata. They do not inspect Keychain, browser profiles, cloud
-credential files, provider login caches, or environment variable values, and
-they do not print secrets.
+provider credential broker boundary. The host-side API-key broker covers Codex,
+Claude, and Gemini; Copilot and Antigravity are not brokered and use isolated
+in-container login state. Those commands read static profile metadata. They do
+not inspect Keychain, browser profiles, cloud credential files, provider login
+caches, or environment variable values, and they do not print secrets.
 
 The intended pattern is host-owned credentials with provider-specific policy
 tied to the endpoint matrix. The guest should receive only a narrow
@@ -162,15 +162,18 @@ managed provider network after the run. Apple `container` 1.0.0 exposes an
 internal gateway address to guests that is not always bindable on the macOS
 host, so the host listener can bind wildcard while rejecting clients outside the
 inspected Apple `container` subnet. The proxy permits the bundled provider hosts
-for the selected profile, their subdomains, and explicit fully qualified
-`--provider-host HOST` additions. It rejects IP literal proxy targets and
-single-label provider hosts. Before opening an upstream connection, the proxy
-resolves the destination and rejects non-public resolved addresses such as
-loopback, private, link-local, multicast, or otherwise local-only addresses.
-It relies on the internal network to block direct guest egress. Blocked proxy
-targets are grouped after provider runs with run id, count, denial reason,
-matched rule, and suggested next action so users can review missing endpoints
-without weakening the default policy.
+for the selected profile, their subdomains, maintainer-curated domain-family
+patterns (for example `*-cloudcode-pa.googleapis.com`, anchored inside one
+registrable domain), and explicit fully qualified `--provider-host HOST`
+additions. It rejects IP literal proxy targets and single-label provider hosts.
+Before opening an upstream connection, the proxy resolves the destination and
+rejects non-public resolved addresses such as loopback, private, link-local,
+multicast, or otherwise local-only addresses. It relies on the internal network
+to block direct guest egress. After a provider run that denied any target,
+RunHaven prints a calm two-line notice that names the agent and the count of
+blocked destinations and points to `runhaven egress log`; the per-host detail
+(host, port, count, denial reason, matched rule) stays in that log so users can
+review missing endpoints without weakening the default policy.
 
 Host-only networks block guest egress to the internet, but they do not firewall
 the host's own listening ports. A guest on an `internal` or `provider` network

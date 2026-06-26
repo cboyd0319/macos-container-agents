@@ -1,6 +1,6 @@
 # RunHaven v0.5.0 And v1.0.0 Gap Analysis
 
-Last updated: 2026-06-24
+Last updated: 2026-06-26
 
 Status: active release-gap tracker.
 
@@ -15,7 +15,15 @@ It is not a second roadmap. Use it to decide whether work is:
 - acceptable as a v1.x follow-up.
 
 RunHaven remains alpha/pre-release until after `v0.5.0`. `v0.5.0` is the
-CLI-complete milestone. `v1.0.0` is the first-class desktop release.
+CLI-complete milestone.
+
+Sequencing update (2026-06-26 directive): all GUI/UI work, the Tauri desktop app
+and the terminal UI (TUI), is deferred to the very end of the roadmap.
+Runtime/security hardening of the Apple `container` boundary, remaining non-UI
+product scope, and a CLI-based public release come first. The v1 desktop gap
+rows below stay valid as the final phase; they are re-sequenced, not removed, and
+the desktop release version label is no longer locked to `v1.0.0`. The sequence
+of record is `current-state.md` and `docs/ROADMAP.md`.
 
 Above all else, the secure path must be the easy path. Secure defaults should
 be the shortest workflow. Supported lower-security choices should warn and
@@ -280,9 +288,16 @@ accessibility, and release-trust work remains.
 1. Done (2026-06-25): split the largest desktop files
    (`src-tauri/src/commands/mod.rs` into validation/warnings; `runhaven.ts` into
    types/client/plan behind a barrel; `App.svelte` into panel components).
-2. Implement `tauri-stop-run-control` (active slice) as the first v1 desktop
-   feature now that the maintainability split is done.
-3. Cut tagged `v0.5.0` release notes at the release-readiness step.
+2. Done (2026-06-25): desktop run control (`stop_run`, `kill_run`, `repair_run`)
+   behind `run-control` and partial read-only diagnostics behind `main-read`
+   (V1-G5). Per the 2026-06-26 directive these shipped GUI slices are now
+   re-sequenced to the roadmap end; remaining desktop gaps wait behind the
+   non-UI work.
+3. Near term (non-UI): runtime/security hardening (audit-and-fix slice is
+   `passing`), then promote design-first non-UI product candidates one at a time
+   through their design gates.
+4. Cut tagged release notes for the CLI public release at the release-readiness
+   step.
 
 ## Decision Log
 

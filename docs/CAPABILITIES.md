@@ -70,7 +70,7 @@ They differ in provider-network backing and authentication support tiers.
 | `codex` | Bundled: `api.openai.com`, `chatgpt.com` | ChatGPT or OpenAI sign-in in isolated state | API-key broker: `--api-key-broker-env`, Responses API (`/v1/responses`) | Key brokered host-side; ChatGPT sign-in uses isolated state |
 | `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state | API-key broker: `--api-key-broker-env`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
 | `copilot` | Bundled: seven `githubcopilot.com` hosts | GitHub OAuth device flow in isolated state | Design-only (cannot be brokered cleanly) | Token exchange + dynamically-routed API host; use isolated state |
-| `antigravity` | None bundled (CLI is a build-time download) | Not yet established | None | Most limited: no runtime hosts, auth path undefined |
+| `antigravity` | Bundled: Google OAuth, userinfo, and Cloud Code hosts plus the `*-cloudcode-pa.googleapis.com` model-endpoint family | First-run Google login in isolated state (`runhaven login antigravity`) | None | No API-key broker; uses isolated login state. Google sign-in consent and redirect happen in the host browser |
 | `shell` | None | Decided by the custom image | None | Generic base for custom images; you supply image and credentials |
 
 "Design-only" means no credential broker is wired yet, so headless use relies on
@@ -88,8 +88,8 @@ for the source-backed detail.
 
 When you do not pass `--network`, RunHaven picks the secure default that still
 works: `provider` for profiles with bundled provider hosts (`claude`, `codex`,
-`copilot`, `gemini`) and `internet` for profiles without them (`shell`,
-`antigravity`), where provider mode would have an empty allowlist. Pass
+`copilot`, `gemini`, `antigravity`) and `internet` for profiles without them
+(`shell`), where provider mode would have an empty allowlist. Pass
 `--network` to override. A provider-default run reaches the agent's own API but
 not arbitrary hosts; add `--provider-host HOST` or use `--network internet` when
 the run needs more.
@@ -113,7 +113,7 @@ each active one. Hard-boundary violations still fail closed.
 
 | Override | What it lowers | Default |
 | --- | --- | --- |
-| `--network internet` | Unrestricted outbound egress with no domain allowlist. The default only for profiles without bundled provider hosts (`shell`, `antigravity`). | profile-aware |
+| `--network internet` | Unrestricted outbound egress with no domain allowlist. The default only for profiles without bundled provider hosts (`shell`). | profile-aware |
 | `--env NAME` | Exposes one host environment variable to the agent; a secret there can be read by workspace code. `NAME=value` is rejected. | none |
 | `--user USER` / `--allow-root-user` | Runs the agent as a different or root container user instead of the non-root `agent` user. Root or UID 0 fails closed without `--allow-root-user`. | `agent` |
 | `--provider-host HOST` | Widens the provider allowlist with one reviewed fully qualified host. | bundled hosts only |
@@ -155,6 +155,7 @@ default.
 | Credential mechanism | What it does |
 | --- | --- |
 | `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex, Claude, or Gemini runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
+| `runhaven login <agent>` | Signs in once and later runs reuse it: Claude via a host `claude setup-token` (the token is injected at run time), and Codex, Copilot, and Antigravity via an in-sandbox login on the shared home volume. `--clear` removes the login. See [Auth broker](AUTH_BROKER.md). |
 | `--auth-scope agent\|project` | `agent` (default) shares one login per agent across all your projects so an OAuth login is done once; `project` isolates the login to this workspace's own volume. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
@@ -224,8 +225,8 @@ RunHaven is not a complete data-loss or exfiltration solution.
   agent home volume.
 - Credentials inside the agent home volume or passed with `--env NAME` may be
   misused by malicious repository content.
-- Host-side auth brokering has an opt-in Codex API-key prototype. Other agent
-  auth brokers remain design-only.
+- Host-side API-key brokering covers Codex, Claude, and Gemini. Copilot and
+  Antigravity are not brokered and use isolated in-container login state.
 - Agent-native approval systems are useful, but they are not a replacement for
   the outer container boundary.
 

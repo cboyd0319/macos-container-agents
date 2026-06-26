@@ -14,8 +14,10 @@ security hardening of the Apple `container` boundary leads now, ahead of any new
 feature surface. The already-shipped desktop run-control and diagnostics slices
 stay `passing`; no GUI work is reverted, only re-sequenced behind the non-UI
 hardening, remaining product scope, and release work. The
-`runtime-security-hardening` audit-and-fix slice is `passing` (branch
-`runtime-security-hardening`, not yet merged); no feature is currently `active`.
+`runtime-security-hardening` slice is `passing` and was merged to `main`
+2026-06-26 (with the four-agent `runhaven login` work, the egress family-pattern
+step, the non-technical UX pass, and a full docs and README refresh); no feature
+is currently `active`.
 
 ## Startup State Contract
 
@@ -134,6 +136,18 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Full repo docs and README refresh, then merged the
+  `runtime-security-hardening` branch to `main`. Rewrote `README.md` (added the
+  `runhaven login` sign-in story for all four agents, plain-language egress
+  framing, and the corrected GUI-and-TUI-last roadmap), and updated the product,
+  roadmap, and policy docs to match current state (PROVIDER_ENDPOINTS host sets
+  and the domain-family pattern, USAGE/CAPABILITIES/SECURITY_MODEL/ARCHITECTURE
+  broker-and-egress wording, ROADMAP/V1_RELEASE_PLAN/NON_UI_BACKLOG re-sequencing
+  and login-done, CLI_SURFACE_COVERAGE login row, CONTRIBUTING/SECURITY/RESEARCH).
+  Verified: `git diff --check`, em-dash/emoji/canned-phrase scans clean, relative
+  Markdown link check (32 README links + the rest, 0 broken), pin check passed,
+  and a final `cargo fmt`/`test --locked` (66 lib + 6 integration)/clippy
+  `-D warnings` green. Pushed to `origin/main`.
 - 2026-06-26: Non-technical UX pass on login/run output (the "much easier"
   thread, after the four-agent set). (1) `launch_run_plan` now preflights the
   agent image (`image_doctor::image_is_built`) and fails with "Build it once
@@ -708,10 +722,11 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`cli-complete-v0.5.0` and the `runtime-security-hardening` audit-and-fix slice are
-both `passing`. The hardening branch `runtime-security-hardening` is not yet merged
-to `main`. Per the 2026-06-26 directive, all GUI/UI work stays deferred to the very
-end.
+`cli-complete-v0.5.0` and the `runtime-security-hardening` slice are both
+`passing` and merged to `main` (2026-06-26), including the four-agent
+`runhaven login` work, the lower-friction egress family-pattern step, the
+non-technical UX pass, and a full repo docs and README refresh. Per the
+2026-06-26 directive, all GUI/UI work stays deferred to the very end.
 
 The `multi-provider-broker` slice is now `passing`: the API-key broker covers
 Codex, Claude, and Gemini (Copilot stays design-only). All work is on the
