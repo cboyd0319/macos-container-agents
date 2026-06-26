@@ -121,6 +121,30 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Built and live-verified `runhaven login antigravity`, completing
+  the user's four-agent set (Claude, Codex, Copilot, Antigravity). agy has no
+  login subcommand, so `runhaven login antigravity` runs agy, whose first run
+  triggers a Google OAuth sign-in (the user approves in the host browser, then
+  types /exit); the login persists in the shared home volume. Observing the real
+  egress corrected the reverse-engineered research: the flow is Google
+  auth-code with a redirect to `antigravity.google` (not device-code, not
+  localhost), and the live model endpoint is `daily-cloudcode-pa.googleapis.com`
+  (not `cloudcode-pa` alone). Pinned 4 bundled hosts from the egress ledger:
+  `oauth2.googleapis.com`, `www.googleapis.com`, `cloudcode-pa.googleapis.com`,
+  `daily-cloudcode-pa.googleapis.com`. `accounts.google.com` and
+  `antigravity.google` are browser-side only, not bundled. Live-verified: the
+  model answered prompts ("Kermit is green"). agy's startup eligibility check
+  fetches `lh3.googleusercontent.com` (profile pic); blocked it is a cosmetic
+  "Eligibility check failed" line and the agent still works, so it is left out of
+  the default (least privilege) with a documented `--provider-host` opt-in.
+  antigravity now defaults to provider mode (it has bundled hosts), a security
+  improvement over the prior internet default. Decision: keep tight host pins,
+  not `*.googleapis.com` (that would open `storage.googleapis.com` as an
+  exfil channel). Verified: fmt, `cargo test --locked` (63 lib incl. an updated
+  default-network test + 6 integration), clippy `-D warnings`, `git diff
+  --check`. Open question from the user: geo/endpoint variation of the
+  cloudcode-pa hosts; a narrow `*-cloudcode-pa.googleapis.com` matcher (Google
+  controls googleapis.com, so it cannot open storage/gmail) is the candidate fix.
 - 2026-06-26: Built `runhaven login` for Codex and Copilot (in-sandbox device
   flow). Each runs the CLI's own device-code login (`codex login --device-auth`;
   `copilot login`) once inside the sandbox on the agent's shared home volume

@@ -1,9 +1,9 @@
 # Auth Broker
 
 Status: host-side API-key broker for Codex, Claude, and Gemini, plus
-`runhaven login` for Claude (host setup-token), Codex, and Copilot (in-sandbox
-device flow). Antigravity login is not yet wired. No Copilot or Antigravity
-API-key broker is planned.
+`runhaven login` for Claude (host setup-token) and Codex, Copilot, and
+Antigravity (in-sandbox login). No Copilot or Antigravity API-key broker is
+planned.
 
 RunHaven exposes two auth inspection commands:
 
@@ -157,10 +157,19 @@ command line (it is passed by name-only `--env` from the RunHaven process
 environment), and in `provider` mode the egress allowlist keeps it from leaving
 Anthropic's hosts. Clear it with `runhaven login claude --clear`.
 
-**Antigravity** is not yet wired into `runhaven login`. Log in by running
-`runhaven run antigravity` and completing the Google login on first run; its
-runtime auth hosts are still being verified before a pinned allowlist. Gemini
-uses the API-key broker.
+**Antigravity (first-run Google login).** `agy` has no login subcommand, so
+`runhaven login antigravity` starts `agy`, which prompts a Google sign-in on
+first run: open the URL it prints, approve in your browser, then type `/exit`
+once you are in the agy session. The login persists in the shared home volume.
+Its hosts were pinned from live egress observation (2026-06-26):
+`oauth2.googleapis.com` (token exchange), `www.googleapis.com` (userinfo),
+`cloudcode-pa.googleapis.com`, and `daily-cloudcode-pa.googleapis.com` (the model
+endpoint this `agy` build calls). The OAuth consent (`accounts.google.com`) and
+redirect (`antigravity.google`) happen in your host browser, not the guest, so
+neither is bundled. `agy` also prints an "Eligibility check failed" line because
+it cannot fetch your profile picture from `lh3.googleusercontent.com`; this is
+harmless (the agent works), add `--provider-host lh3.googleusercontent.com` to
+silence it. Gemini uses the API-key broker.
 
 ## Smoke Coverage
 

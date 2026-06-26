@@ -16,6 +16,17 @@ pub fn bundled_provider_hosts(profile: &str) -> &'static [&'static str] {
         // auth.openai.com is the Codex device-login + token-refresh host.
         "codex" => &["api.openai.com", "chatgpt.com", "auth.openai.com"],
         "gemini" => &["generativelanguage.googleapis.com"],
+        // Observed live 2026-06-26 (egress ledger): oauth2 + www.googleapis are
+        // the OAuth token-exchange and userinfo hosts; cloudcode-pa and the
+        // daily- channel are the Cloud Code model backend (the model call hits
+        // the daily- host on this agy version). accounts.google.com and
+        // antigravity.google are browser-side only and not needed in the guest.
+        "antigravity" => &[
+            "oauth2.googleapis.com",
+            "www.googleapis.com",
+            "cloudcode-pa.googleapis.com",
+            "daily-cloudcode-pa.googleapis.com",
+        ],
         "copilot" => &[
             "api.githubcopilot.com",
             "individual.githubcopilot.com",
@@ -155,7 +166,39 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
         status: "build",
         purpose: "Pinned Antigravity CLI archive download during image build.",
         evidence: &["images/antigravity/Containerfile"],
-        note: "No source-backed minimal runtime host set has been identified for Antigravity CLI.",
+        note: "Build-time only.",
+    },
+    ProviderEndpoint {
+        profile: "antigravity",
+        host: "oauth2.googleapis.com",
+        status: "bundled",
+        purpose: "Google OAuth token exchange and refresh for the agy login.",
+        evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
+        note: "The OAuth consent (accounts.google.com) and redirect (antigravity.google) happen in the host browser, not the guest, so neither is bundled.",
+    },
+    ProviderEndpoint {
+        profile: "antigravity",
+        host: "www.googleapis.com",
+        status: "bundled",
+        purpose: "Google userinfo (email and profile) during the agy login.",
+        evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
+        note: "",
+    },
+    ProviderEndpoint {
+        profile: "antigravity",
+        host: "cloudcode-pa.googleapis.com",
+        status: "bundled",
+        purpose: "Cloud Code backend used during agy login and registration.",
+        evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
+        note: "",
+    },
+    ProviderEndpoint {
+        profile: "antigravity",
+        host: "daily-cloudcode-pa.googleapis.com",
+        status: "bundled",
+        purpose: "Cloud Code model endpoint for agy runtime requests (Gemini).",
+        evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
+        note: "Version-specific: this agy build calls the daily- channel; re-verify per CLI version. Not bundled (optional): antigravity-unleash.goog (feature flags), lh3.googleusercontent.com (avatar), playwright*.azureedge.net (browser binaries).",
     },
     ProviderEndpoint {
         profile: "copilot",

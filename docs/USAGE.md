@@ -227,13 +227,20 @@ inside the sandbox so later runs skip it:
 ```bash
 runhaven login codex          # `codex login --device-auth` in the sandbox; open the URL, no code to paste back
 runhaven login copilot        # `copilot login` in the sandbox; open github.com/login/device, enter the code
+runhaven login antigravity    # starts `agy`; complete the Google sign-in in your browser, then type /exit
 runhaven login codex --clear  # delete that agent's shared home volume (logs it out)
 ```
 
 These persist in the agent's shared home volume; RunHaven never sees the token.
-Codex needs the account "Allow device code login" setting on. The login runs in
+Codex needs the account "Allow device code login" setting on. Copilot has no
+in-container keychain, so it asks to store the token in a plaintext config file;
+answer `y` (it lands in the isolated volume, the same as every other in-container
+login). Antigravity (`agy`) prints an "Eligibility check failed" line because it
+cannot fetch your profile picture; this is harmless and the agent works, add
+`--provider-host lh3.googleusercontent.com` to silence it. The login runs in
 `provider` mode, so the allowlist includes each provider's login hosts
-(`auth.openai.com` for Codex; `github.com` and `api.github.com` for Copilot).
+(`auth.openai.com` for Codex; `github.com` and `api.github.com` for Copilot;
+four `googleapis.com` hosts for Antigravity).
 
 For Claude, a zero-friction opt-in avoids the copy step entirely:
 

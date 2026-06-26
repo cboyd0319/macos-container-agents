@@ -9,11 +9,12 @@
 //!   at run time only. The token is a usable credential, so this is an explicit,
 //!   warned opt-in: the guest then holds a token, and provider-network egress
 //!   keeps it from leaving the provider's hosts.
-//! - Codex and Copilot: device-code flows that print a URL and poll to
-//!   completion. `runhaven login <agent>` runs the CLI's own login command once
-//!   inside the sandbox on the agent's shared home volume (`--auth-scope
-//!   agent`), so the credential stays in that isolated volume and later runs
-//!   reuse it. RunHaven never holds the token.
+//! - Codex, Copilot, and Antigravity: in-sandbox logins on the agent's shared
+//!   home volume (`--auth-scope agent`), so the credential stays in that
+//!   isolated volume and later runs reuse it; RunHaven never holds the token.
+//!   Codex and Copilot have device-code login subcommands; Antigravity (agy)
+//!   has none, so its login runs the agent, which prompts a Google sign-in on
+//!   first run (the user types /exit afterward).
 
 use std::io::{IsTerminal, Read, Write};
 use std::process::{Command, Stdio};
@@ -43,8 +44,8 @@ fn token_env_var(agent: &str) -> Option<&'static str> {
 pub fn login(agent: &str) -> Result<i32> {
     match agent {
         "claude" => login_claude(),
-        "codex" | "copilot" => {
-            let args = sandbox_login_command(agent).expect("codex/copilot have a login command");
+        "codex" | "copilot" | "antigravity" => {
+            let args = sandbox_login_command(agent).expect("agent has a sandbox login command");
             login_in_sandbox(agent, args, sandbox_login_guidance(agent))
         }
         other => bail!(
@@ -53,11 +54,14 @@ pub fn login(agent: &str) -> Result<i32> {
     }
 }
 
-/// The agent's own login command, run inside the sandbox for a device-code flow.
+/// The command to run inside the sandbox to log in. Codex and Copilot have
+/// device-code login subcommands; Antigravity (agy) has no login subcommand, so
+/// it runs the agent, which prompts a Google sign-in on first run.
 fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
     match agent {
         "codex" => Some(&["codex", "login", "--device-auth"]),
         "copilot" => Some(&["copilot", "login"]),
+        "antigravity" => Some(&["agy"]),
         _ => None,
     }
 }
@@ -70,15 +74,18 @@ fn sandbox_login_guidance(agent: &str) -> &'static str {
         "copilot" => {
             "Logging in to Copilot inside the sandbox. Open https://github.com/login/device, enter the code it prints, and approve. The login persists in the agent's shared home volume, so later runs reuse it."
         }
+        "antigravity" => {
+            "Logging in to Antigravity inside the sandbox. agy has no separate login command, so this starts agy and it prompts a Google sign-in on first run: open the URL it prints, approve in your browser, and follow any code prompt. Once you are in the agy session, type /exit to leave. The login persists in the agent's shared home volume, so later runs reuse it."
+        }
         _ => "Logging in inside the sandbox. The login persists in the agent's shared home volume.",
     }
 }
 
 pub fn logout(agent: &str) -> Result<i32> {
     match agent {
-        // Codex and Copilot keep their login in the shared home volume, not a
-        // host token file; clearing it means removing that volume.
-        "codex" | "copilot" => logout_shared_volume(agent),
+        // Codex, Copilot, and Antigravity keep their login in the shared home
+        // volume, not a host token file; clearing it means removing that volume.
+        "codex" | "copilot" | "antigravity" => logout_shared_volume(agent),
         _ => logout_host_token(agent),
     }
 }
@@ -255,6 +262,7 @@ mod tests {
             sandbox_login_command("copilot"),
             Some(&["copilot", "login"][..])
         );
+        assert_eq!(sandbox_login_command("antigravity"), Some(&["agy"][..]));
         assert_eq!(sandbox_login_command("claude"), None);
     }
 
@@ -265,6 +273,11 @@ mod tests {
         assert!(bundled_provider_hosts("codex").contains(&"auth.openai.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"github.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"api.github.com"));
+        // Antigravity: OAuth token exchange + the model endpoint it actually hits.
+        assert!(bundled_provider_hosts("antigravity").contains(&"oauth2.googleapis.com"));
+        assert!(
+            bundled_provider_hosts("antigravity").contains(&"daily-cloudcode-pa.googleapis.com")
+        );
     }
 
     #[test]

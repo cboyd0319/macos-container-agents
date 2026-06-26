@@ -534,12 +534,15 @@ mod tests {
             default_network_mode(&get_profile("codex").expect("profile")),
             NetworkMode::Provider
         );
-        assert_eq!(
-            default_network_mode(&get_profile("shell").expect("profile")),
-            NetworkMode::Internet
-        );
+        // antigravity now has bundled provider hosts (its login/model
+        // googleapis.com set), so it defaults to provider like claude/codex.
         assert_eq!(
             default_network_mode(&get_profile("antigravity").expect("profile")),
+            NetworkMode::Provider
+        );
+        // shell has no bundled hosts, so it is the "else internet" case.
+        assert_eq!(
+            default_network_mode(&get_profile("shell").expect("profile")),
             NetworkMode::Internet
         );
     }
