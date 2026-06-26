@@ -30,6 +30,7 @@ use crate::plans::{
     AgentRunPlan, AuthScope, RunOptions, WorkspaceScope, build_run_plan, default_network_mode,
 };
 use crate::profiles::get_profile;
+use crate::runtime_state::{VolumeDeletion, delete_volume};
 use crate::session_state::shared_state_volume_name;
 
 /// Agents whose login RunHaven can store host-side as an OAuth token and inject
@@ -110,17 +111,19 @@ fn logout_host_token(agent: &str) -> Result<i32> {
 
 fn logout_shared_volume(agent: &str) -> Result<i32> {
     let volume = shared_state_volume_name(agent);
-    let status = Command::new("container")
-        .args(["volume", "delete", &volume])
-        .status()
-        .with_context(|| format!("could not run container volume delete {volume}"))?;
-    if status.success() {
-        eprintln!("Cleared the {agent} login (deleted the shared home volume {volume}).");
-    } else {
-        // The most common reason is that no login volume exists yet.
-        eprintln!("No {agent} login volume to clear ({volume}).");
+    // Reuse the shared deletion path (existence check, in-use retry, no error on
+    // a volume that was never created).
+    match delete_volume(&volume)? {
+        VolumeDeletion::Deleted => {
+            eprintln!("Cleared the {agent} login (deleted the shared home volume {volume}).");
+            Ok(0)
+        }
+        VolumeDeletion::Missing => {
+            eprintln!("No {agent} login volume to clear ({volume}).");
+            Ok(0)
+        }
+        VolumeDeletion::Failed => Ok(1),
     }
-    Ok(0)
 }
 
 /// Run an agent's own login command once inside the sandbox, on its shared home

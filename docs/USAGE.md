@@ -163,6 +163,11 @@ runhaven runs status <run-id>
 runhaven runs status <run-id> --json
 ```
 
+Every `--json` output is best-effort and unversioned during alpha (through
+`v0.5.0`): fields may be added, renamed, or removed between versions, so do not
+build a durable integration on it yet. See the JSON and local data lifecycle
+decision in [V1_RELEASE_PLAN](V1_RELEASE_PLAN.md#data-storage-and-recovery).
+
 `runs attach` starts a new process inside the active container with Apple
 `container exec`; it does not attach to the original agent process stream. By
 default it opens `/bin/bash` as the non-root `agent` user in `/workspace`.

@@ -267,9 +267,19 @@ Unsupported or intentionally limited users:
 - `runs.jsonl`, `egress-policy.jsonl`, and `auth-broker.jsonl` are append-only
   and currently read into memory. Long-term use can make listing slow and cache
   growth unbounded.
-- Run record schemas do not yet carry explicit schema versions. v1 should add
-  schema versioning before declaring JSON output stable, or explicitly state
-  which JSON outputs are best-effort.
+- JSON and local data lifecycle (decision, 2026-06-26): through `v0.5.0`, every
+  CLI `--json` output (`runs list`, `show`, `log`, `diff`, `status`, `repair`;
+  `auth status`, `explain`, `log`; `egress log`; `image doctor`) and every local
+  record file (`runs.jsonl`, `egress-policy.jsonl`, `auth-broker.jsonl`, and
+  active-run markers `active-runs/<id>.json`) is best-effort and unversioned.
+  RunHaven owns these, fields may be added, renamed, or removed between versions,
+  and external tools should not depend on them yet. OAuth token files, state lock
+  files, the login workspace, and state and home volumes are internal
+  implementation details, never a documented format. Before any output is
+  declared stable it gains an explicit `schema_version` field and a documented
+  shape; the first candidates are the audit and log outputs (`runs log`,
+  `auth log`, `egress log`). No output is a stable integration contract before
+  that step.
 - State volumes can contain provider sessions, local caches, and generated
   code. `state reset` and `state prune --yes` are irreversible and need clear
   preview text in both CLI and desktop.

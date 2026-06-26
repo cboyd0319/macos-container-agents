@@ -136,6 +136,22 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Closed the last two `v0.5.0` CLI-complete items (on `main`,
+  committed locally), so all four closure items are now done. JSON and local-data
+  lifecycle: recorded an explicit decision in `V1_RELEASE_PLAN.md` (Data, Storage,
+  And Recovery) with a `USAGE.md` pointer, through `v0.5.0` every CLI `--json`
+  output and local record file (`runs.jsonl`, `egress-policy.jsonl`,
+  `auth-broker.jsonl`, active-run markers) is best-effort and unversioned; OAuth
+  tokens, locks, the login workspace, and volumes are internal; stability needs
+  an explicit `schema_version` field first (audit/log outputs are the first
+  candidates). CLI maintainability check (lean-reviewer pass against the
+  ~500-line guard): deleted dead `ApiKeyBrokerProxy::bind` and deduped
+  `logout_shared_volume` onto the shared existence-aware `delete_volume` (logout
+  now gets the same existence check and retry). `egress.rs` (525),
+  `auth_broker.rs` (512), and `app.rs` (508) are slightly over the guard but
+  cohesive surfaces left whole; `egress.rs` has a policy-vs-proxy seam to split
+  only if it grows. Verified: cargo fmt, `cargo test --locked` (69 lib + 6
+  integration), clippy `-D warnings`, doc scans and `git diff --check` clean.
 - 2026-06-26: CLI command + docs contract audit (a `v0.5.0` closure item, on
   `main`, committed locally). Cross-checked the full command tree (14 top-level
   commands plus all subcommand groups: runs 15, image 3, network 2, state 3,

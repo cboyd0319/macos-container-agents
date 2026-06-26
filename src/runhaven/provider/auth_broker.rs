@@ -152,14 +152,6 @@ struct BrokerState {
 type BrokerDecisionKey = (String, String, String, String, Option<u16>);
 
 impl ApiKeyBrokerProxy {
-    pub fn bind(
-        address: (&str, u16),
-        api_key: String,
-        allowed_client_subnets: &[String],
-    ) -> Result<Self> {
-        Self::bind_for_profile(address, CODEX_BROKER, api_key, allowed_client_subnets)
-    }
-
     pub fn bind_for_profile(
         address: (&str, u16),
         profile: ProviderBrokerProfile,
