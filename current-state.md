@@ -121,6 +121,21 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Built `runhaven login claude`, the Claude setup-token opt-in (the
+  zero-friction path the user chose; Claude has no in-container device login at
+  the pinned version). It runs Anthropic's `claude setup-token` on the host
+  (needs host Claude Code), stores the token `0600` in the RunHaven cache, and
+  `runhaven run claude` injects it at run time as a name-only
+  `--env CLAUDE_CODE_OAUTH_TOKEN` (value from the RunHaven process env, never on
+  the argv or in the printed `plan`). A run-time notice marks the injection;
+  provider-mode egress confines the token to Anthropic's hosts;
+  `runhaven login claude --clear` removes it. New
+  `src/runhaven/runtime/login.rs` + `paths::oauth_token_path`, wired into the
+  standard and provider run paths; docs in `AUTH_BROKER`/`USAGE`. Verified: cargo
+  fmt, `cargo test --locked` (61 lib incl. 2 new login tests + 6 integration),
+  clippy `-D warnings`, Tauri builds and clippy. Live test pending: the user runs
+  `runhaven login claude` to confirm the setup-token output parses and the
+  injected token authenticates a run.
 - 2026-06-26: Started the `oauth-isolated-login` slice (easy OAuth; the product's
   target audience uses subscription/OAuth logins, not API keys). Live-verified
   that a Claude Max subscription OAuth login works end to end inside a RunHaven
@@ -621,7 +636,8 @@ detail in AgentMemory). It is security-sensitive (host token storage + run-time
 injection, broad allowlist widening) and needs live per-agent smokes, so build
 carefully:
 
-- Claude (the user's agent): setup-token opt-in. `runhaven login claude` runs
+- Claude (the user's agent): setup-token opt-in. BUILT 2026-06-26 (live test
+  pending). `runhaven login claude` runs
   Anthropic's official `claude setup-token` on the host (requires host `claude`),
   captures `CLAUDE_CODE_OAUTH_TOKEN`, stores it `0600` in the RunHaven cache; runs
   then inject it as `--env CLAUDE_CODE_OAUTH_TOKEN` at run time only (never in the

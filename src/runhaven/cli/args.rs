@@ -34,6 +34,13 @@ pub(super) enum TopCommand {
     Plan(RunArgs),
     #[command(about = "run an agent through Apple container", after_help = AGENT_ARGS_HELP)]
     Run(RunCommand),
+    #[command(about = "log in to an agent once and reuse the login across runs")]
+    Login {
+        #[arg(help = "agent profile to log in (currently: claude)")]
+        agent: String,
+        #[arg(long, help = "clear the stored login for this agent")]
+        clear: bool,
+    },
     #[command(about = "manage local agent images")]
     Image {
         #[command(subcommand)]

@@ -76,6 +76,14 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
         TopCommand::Run(command) => {
             run_agent(&command.args, command.dry_run, command.worktree, agent_args)
         }
+        TopCommand::Login { agent, clear } => {
+            get_profile(&agent)?;
+            if clear {
+                crate::login::logout(&agent)
+            } else {
+                crate::login::login(&agent)
+            }
+        }
         TopCommand::Image { command } => image_command(command),
         TopCommand::Network { command } => network_command(command),
         TopCommand::State { command } => state_command(command),

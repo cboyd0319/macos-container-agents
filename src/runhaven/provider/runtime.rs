@@ -101,7 +101,21 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         eprintln!("Run id: {run_id}");
         write_active_run_record(plan, &run_id, &started)?;
         active_recorded = true;
-        let status = Command::new(&command[0]).args(&command[1..]).status();
+        let token_injection = crate::login::run_token_injection(plan);
+        let command = match &token_injection {
+            Some((env, _)) => crate::login::with_token_env(&command, &plan.image, env),
+            None => command,
+        };
+        let mut agent_command = Command::new(&command[0]);
+        agent_command.args(&command[1..]);
+        if let Some((env, value)) = &token_injection {
+            eprintln!(
+                "Using your stored {} login (injected into the sandbox env).",
+                plan.profile_name
+            );
+            agent_command.env(env, value);
+        }
+        let status = agent_command.status();
         terminal_status = active_run_terminal_status(&run_id);
         let finished = utc_timestamp();
         git = Some(summarize_git_change(

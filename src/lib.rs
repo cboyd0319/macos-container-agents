@@ -17,6 +17,7 @@ pub use runhaven::provider::runtime as provider_runtime;
 pub use runhaven::records::history as records;
 pub use runhaven::runtime::active;
 pub use runhaven::runtime::launch;
+pub use runhaven::runtime::login;
 pub use runhaven::runtime::network;
 pub use runhaven::runtime::plans;
 pub use runhaven::runtime::profiles;

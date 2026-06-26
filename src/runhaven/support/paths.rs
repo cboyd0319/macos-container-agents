@@ -48,6 +48,12 @@ pub fn state_lock_path(state_volume: &str) -> PathBuf {
         .join(format!("{state_volume}.lock"))
 }
 
+pub fn oauth_token_path(agent: &str) -> PathBuf {
+    runhaven_cache_root()
+        .join("auth")
+        .join(format!("{agent}-oauth-token"))
+}
+
 pub fn ensure_private_dir(path: &Path) -> Result<()> {
     fs::create_dir_all(path)?;
     restrict_dir_permissions(path)?;

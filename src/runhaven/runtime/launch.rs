@@ -37,9 +37,21 @@ pub fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
     let started_at = utc_timestamp();
     eprintln!("Run id: {run_id}");
     write_active_run_record(plan, &run_id, &started_at)?;
-    let status_result = Command::new(&plan.command[0])
-        .args(&plan.command[1..])
-        .status();
+    let injection = crate::login::run_token_injection(plan);
+    let command = match &injection {
+        Some((env, _)) => crate::login::with_token_env(&plan.command, &plan.image, env),
+        None => plan.command.clone(),
+    };
+    let mut agent_command = Command::new(&command[0]);
+    agent_command.args(&command[1..]);
+    if let Some((env, value)) = &injection {
+        eprintln!(
+            "Using your stored {} login (injected into the sandbox env).",
+            plan.profile_name
+        );
+        agent_command.env(env, value);
+    }
+    let status_result = agent_command.status();
     let terminal_status = active_run_terminal_status(&run_id);
     let _ = remove_active_run_record(&run_id);
     let finished_at = utc_timestamp();

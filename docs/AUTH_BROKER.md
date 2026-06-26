@@ -123,6 +123,23 @@ work there is allowlisting each provider's login and token-refresh hosts and a
 smooth headless login, not a broker. Tracked in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
 
+### `runhaven login claude` (warned opt-in)
+
+Claude Code has no in-container device login at the pinned version, so an
+in-sandbox login requires pasting a code back. For a zero-friction alternative,
+`runhaven login claude` runs Anthropic's official `claude setup-token` on your
+host (this needs Claude Code installed on the host), captures the resulting
+token, and stores it `0600` in the RunHaven cache. `runhaven run claude` then
+injects it into the sandbox env at run time.
+
+This is an explicit, warned opt-in, not the default. Unlike the isolated-login
+default, the guest then holds a usable token, so it is the lower-isolation
+choice. The token is never written into your `~/.claude`, never appears in the
+printed `plan` or on a command line (it is passed by name-only `--env` from the
+RunHaven process environment), and in `provider` network mode the egress
+allowlist keeps it from leaving Anthropic's hosts. Clear it any time with
+`runhaven login claude --clear`.
+
 ## Smoke Coverage
 
 Codex broker behavior is live-verified on macOS 26+ with Apple `container` using

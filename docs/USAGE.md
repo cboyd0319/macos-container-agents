@@ -219,8 +219,24 @@ volume. By default (`--auth-scope agent`) that volume is shared across all your
 projects, so you log in once per agent and every later run reuses it; pass
 `--auth-scope project` to keep a project's login isolated to its own volume. The
 in-sandbox login shows a URL and code to open in your host browser (there is no
-browser inside the container). Use `--env NAME` only when a headless run
-deliberately needs one token value inside the guest.
+browser inside the container).
+
+For Claude, a zero-friction opt-in avoids that copy/paste:
+
+```bash
+runhaven login claude          # runs `claude setup-token` on your host, stores the token
+runhaven run claude            # injects the stored token into the sandbox
+runhaven login claude --clear  # remove the stored token
+```
+
+`runhaven login claude` needs Claude Code installed on your host. It is a warned
+opt-in: the guest then holds a usable token (the lower-isolation choice), kept
+out of `~/.claude`, the printed `plan`, and any command line, and confined to
+Anthropic's hosts in `provider` network mode. See
+[`AUTH_BROKER.md`](AUTH_BROKER.md).
+
+Use `--env NAME` only when a headless run deliberately needs one token value
+inside the guest.
 
 ## Read-Only Review
 
