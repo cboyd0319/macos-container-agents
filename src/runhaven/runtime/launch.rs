@@ -21,6 +21,7 @@ pub fn new_run_id() -> String {
 pub fn launch_run_plan(plan: &AgentRunPlan) -> Result<i32> {
     provider_runtime::validate_runtime_auth_broker_environment(plan)?;
     require_container_cli()?;
+    ensure_agent_image_built(plan)?;
     let _state_lock = acquire_state_lock(&plan.state_volume)?;
     if plan.network_mode == NetworkMode::Provider {
         return provider_runtime::run_provider_agent(plan);
@@ -29,6 +30,29 @@ pub fn launch_run_plan(plan: &AgentRunPlan) -> Result<i32> {
         provider_runtime::run_preflight(command)?;
     }
     run_standard_agent(plan)
+}
+
+/// Fail early with an actionable message when the agent image is not built,
+/// instead of letting `container run` try to pull a RunHaven image and return a
+/// confusing `registry-1.docker.io 401`.
+fn ensure_agent_image_built(plan: &AgentRunPlan) -> Result<()> {
+    if crate::image_doctor::image_is_built(&plan.image)? {
+        return Ok(());
+    }
+    bail!(
+        "{}",
+        image_not_built_message(&plan.image, &plan.profile_name)
+    );
+}
+
+fn image_not_built_message(image: &str, agent: &str) -> String {
+    if image.starts_with("runhaven/") {
+        format!(
+            "The {agent} image is not built yet, so the sandbox cannot start. Build it once with:\n  runhaven image build {agent}"
+        )
+    } else {
+        format!("The image {image} is not available locally. Build or load it before running.")
+    }
 }
 
 pub fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
@@ -92,4 +116,19 @@ pub fn require_container_cli() -> Result<()> {
     bail!(
         "Apple container CLI was not found. Install it from https://github.com/apple/container/releases and run `container system start`."
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn image_not_built_message_points_to_the_build_command_for_bundled_images() {
+        let bundled = image_not_built_message("runhaven/codex:0.1.0", "codex");
+        assert!(bundled.contains("runhaven image build codex"));
+        // A custom --image is the user's to provide, so no build hint.
+        let custom = image_not_built_message("my/custom:1.0", "codex");
+        assert!(!custom.contains("runhaven image build"));
+        assert!(custom.contains("my/custom:1.0"));
+    }
 }

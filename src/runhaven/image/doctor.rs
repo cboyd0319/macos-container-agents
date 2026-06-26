@@ -120,6 +120,14 @@ fn selected_profiles(agent: Option<&str>) -> Result<Vec<AgentProfile>> {
     Ok(profiles())
 }
 
+/// Whether `image` (for example `runhaven/codex:0.1.0`) is present in the local
+/// Apple container image store. Used to fail a run with a clear "build it first"
+/// message instead of letting `container run` try to pull a RunHaven image from
+/// a registry and return a confusing 401.
+pub fn image_is_built(image: &str) -> Result<bool> {
+    Ok(find_local_image(image, &list_local_images()?).is_some())
+}
+
 fn list_local_images() -> Result<Vec<LocalImage>> {
     let output = Command::new("container")
         .args(["image", "list", "--format", "json"])
