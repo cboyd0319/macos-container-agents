@@ -12,8 +12,13 @@ use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 
 mod headers;
+mod profiles;
 
 pub use headers::broker_request_headers;
+pub use profiles::{
+    BROKER_PLACEHOLDER_VALUE, CLAUDE_BROKER, CODEX_BROKER, CredentialInjection, GEMINI_BROKER,
+    GuestRedirect, PathRule, ProviderBrokerProfile, broker_profile_for_agent,
+};
 
 pub use crate::auth_profiles::{
     AUTH_BROKER_RUNTIME, AUTH_BROKER_STATUS, CODEX_API_KEY_BROKER_STATUS,
@@ -23,7 +28,6 @@ pub use crate::auth_profiles::{
 pub const CODEX_BROKER_PROVIDER_ID: &str = "runhaven_openai";
 pub const CODEX_BROKER_PLACEHOLDER_VALUE: &str = "runhaven-broker-placeholder";
 pub const CODEX_BROKER_UPSTREAM_HOST: &str = "api.openai.com";
-pub const CODEX_BROKER_RESPONSES_PATH: &str = "/v1/responses";
 pub const CODEX_BROKER_REQUEST_TIMEOUT_SECONDS: u64 = 120;
 pub const MAX_CODEX_BROKER_REQUEST_BYTES: usize = 64 * 1024 * 1024;
 
@@ -63,8 +67,16 @@ pub struct OpenAIResponsesUpstream {
 
 impl Default for OpenAIResponsesUpstream {
     fn default() -> Self {
+        Self::for_host(CODEX_BROKER_UPSTREAM_HOST)
+    }
+}
+
+impl OpenAIResponsesUpstream {
+    /// HTTPS upstream pinned to a provider host. The sender is host-agnostic
+    /// (`https://{host}{path}`); only the broker profile decides the host.
+    fn for_host(host: &str) -> Self {
         Self {
-            host: CODEX_BROKER_UPSTREAM_HOST.to_string(),
+            host: host.to_string(),
             agent: broker_upstream_agent(),
         }
     }
@@ -131,7 +143,7 @@ pub struct CodexApiKeyBrokerProxy {
 
 struct BrokerState {
     api_key: String,
-    upstream_host: String,
+    profile: ProviderBrokerProfile,
     upstream: Arc<dyn CodexBrokerUpstream>,
     allowed_client_networks: Vec<IpNet>,
     decisions: Mutex<BTreeMap<BrokerDecisionKey, usize>>,
@@ -145,24 +157,28 @@ impl CodexApiKeyBrokerProxy {
         api_key: String,
         allowed_client_subnets: &[String],
     ) -> Result<Self> {
-        Self::bind_with_upstream(
-            address,
-            api_key,
-            allowed_client_subnets,
-            CODEX_BROKER_UPSTREAM_HOST,
-            Arc::new(OpenAIResponsesUpstream::default()),
-        )
+        Self::bind_for_profile(address, CODEX_BROKER, api_key, allowed_client_subnets)
+    }
+
+    pub fn bind_for_profile(
+        address: (&str, u16),
+        profile: ProviderBrokerProfile,
+        api_key: String,
+        allowed_client_subnets: &[String],
+    ) -> Result<Self> {
+        let upstream = Arc::new(OpenAIResponsesUpstream::for_host(profile.upstream_host));
+        Self::bind_with_upstream(address, profile, api_key, allowed_client_subnets, upstream)
     }
 
     pub fn bind_with_upstream(
         address: (&str, u16),
+        profile: ProviderBrokerProfile,
         api_key: String,
         allowed_client_subnets: &[String],
-        upstream_host: &str,
         upstream: Arc<dyn CodexBrokerUpstream>,
     ) -> Result<Self> {
         if api_key.trim().is_empty() {
-            bail!("Codex API key broker requires a host API key");
+            bail!("{} requires a host API key", profile.label);
         }
         let listener = TcpListener::bind(address)?;
         listener.set_nonblocking(true)?;
@@ -177,7 +193,7 @@ impl CodexApiKeyBrokerProxy {
             listener: Arc::new(listener),
             state: Arc::new(BrokerState {
                 api_key,
-                upstream_host: upstream_host.to_string(),
+                profile,
                 upstream,
                 allowed_client_networks: networks,
                 decisions: Mutex::new(BTreeMap::new()),
@@ -283,7 +299,7 @@ fn handle_broker_client(
         send_error(&mut stream, 405, "Method Not Allowed")?;
         return Ok(());
     }
-    let upstream_path = match codex_broker_upstream_path(target) {
+    let upstream_path = match broker_upstream_path(target, &state.profile.path_rule) {
         Ok(path) => path,
         Err(_) => {
             record_decision(
@@ -305,7 +321,7 @@ fn handle_broker_client(
             record_decision(
                 &state,
                 "POST",
-                CODEX_BROKER_RESPONSES_PATH,
+                &upstream_path,
                 "denied",
                 "length-required",
                 None,
@@ -317,7 +333,7 @@ fn handle_broker_client(
             record_decision(
                 &state,
                 "POST",
-                CODEX_BROKER_RESPONSES_PATH,
+                &upstream_path,
                 "denied",
                 "bad-content-length",
                 None,
@@ -330,7 +346,7 @@ fn handle_broker_client(
         record_decision(
             &state,
             "POST",
-            CODEX_BROKER_RESPONSES_PATH,
+            &upstream_path,
             "denied",
             "payload-too-large",
             None,
@@ -340,8 +356,13 @@ fn handle_broker_client(
     }
     let mut body = vec![0u8; length];
     reader.read_exact(&mut body)?;
-    let request_headers =
-        broker_request_headers(&headers, &state.upstream_host, &state.api_key, body.len());
+    let request_headers = broker_request_headers(
+        &headers,
+        state.profile.upstream_host,
+        &state.api_key,
+        &state.profile.injection,
+        body.len(),
+    );
     match state
         .upstream
         .send("POST", &upstream_path, &request_headers, &body)
@@ -350,7 +371,7 @@ fn handle_broker_client(
             record_decision(
                 &state,
                 "POST",
-                CODEX_BROKER_RESPONSES_PATH,
+                &upstream_path,
                 "allowed",
                 "upstream-response",
                 Some(response.status),
@@ -361,7 +382,7 @@ fn handle_broker_client(
             record_decision(
                 &state,
                 "POST",
-                CODEX_BROKER_RESPONSES_PATH,
+                &upstream_path,
                 "allowed",
                 "upstream-error",
                 None,
@@ -461,12 +482,12 @@ fn send_upstream_response(stream: &mut TcpStream, response: BrokerUpstreamRespon
     Ok(())
 }
 
-pub fn codex_broker_upstream_path(target: &str) -> Result<String> {
+pub fn broker_upstream_path(target: &str, path_rule: &PathRule) -> Result<String> {
     let (path, query) = target
         .split_once('?')
         .map_or((target, None), |(path, query)| (path, Some(query)));
-    if path != CODEX_BROKER_RESPONSES_PATH {
-        bail!("Codex API key broker only supports the Responses create path");
+    if !path_rule.allows(path) {
+        bail!("broker does not allow request path {path}");
     }
     Ok(query.map_or_else(|| path.to_string(), |query| format!("{path}?{query}")))
 }

@@ -28,15 +28,34 @@ pub fn broker_request_headers(
     headers: &[(String, String)],
     upstream_host: &str,
     api_key: &str,
+    injection: &super::profiles::CredentialInjection,
     body_length: usize,
 ) -> Vec<(String, String)> {
+    use super::profiles::CredentialInjection;
+    // Strip hop-by-hop headers and any guest-sent copy of the headers we inject
+    // (e.g. a placeholder x-api-key), so the guest can never set or leak the
+    // real credential headers.
+    let injected = injection.injected_header_names();
     let mut forwarded = headers
         .iter()
-        .filter(|(name, _)| !header_is_hop_by_hop(name, HOP_BY_HOP_REQUEST_HEADERS))
+        .filter(|(name, _)| {
+            !header_is_hop_by_hop(name, HOP_BY_HOP_REQUEST_HEADERS)
+                && !injected.iter().any(|n| name.eq_ignore_ascii_case(n))
+        })
         .cloned()
         .collect::<Vec<_>>();
     forwarded.push(("Host".to_string(), upstream_host.to_string()));
-    forwarded.push(("Authorization".to_string(), format!("Bearer {api_key}")));
+    match injection {
+        CredentialInjection::BearerAuth => {
+            forwarded.push(("Authorization".to_string(), format!("Bearer {api_key}")));
+        }
+        CredentialInjection::ApiKeyHeader { name, extra } => {
+            forwarded.push(((*name).to_string(), api_key.to_string()));
+            for (key, value) in *extra {
+                forwarded.push(((*key).to_string(), (*value).to_string()));
+            }
+        }
+    }
     forwarded.push(("Content-Length".to_string(), body_length.to_string()));
     forwarded
 }
