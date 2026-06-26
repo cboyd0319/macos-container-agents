@@ -17,15 +17,17 @@ pub fn bundled_provider_hosts(profile: &str) -> &'static [&'static str] {
         "codex" => &["api.openai.com", "chatgpt.com", "auth.openai.com"],
         "gemini" => &["generativelanguage.googleapis.com"],
         // Observed live 2026-06-26 (egress ledger): oauth2 + www.googleapis are
-        // the OAuth token-exchange and userinfo hosts; cloudcode-pa and the
-        // daily- channel are the Cloud Code model backend (the model call hits
-        // the daily- host on this agy version). accounts.google.com and
-        // antigravity.google are browser-side only and not needed in the guest.
+        // the OAuth token-exchange and userinfo hosts; cloudcode-pa is the Cloud
+        // Code backend. The model call hits a channel/region prefix of that host
+        // (daily- on this agy version), so the family pattern covers daily-, us-,
+        // eu-, and future prefixes without opening other googleapis.com services
+        // like storage. accounts.google.com and antigravity.google are
+        // browser-side only and not needed in the guest.
         "antigravity" => &[
             "oauth2.googleapis.com",
             "www.googleapis.com",
             "cloudcode-pa.googleapis.com",
-            "daily-cloudcode-pa.googleapis.com",
+            "*-cloudcode-pa.googleapis.com",
         ],
         "copilot" => &[
             "api.githubcopilot.com",
@@ -194,11 +196,11 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
     },
     ProviderEndpoint {
         profile: "antigravity",
-        host: "daily-cloudcode-pa.googleapis.com",
+        host: "*-cloudcode-pa.googleapis.com",
         status: "bundled",
-        purpose: "Cloud Code model endpoint for agy runtime requests (Gemini).",
+        purpose: "Cloud Code model endpoint family for agy runtime (Gemini); covers daily- and any channel or region prefix.",
         evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
-        note: "Version-specific: this agy build calls the daily- channel; re-verify per CLI version. Not bundled (optional): antigravity-unleash.goog (feature flags), lh3.googleusercontent.com (avatar), playwright*.azureedge.net (browser binaries).",
+        note: "Family pattern, so a channel/region change (daily-, us-, eu-, ...) needs no re-pin; it stays inside googleapis.com, so storage and other Google services remain denied. Not bundled (optional): antigravity-unleash.goog (feature flags), lh3.googleusercontent.com (avatar), playwright*.azureedge.net (browser binaries).",
     },
     ProviderEndpoint {
         profile: "copilot",

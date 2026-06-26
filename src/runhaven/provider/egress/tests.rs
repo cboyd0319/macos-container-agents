@@ -17,6 +17,30 @@ fn policy_allows_exact_and_subdomain_hosts_only() {
 }
 
 #[test]
+fn policy_wildcard_family_matches_prefixes_within_one_domain() {
+    let policy = EgressPolicy::new(&["*-cloudcode-pa.googleapis.com".to_string()]).expect("policy");
+
+    // Any channel/region prefix of the family is allowed.
+    assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
+    assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
+    // The pattern stays inside googleapis.com: other Google services, the bare
+    // host (no prefix), and a look-alike under another domain are all denied.
+    assert!(!policy.allows("storage.googleapis.com", 443));
+    assert!(!policy.allows("cloudcode-pa.googleapis.com", 443));
+    assert!(!policy.allows("x-cloudcode-pa.googleapis.com.attacker.com", 443));
+}
+
+#[test]
+fn wildcard_pattern_must_anchor_to_one_registrable_domain() {
+    // A tail that is a single registrable domain would match other domains an
+    // attacker could register (attacker-foo.com), so it is rejected.
+    assert!(EgressPolicy::new(&["*-foo.com".to_string()]).is_err());
+    assert!(EgressPolicy::new(&["*foo".to_string()]).is_err());
+    // A properly anchored family pattern is accepted.
+    assert!(EgressPolicy::new(&["*-cloudcode-pa.googleapis.com".to_string()]).is_ok());
+}
+
+#[test]
 fn upstream_address_safety_rejects_private_and_documentation_ranges() {
     assert!(!is_safe_upstream_address(IpAddr::V4(Ipv4Addr::new(
         10, 0, 0, 1

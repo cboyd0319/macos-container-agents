@@ -163,10 +163,13 @@ first run: open the URL it prints, approve in your browser, then type `/exit`
 once you are in the agy session. The login persists in the shared home volume.
 Its hosts were pinned from live egress observation (2026-06-26):
 `oauth2.googleapis.com` (token exchange), `www.googleapis.com` (userinfo),
-`cloudcode-pa.googleapis.com`, and `daily-cloudcode-pa.googleapis.com` (the model
-endpoint this `agy` build calls). The OAuth consent (`accounts.google.com`) and
-redirect (`antigravity.google`) happen in your host browser, not the guest, so
-neither is bundled. `agy` also prints an "Eligibility check failed" line because
+`cloudcode-pa.googleapis.com`, and the model-endpoint family pattern
+`*-cloudcode-pa.googleapis.com`. That pattern covers the `daily-` channel this
+`agy` build uses and any future channel or region prefix (`us-`, `eu-`, ...)
+without a re-pin, and because it is anchored inside `googleapis.com` it cannot
+reach `storage` or other Google services. The OAuth consent
+(`accounts.google.com`) and redirect (`antigravity.google`) happen in your host
+browser, not the guest, so neither is bundled. `agy` also prints an "Eligibility check failed" line because
 it cannot fetch your profile picture from `lh3.googleusercontent.com`; this is
 harmless (the agent works), add `--provider-host lh3.googleusercontent.com` to
 silence it. Gemini uses the API-key broker.

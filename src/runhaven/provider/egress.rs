@@ -45,7 +45,7 @@ impl EgressPolicy {
         }
         let mut allowed_hosts = Vec::with_capacity(hosts.len());
         for host in hosts {
-            allowed_hosts.push(normalize_host(host)?);
+            allowed_hosts.push(normalize_allowed_entry(host)?);
         }
         Ok(Self {
             allowed_hosts,
@@ -68,9 +68,7 @@ impl EgressPolicy {
         }
         self.allowed_hosts
             .iter()
-            .find(|allowed| {
-                normalized == allowed.as_str() || normalized.ends_with(&format!(".{allowed}"))
-            })
+            .find(|allowed| allowed_entry_matches(allowed, &normalized))
             .cloned()
     }
 
@@ -85,6 +83,38 @@ impl EgressPolicy {
             return "ip-literal";
         }
         "not-in-allowlist"
+    }
+}
+
+/// Validate and normalize one allowlist entry. A leading `*` marks a wildcard
+/// family pattern (for example `*-cloudcode-pa.googleapis.com`): it matches any
+/// host ending in the literal text after the `*`. The pattern is anchored so the
+/// wildcard can only expand a subdomain label inside one registrable domain: it
+/// must start with `-` or `.` and the tail must carry a registrable domain (at
+/// least two dots). That keeps `*-cloudcode-pa.googleapis.com` Google-only and
+/// rejects cross-registrable-domain patterns like `*-foo.com`. Wildcard patterns
+/// are maintainer-curated for the bundled allowlist, never required from users.
+fn normalize_allowed_entry(entry: &str) -> Result<String> {
+    let Some(suffix) = entry.strip_prefix('*') else {
+        return normalize_host(entry);
+    };
+    if !(suffix.starts_with('-') || suffix.starts_with('.')) || suffix.matches('.').count() < 2 {
+        bail!(
+            "invalid wildcard host pattern {entry:?}: use *-name.domain.tld or *.domain.tld so it stays inside one registrable domain"
+        );
+    }
+    // The domain tail must itself be a valid host.
+    normalize_host(suffix.trim_start_matches(['-', '.']))?;
+    Ok(entry.to_ascii_lowercase())
+}
+
+/// Whether a normalized host matches one allowlist entry. Plain entries match
+/// the host itself or any subdomain; `*`-prefixed entries match any host ending
+/// in the literal suffix after the `*`.
+fn allowed_entry_matches(allowed: &str, normalized: &str) -> bool {
+    match allowed.strip_prefix('*') {
+        Some(suffix) => normalized.ends_with(suffix),
+        None => normalized == allowed || normalized.ends_with(&format!(".{allowed}")),
     }
 }
 

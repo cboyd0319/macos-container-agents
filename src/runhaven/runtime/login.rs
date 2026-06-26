@@ -273,11 +273,18 @@ mod tests {
         assert!(bundled_provider_hosts("codex").contains(&"auth.openai.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"github.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"api.github.com"));
-        // Antigravity: OAuth token exchange + the model endpoint it actually hits.
+        // Antigravity: OAuth token exchange present, and the model family
+        // pattern allows any -cloudcode-pa channel/region without opening
+        // storage.googleapis.com.
         assert!(bundled_provider_hosts("antigravity").contains(&"oauth2.googleapis.com"));
-        assert!(
-            bundled_provider_hosts("antigravity").contains(&"daily-cloudcode-pa.googleapis.com")
-        );
+        let antigravity_hosts: Vec<String> = bundled_provider_hosts("antigravity")
+            .iter()
+            .map(|h| (*h).to_string())
+            .collect();
+        let policy = crate::egress::EgressPolicy::new(&antigravity_hosts).expect("policy");
+        assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
+        assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
+        assert!(!policy.allows("storage.googleapis.com", 443));
     }
 
     #[test]

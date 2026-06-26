@@ -239,8 +239,10 @@ login). Antigravity (`agy`) prints an "Eligibility check failed" line because it
 cannot fetch your profile picture; this is harmless and the agent works, add
 `--provider-host lh3.googleusercontent.com` to silence it. The login runs in
 `provider` mode, so the allowlist includes each provider's login hosts
-(`auth.openai.com` for Codex; `github.com` and `api.github.com` for Copilot;
-four `googleapis.com` hosts for Antigravity).
+(`auth.openai.com` for Codex; `github.com` and `api.github.com` for Copilot; the
+Google login and Cloud Code hosts for Antigravity, including the model-endpoint
+family pattern `*-cloudcode-pa.googleapis.com` so a Google channel or region
+change does not need a new host).
 
 For Claude, a zero-friction opt-in avoids the copy step entirely:
 
