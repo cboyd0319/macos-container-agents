@@ -27,6 +27,18 @@ agents, or mount any workspace. It also explains when to use local-only,
 provider-only, package install, or unrestricted internet network modes, and
 how to choose a workspace without mounting host credential paths.
 
+## List Agents
+
+```bash
+runhaven agents
+```
+
+Lists the bundled agent profiles with their support tiers: the sign-in path
+(`runhaven login`, an in-sandbox login, or not applicable for the generic
+`shell` profile), the default network mode, and whether the host-side API-key
+broker covers the agent. The tiers are read from the profile and auth code, so
+the table always matches current behavior.
+
 ## Check the Mac
 
 ```bash

@@ -136,6 +136,24 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: CLI command + docs contract audit (a `v0.5.0` closure item, on
+  `main`, committed locally). Cross-checked the full command tree (14 top-level
+  commands plus all subcommand groups: runs 15, image 3, network 2, state 3,
+  auth 3, egress 1, why 4) against the clap help, `CLI_SURFACE_COVERAGE.md`, and
+  `USAGE.md`. Fixed one doc gap (`runhaven agents` was missing from USAGE; added
+  a List Agents section). The breadth surface check then caught a real regression
+  from this session's `--auth-scope agent` default: `runhaven run --session X`
+  now uses the shared per-agent volume, so `state reset --session X` (always
+  project-scoped) targeted a session volume the run no longer creates and failed
+  on a non-existent volume. Fixes: `state reset`/`state prune` deletion is now
+  existence-aware (a missing volume is reported, not an error) and retries while
+  a volume is transiently held after a stop or kill (Apple container does not
+  auto-remove the container); the surface check's active run uses `--auth-scope
+  project` so the session-volume reset path is actually exercised. Result:
+  `cli_surface_check.sh` 39/39. Verified: cargo fmt, `cargo test --locked` (69
+  lib incl. a new `volume_in_list` test + 6 integration), clippy `-D warnings`,
+  `git diff --check`. Follow-up: RunHaven runs without `--rm`, so killed
+  containers reap asynchronously; a runtime-lifecycle review is a separate item.
 - 2026-06-26: Profile support tiers (a `v0.5.0` CLI-complete closure item, on
   `main`, committed locally). Made the per-agent support matrix code-derived so
   it cannot drift: `runhaven agents` now prints sign-in path (`runhaven login`

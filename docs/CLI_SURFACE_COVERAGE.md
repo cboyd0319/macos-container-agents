@@ -9,9 +9,11 @@ scripts/cli_surface_check.sh                                 # breadth: every co
 scripts/apple_container_smoke.sh --with-provider --with-ssh  # depth: provider egress denial + SSH fail-closed
 ```
 
-Last full run: 2026-06-25 on macOS 27.0 (build 26A5368g), Apple `container`
-1.0.0 (commit ee848e3). `cli_surface_check.sh`: 39/39 surfaces passed.
-`apple_container_smoke.sh --with-provider --with-ssh`: passed.
+Last full run on macOS 27.0 (build 26A5368g), Apple `container` 1.0.0 (commit
+ee848e3): `cli_surface_check.sh` 2026-06-26 (39/39 surfaces passed; the
+session-volume reset path now runs with `--auth-scope project` so it is exercised
+under the `--auth-scope agent` default introduced for shared logins).
+`apple_container_smoke.sh --with-provider --with-ssh`: 2026-06-25 passed.
 
 ## Coverage
 

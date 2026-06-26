@@ -307,13 +307,20 @@ fn state_command(command: StateCommand) -> Result<i32> {
                 return Ok(2);
             }
             require_container_cli()?;
-            let status = Command::new("container")
-                .args(["volume", "delete", &plan.state_volume])
-                .status()?;
-            if status.success() {
-                println!("Deleted state volume: {}", plan.state_volume);
+            match runtime_state::delete_volume(&plan.state_volume)? {
+                runtime_state::VolumeDeletion::Deleted => {
+                    println!("Deleted state volume: {}", plan.state_volume);
+                    Ok(0)
+                }
+                runtime_state::VolumeDeletion::Missing => {
+                    println!(
+                        "No state volume to reset: {} does not exist (project-scoped runs create it; the default --auth-scope agent shares one per-agent volume).",
+                        plan.state_volume
+                    );
+                    Ok(0)
+                }
+                runtime_state::VolumeDeletion::Failed => Ok(1),
             }
-            Ok(status.code().unwrap_or(1))
         }
     }
 }

@@ -228,8 +228,11 @@ fi
 step "active run control"
 active_stderr="$TMP_ROOT/active.stderr"
 active_stdout="$TMP_ROOT/active.stdout"
+# --auth-scope project so this run creates the per-session state volume that the
+# scoped-cleanup section exercises with `state reset`/`state prune`. The default
+# (--auth-scope agent) shares one per-agent home volume instead.
 "$RUNHAVEN_BIN" run shell \
-  --workspace "$WORK" --session "$SESSION" \
+  --workspace "$WORK" --session "$SESSION" --auth-scope project \
   --network internal --no-interactive --tty never \
   -- /bin/bash -lc 'echo runhaven-active-ready; sleep 60' \
   >"$active_stdout" 2>"$active_stderr" &
