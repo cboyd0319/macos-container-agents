@@ -121,6 +121,22 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Built `runhaven login` for Codex and Copilot (in-sandbox device
+  flow). Each runs the CLI's own device-code login (`codex login --device-auth`;
+  `copilot login`) once inside the sandbox on the agent's shared home volume
+  (`--auth-scope agent`), reusing `launch_run_plan` in provider mode. The
+  credential stays in the isolated volume; RunHaven never sees the token.
+  Allowlisted the login/refresh hosts in `endpoints.rs`: `auth.openai.com` for
+  Codex; `github.com` and `api.github.com` for Copilot (a deliberate, documented
+  egress widening, flipped from `candidate` to `bundled` in the endpoint matrix).
+  `--clear` deletes that agent's shared home volume. Added
+  `paths::login_workspace_dir` (a stable read-only login workspace), command +
+  allowlist unit tests, and `AUTH_BROKER`/`USAGE` docs. Verified: cargo fmt,
+  `cargo test --locked` (63 lib incl. 2 new login tests + 6 integration), clippy
+  `-D warnings`, `git diff --check`. Live test pending: the user runs
+  `runhaven login codex` and `runhaven login copilot` to confirm each device
+  flow reaches its auth hosts and persists. Antigravity login is next (its hosts
+  are reverse-engineered, so observe real egress before pinning an allowlist).
 - 2026-06-26: Built `runhaven login claude`, the Claude setup-token opt-in (the
   zero-friction path the user chose; Claude has no in-container device login at
   the pinned version). It runs Anthropic's `claude setup-token` on the host
