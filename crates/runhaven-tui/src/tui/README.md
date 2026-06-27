@@ -49,10 +49,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 372.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 13.
+- RunHaven-only files: 16.
 - Copied Codex files with local edits: 26.
 
 RunHaven-only files:
@@ -60,6 +60,9 @@ RunHaven-only files:
 ```text
 README.md
 app_shell.rs
+codex_protocol/mod.rs
+codex_protocol/models.rs
+codex_protocol/user_input.rs
 mod.rs
 pets/bundled_custom.rs
 runhaven/app_server_client.rs
@@ -128,6 +131,10 @@ Local integration exceptions:
 - `app_event`, `app_event_sender`, and `bottom_pane` in `mod.rs` are staged
   contracts for compiled vendored surfaces. Replace them with full Codex
   adapters as those surfaces come online.
+- `codex_protocol/user_input.rs` and `codex_protocol/models.rs` are staged
+  leaves from the upstream Codex protocol crate. They replace the previous
+  inline `codex_protocol::user_input` shim in `mod.rs` while the full
+  `codex-protocol` crate remains a Phase 4 dependency decision.
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.

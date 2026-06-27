@@ -217,6 +217,13 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   upgrade path (which vendored module replaces it). Prefer activating the real
   vendored module over extending a stand-in.
 
+Applied partial fix after audit: `codex_protocol::user_input` is no longer an
+inline `mod.rs` shim. RunHaven now stages the upstream Codex protocol leaf in
+`crates/runhaven-tui/src/tui/codex_protocol/`, and `mod.rs` has guard tests that
+prevent new inline stand-ins or new `codex_*` self-aliases from appearing
+quietly. The remaining D2 debt is still `app_event`, `app_event_sender`,
+`bottom_pane`, `keymap`, `render`, `status`, and `clipboard_paste`.
+
 ### D3 - Vendoring strategy diverged: no `codex-*` crates; crate-aliasing instead. (Severity: Medium)
 
 - Plan rule: doc 02 "Keep Codex TUI source layout and vendor as many Codex
@@ -235,6 +242,13 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
 - Recommendation: revisit doc 02's vendor-the-crates recommendation before
   Phase 4. Vendoring `codex-app-server-protocol` and `codex-protocol` as real
   inert crates would remove a large class of future stand-ins.
+
+Current status after the first D2 shrink: this is still open. The protocol leaf
+removal reduces live shim surface, but it does not claim that full
+`codex-protocol` or `codex-app-server-protocol` crate vendoring is complete.
+Those crates should be evaluated together with native `AppServerSession`,
+`AppEvent`, and `BottomPane` activation so RunHaven does not pull host-reaching
+Codex backend behavior into the active security boundary by accident.
 
 ### D4 - Zero of 538 upstream snapshots copied. (Severity: Medium)
 

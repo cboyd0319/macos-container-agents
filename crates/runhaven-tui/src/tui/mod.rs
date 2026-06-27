@@ -154,55 +154,7 @@ pub(crate) mod clipboard_paste {
 }
 
 #[allow(dead_code)]
-pub(crate) mod codex_protocol {
-    pub(crate) mod user_input {
-        #[derive(Debug, Clone, PartialEq)]
-        pub(crate) struct TextElement {
-            pub(crate) byte_range: ByteRange,
-            placeholder: Option<String>,
-        }
-
-        impl TextElement {
-            pub(crate) fn new(byte_range: ByteRange, placeholder: Option<String>) -> Self {
-                Self {
-                    byte_range,
-                    placeholder,
-                }
-            }
-
-            pub(crate) fn map_range<F>(&self, map: F) -> Self
-            where
-                F: FnOnce(ByteRange) -> ByteRange,
-            {
-                Self {
-                    byte_range: map(self.byte_range),
-                    placeholder: self.placeholder.clone(),
-                }
-            }
-
-            pub(crate) fn placeholder<'a>(&'a self, text: &'a str) -> Option<&'a str> {
-                self.placeholder
-                    .as_deref()
-                    .or_else(|| text.get(self.byte_range.start..self.byte_range.end))
-            }
-        }
-
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        pub(crate) struct ByteRange {
-            pub(crate) start: usize,
-            pub(crate) end: usize,
-        }
-
-        impl From<std::ops::Range<usize>> for ByteRange {
-            fn from(range: std::ops::Range<usize>) -> Self {
-                Self {
-                    start: range.start,
-                    end: range.end,
-                }
-            }
-        }
-    }
-}
+pub(crate) mod codex_protocol;
 
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
@@ -773,6 +725,22 @@ pub fn run() -> Result<i32> {
 
 #[cfg(test)]
 mod drift_tests {
+    fn inline_module_declarations(module_source: &str) -> Vec<String> {
+        module_source
+            .lines()
+            .map(str::trim)
+            .filter_map(|line| {
+                ["pub(crate) mod ", "pub mod ", "mod "]
+                    .iter()
+                    .find_map(|prefix| {
+                        line.strip_prefix(prefix)
+                            .and_then(|rest| rest.strip_suffix(" {"))
+                    })
+            })
+            .map(str::to_string)
+            .collect()
+    }
+
     fn module_declared(module_source: &str, module: &str) -> bool {
         let private_decl = format!("mod {module};");
         let crate_decl = format!("pub(crate) mod {module};");
@@ -798,6 +766,83 @@ mod drift_tests {
             assert!(
                 !source.contains(marker),
                 "{module} is declared in tui/mod.rs, but {source_path} still contains risky upstream marker {marker:?}; remove or fail-close that behavior before activating the module"
+            );
+        }
+    }
+
+    #[test]
+    fn staging_facade_inline_modules_do_not_grow() {
+        let module_source = include_str!("mod.rs");
+        let inline_modules = inline_module_declarations(module_source);
+
+        assert_eq!(
+            inline_modules,
+            [
+                "app_event",
+                "app_event_sender",
+                "bottom_pane",
+                "bottom_pane_view",
+                "clipboard_paste",
+                "keymap",
+                "render",
+                "status",
+                "drift_tests",
+            ],
+            "tui/mod.rs may shrink inline staging modules, but must not grow new stand-ins"
+        );
+    }
+
+    #[test]
+    fn protocol_user_input_leaf_is_file_backed() {
+        let module_source = include_str!("mod.rs");
+        let protocol_source = include_str!("codex_protocol/user_input.rs");
+
+        assert!(
+            module_declared(module_source, "codex_protocol"),
+            "codex_protocol should be a file-backed staged module"
+        );
+        assert!(
+            !module_source
+                .lines()
+                .map(str::trim)
+                .any(|line| line == "pub(crate) mod codex_protocol {"),
+            "codex_protocol must not be an inline shim in tui/mod.rs"
+        );
+        assert!(
+            protocol_source.contains("MAX_USER_INPUT_TEXT_CHARS")
+                && protocol_source.contains("set_placeholder")
+                && protocol_source.contains("enum UserInput"),
+            "staged codex_protocol::user_input should preserve the upstream protocol leaf shape"
+        );
+    }
+
+    #[test]
+    fn codex_self_aliases_do_not_grow() {
+        let lib_source = include_str!("../lib.rs");
+        let aliases = lib_source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("extern crate self as codex_"))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            aliases,
+            [
+                "extern crate self as codex_config;",
+                "extern crate self as codex_terminal_detection;",
+            ],
+            "do not add new codex_* self-aliases; vendor real Codex crates or shrink local shims"
+        );
+    }
+
+    #[test]
+    fn native_app_entrypoint_cannot_share_temporary_shell() {
+        let module_source = include_str!("mod.rs");
+
+        if module_declared(module_source, "app") {
+            assert!(
+                !module_source.contains("app_shell::run()"),
+                "native app activation must move run() off the temporary app_shell entrypoint"
             );
         }
     }

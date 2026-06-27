@@ -458,6 +458,20 @@ Latest TUI Strategy C drift correction:
   test that fails if dormant host-reaching Codex surfaces are declared before
   their risky upstream markers are removed or fail-closed.
 
+Latest TUI staging-facade shrink:
+
+- 2026-06-27: Removed the inline `codex_protocol::user_input` shim from
+  `crates/runhaven-tui/src/tui/mod.rs`. The active `TextArea` path now uses
+  file-backed staged leaves under `crates/runhaven-tui/src/tui/codex_protocol/`
+  copied from upstream Codex protocol source. Added exact pins for `schemars`
+  and `ts-rs` because the staged leaf keeps Codex's schema and TypeScript
+  derives. Added drift guards so `mod.rs` cannot grow new inline staging
+  modules, new `codex_*` self-aliases, or a native `app` declaration that still
+  routes `run()` through `app_shell::run()`. Current vendor audit: 894 upstream
+  files, 372 RunHaven files, 356 common paths, 538 upstream `.snap` files
+  external by default, 16 RunHaven-only files, and 26 copied Codex files with
+  local edits.
+
 Latest TUI Phase 3 runtime and handoff gate:
 
 - 2026-06-27: Completed the terminal-handoff proof without wiring real agent
