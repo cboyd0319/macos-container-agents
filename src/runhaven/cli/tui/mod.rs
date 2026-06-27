@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+mod app_shell;
+
 #[allow(dead_code)]
 pub(crate) mod color;
 
@@ -259,8 +261,5 @@ mod frame_requester;
 pub use frame_requester::FrameRequester;
 
 pub fn run() -> Result<i32> {
-    eprintln!(
-        "RunHaven TUI is being rebuilt from the Codex TUI source. Use a subcommand for now, such as `runhaven plan` or `runhaven run`."
-    );
-    Ok(2)
+    app_shell::run()
 }

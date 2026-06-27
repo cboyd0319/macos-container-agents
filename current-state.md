@@ -1108,11 +1108,15 @@ RunHaven, then adapt it to the wishlist in
 Immediate next step: adapt the full Codex bottom-pane and app-shell crate
 assumptions into RunHaven entrypoint and product adapters without culling
 product surfaces prematurely. `src/runhaven/cli/tui/mod.rs` currently keeps the
-crate buildable and fails closed for bare interactive TUI launch until that
-integration is complete. The lower native pet runtime now compiles and passes
-tests, including terminal detection, frame extraction, image protocol writers,
-Sixel encoding, ambient draw requests, Tokio frame scheduling, native pet
-picker discovery, picker preview state, the Codex renderable contract, and the
+crate buildable and dispatches bare interactive `runhaven` to a temporary
+read-only launch preview in `app_shell.rs`. That preview consumes
+`LaunchPlanData` and lets the user choose an agent, inspect the current
+workspace plan, see what is shared and not shared, and quit with `q` or esc.
+It does not launch containers yet. The lower native pet runtime now compiles
+and passes tests, including terminal detection, frame extraction, image
+protocol writers, Sixel encoding, ambient draw requests, Tokio frame
+scheduling, native pet picker discovery, picker preview state, the Codex
+renderable contract, and the
 Codex terminal title helper. The motion, shimmer, terminal palette, and bounded
 terminal probe helpers now compile and pass focused tests too. Shared Codex
 style and text helpers now compile as well: line truncation, text formatting,
@@ -1141,6 +1145,30 @@ for the UI contract slice passed:
 - `jq empty feature_list.json`
 - `git diff --check`
 - em dash scan on touched files
+
+Current TUI app-shell slice: `app_shell.rs` restores a real bare interactive
+TUI path. It is a temporary read-only launch preview backed by
+`LaunchPlanData`, with up/down and `j`/`k` agent selection plus `q` or esc to
+quit. It shows the selected workspace, agent, sign-in mode, broker support,
+network, state volume, image, not-shared boundary facts, safety notes, and the
+copyable command when the terminal is tall enough. It does not launch
+containers yet. A PTY smoke opened `cargo run --locked --quiet`, showed the
+preview at 80x24 with the not-shared facts visible, accepted `q`, and restored
+the alternate screen.
+
+Verification for the app-shell slice passed:
+
+- `cargo fmt --check`
+- `cargo test --locked app_shell --quiet`
+- `cargo test --locked tui --quiet`
+- `cargo test --locked --quiet`
+- `cargo clippy --all-targets --locked -- -D warnings`
+- `cargo run --locked --bin runhaven-check-pins --quiet`
+- `jq empty feature_list.json`
+- `git diff --check`
+- em dash scan on touched files
+- PTY `cargo run --locked --quiet`, then `q`
+- non-TTY `cargo run --locked --quiet` prints CLI help and exits 2
 
 Do not publish a release from the interim vendor-reset state. After the TUI is
 fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`

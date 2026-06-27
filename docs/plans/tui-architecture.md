@@ -90,6 +90,7 @@ Target ownership for the rebuilt source remains:
 | Module | Ownership |
 | --- | --- |
 | `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
+| `app_shell.rs` | Temporary read-only launch preview over `LaunchPlanData`; remove or shrink when the full Codex app shell is adapted. |
 | `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
 | `theme.rs`, `color.rs`, `event_loop.rs` | Domain-agnostic settings, palettes, color math, and deterministic tick timing. |

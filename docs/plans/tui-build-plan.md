@@ -25,7 +25,8 @@ drives the architecture below.
 The earlier custom TUI phases below are historical design evidence. The active
 source has now been reset to a Codex TUI source baseline in
 `src/runhaven/cli/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
-crate buildable and fails closed for bare interactive launch.
+crate buildable. A bare interactive `runhaven` now opens a temporary read-only
+launch preview while the full Codex app shell and bottom pane are adapted.
 
 The dbt-wizard comparison note shows the right production pattern: keep a
 coherent terminal app substrate, add a narrow product payload seam, and render

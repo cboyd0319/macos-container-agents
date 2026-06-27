@@ -20,61 +20,27 @@ agents and run planner as the CLI:
 runhaven
 ```
 
-On a fresh RunHaven cache, the TUI opens the guide first. Press esc to return to
-home, or press `?`/F1 from the main screens to open the guide again. Use up/down
-to choose an agent, `w` to choose a workspace, `r` to review safety, `d` to open
-the dashboard, `h` to review run history and diffs, `g` to open checks, enter to
-move through detail/review/confirm, and esc to go back.
-The launch path is a four-step wizard: choose agent, choose workspace, review
-the safety plan, then confirm launch. The Home banner shows the RunHaven logo and
-at-a-glance context: launch stepper, selected agent, workspace, network mode,
-default boundary, and next safe action.
+Current rebuild state: the TUI opens a read-only launch preview. Use up/down
+or `j`/`k` to choose an agent. The preview shows the selected workspace, sign-in
+mode, broker support, network posture, saved agent state, what is shared with
+the agent, what is not shared, safety notes, and the matching `container run`
+command. Press `q` or esc to quit.
 
-The review screen is built from the same planner as `runhaven plan`: it shows
-the workspace folder, saved agent state, network mode, which provider hosts the
-agent may reach, what RunHaven will not open (such as your home folder or
-credential folders), and the matching CLI command. Confirming a plan restores
-the terminal and launches the same run path as `runhaven run`.
+RunHaven is reattaching the full review, launch, dashboard, history,
+diagnostics, pet, and hidden easter egg surfaces from the Codex-vendored TUI
+baseline. Until those screens are back, use the CLI for real runs and run
+management:
 
-Riskier plans show safety notes and require typing `run` before launch. Safe
-default plans launch with enter from the confirm screen.
+```bash
+runhaven plan claude
+runhaven run claude
+runhaven runs active
+runhaven runs list
+runhaven doctor
+```
 
-The dashboard lists active RunHaven runs and shows the selected run's sanitized
-status, resource summary, network details, and provider network log. Press
-enter or `l` from the dashboard to open a bounded log snapshot with search,
-scrolling, and tail-following. The log viewer parses ANSI output into terminal
-cells instead of replaying escape sequences. Raw agent output can contain
-secrets, so log snapshots are explicit and bounded.
-
-Stop, hard-stop, and stale-marker repair are available from the dashboard with
-`s`, `x`, and `e`. Each opens a plain confirmation screen that names the run and
-container and requires typing the action phrase before RunHaven calls the same
-validated run-control core used by the CLI.
-
-Completed-run history and per-run diff review are available with `h`.
-Checks are available with `g` and show provider network metadata, auth broker
-metadata, terminal image support, and a doctor screen with fixes. The dashboard
-also shows plain notices when a run looks done, stale, in a stop or repair step,
-or likely waiting for input.
-
-Cubby, the RunHaven pet, is visible by default as a compact ambient pet. Press
-`p` to hide or show Cubby for the current session. Set `RUNHAVEN_TUI_PET=0` to
-start with the pet hidden. This does not hide the RunHaven logo.
-
-The Home screen also has a hidden, attributed Zork I easter egg. Press `~` from
-Home to open it, type game commands normally, and press esc to return Home. The
-game runs from bundled MIT-licensed story bytes with no network, subprocess, or
-workspace access. Zork `save` and `restore` use one private RunHaven cache slot;
-RunHaven never opens an arbitrary user-selected save file.
-
-On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, the logo and
-Cubby use Codex-derived high-resolution image overlays; otherwise they fall back
-to terminal-safe half-block rendering. `NO_COLOR` disables color,
-`RUNHAVEN_TUI_REDUCED_MOTION=1` keeps Cubby static, and
-`RUNHAVEN_TUI_LINE_MODE=1` starts a simpler text-first layout without the logo
-or pet. `RUNHAVEN_TUI_COLOR_MODE=light` or `dark` selects the palette. The CLI
-stays the complete, scriptable surface: any subcommand, or a piped or redirected
-invocation, uses the CLI directly and never opens the TUI. Press `q` to quit.
+The CLI stays the complete, scriptable surface. Any subcommand, or a piped or
+redirected invocation, uses the CLI directly and never opens the TUI.
 
 ## Guided Setup
 
