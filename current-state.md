@@ -137,9 +137,25 @@ evidence and a recorded reason.
   registrable domain) is built and used for Antigravity. Remaining: graceful
   degradation, plain-language foreign-host messaging, and the auto-updating
   policy. This is still an allowlist (default-deny); it just speaks in families.
+- TUI high-resolution mascot rendering must follow codex's protocol choice, not
+  a generic crate's auto-detection (2026-06-26 lesson). `ratatui-image` 11.0.6
+  auto-selected iTerm2's own OSC 1337 inline-image protocol, which renders blank
+  in a full-screen alternate-screen TUI; the image tier was reverted. Codex
+  (`codex-rs/tui/src/pets/image_protocol.rs`) instead renders via the Kitty
+  graphics protocol on iTerm2 (3.6+) and emits it as a direct overlay outside the
+  cell buffer, which is TUI-safe. When the high-resolution/animated pet is built,
+  adapt codex's Kitty-graphics overlay approach (Apache-2.0, with attribution),
+  defaulting to the portable half-block sprite when no graphics protocol is
+  present. Codex is Apache-2.0, so adapting its code is permitted.
 
 ## Latest Verified Work
 
+- 2026-06-26: Reverted the `ratatui-image` high-resolution image tier (it
+  rendered blank on iTerm2; see the Key Decision above). The home banner is back
+  to the reliable xterm-256 half-block Cubby hero, which renders on every
+  terminal. `ratatui-image` and `image` deps removed. High-resolution rendering
+  will be redone via codex's Kitty-graphics overlay approach. Verified: cargo
+  build, `cargo test --locked` (10 TUI tests), pin check.
 - 2026-06-27: Generated Terminal.app-safe Cubby header/hero mascot assets from
   the reference cube image. Added exact pixel-grid PNGs plus half-block ANSI
   renderings for 16x18, 24x26, 32x36, 40x44, and 48x52 under
