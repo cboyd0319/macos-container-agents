@@ -11,6 +11,7 @@ pub(super) fn load_ambient_pet(
     if selected_pet == crate::pets::DISABLED_PET_ID {
         return None;
     }
+    crate::pets::ensure_bundled_pet_for_selector(selected_pet, &config.codex_home).ok()?;
 
     crate::pets::AmbientPet::load(
         Some(selected_pet),
@@ -37,7 +38,7 @@ pub(super) fn start_configured_pet_load_if_needed(
     let codex_home = config.codex_home.clone();
     let animations_enabled = config.animations;
     spawn_pet_load(move || {
-        let result = crate::pets::ensure_builtin_pack_for_pet(&pet_id, &codex_home)
+        let result = crate::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
             .and_then(|()| {
                 crate::pets::AmbientPet::load(
                     Some(&pet_id),
@@ -235,7 +236,7 @@ impl ChatWidget {
         let frame_requester = self.frame_requester.clone();
         let tx = self.app_event_tx.clone();
         spawn_pet_load(move || {
-            let result = crate::pets::ensure_builtin_pack_for_pet(&pet_id, &codex_home)
+            let result = crate::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
                 .and_then(|()| {
                     crate::pets::AmbientPet::load(
                         Some(&pet_id),

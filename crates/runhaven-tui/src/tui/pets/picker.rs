@@ -19,6 +19,10 @@ use crate::tui::bottom_pane::popup_consts::standard_popup_hint_line;
 
 use super::DEFAULT_PET_ID;
 use super::DISABLED_PET_ID;
+use super::RUNHAVEN_BUNDLED_CUBBY_DESCRIPTION;
+use super::RUNHAVEN_BUNDLED_CUBBY_DISPLAY_NAME;
+use super::RUNHAVEN_BUNDLED_CUBBY_ID;
+use super::RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
 use super::catalog;
 use super::model::CUSTOM_PET_PREFIX;
 use super::model::Pet;
@@ -39,8 +43,8 @@ struct PetPickerEntry {
 /// Build the selection popup parameters for `/pets`.
 ///
 /// The picker preselects `DEFAULT_PET_ID` when no pet is configured so the UI
-/// has a sensible starting point without implying that Codex is already the
-/// active ambient pet. Callers should treat the returned actions as the only
+/// has a sensible starting point without implying that a pet is already active.
+/// Callers should treat the returned actions as the only
 /// supported mutation path; bypassing them would skip preview-loading and
 /// selection-specific event wiring.
 pub(crate) fn build_pet_picker_params(
@@ -151,6 +155,12 @@ fn available_pet_entries(codex_home: &Path) -> Vec<PetPickerEntry> {
         display_name: "Disable terminal pets".to_string(),
         description: None,
     });
+    entries.push(PetPickerEntry {
+        selector: RUNHAVEN_BUNDLED_CUBBY_SELECTOR.to_string(),
+        legacy_selector: Some(RUNHAVEN_BUNDLED_CUBBY_ID.to_string()),
+        display_name: RUNHAVEN_BUNDLED_CUBBY_DISPLAY_NAME.to_string(),
+        description: Some(RUNHAVEN_BUNDLED_CUBBY_DESCRIPTION.to_string()),
+    });
     entries.extend(custom_pet_entries(codex_home));
     entries
 }
@@ -169,7 +179,10 @@ fn custom_pet_entries(codex_home: &Path) -> Vec<PetPickerEntry> {
             let Some(id) = path.file_name().and_then(|name| name.to_str()) else {
                 continue;
             };
-            if id == DISABLED_PET_ID || id.starts_with(CUSTOM_PET_PREFIX) {
+            if id == DISABLED_PET_ID
+                || id.starts_with(CUSTOM_PET_PREFIX)
+                || id == RUNHAVEN_BUNDLED_CUBBY_ID
+            {
                 continue;
             }
             let selector = custom_pet_selector(id);
@@ -254,6 +267,7 @@ mod tests {
                 "BSOD",
                 "Chefito",
                 "Codex",
+                "Cubby",
                 "Dewey",
                 "Fireball",
                 "Null Signal",
@@ -270,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn picker_preselects_codex_without_marking_it_current_when_no_pet_is_configured() {
+    fn picker_preselects_cubby_without_marking_it_current_when_no_pet_is_configured() {
         let codex_home = tempfile::tempdir().unwrap();
         let params = build_pet_picker_params(
             /*current_pet*/ None,
@@ -278,9 +292,13 @@ mod tests {
             PetPickerPreviewState::default(),
         );
 
-        assert_eq!(params.initial_selected_idx, Some(2));
-        assert_eq!(params.items[2].name, "Codex");
-        assert!(!params.items[2].is_current);
+        assert_eq!(params.initial_selected_idx, Some(3));
+        assert_eq!(params.items[3].name, "Cubby");
+        assert_eq!(
+            params.items[3].search_value.as_deref(),
+            Some(RUNHAVEN_BUNDLED_CUBBY_SELECTOR)
+        );
+        assert!(!params.items[3].is_current);
     }
 
     #[test]

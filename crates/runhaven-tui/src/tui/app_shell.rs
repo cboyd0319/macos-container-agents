@@ -34,7 +34,7 @@ const TICK_RATE: Duration = Duration::from_millis(250);
 const IMAGE_SMOKE_TICK_RATE: Duration = Duration::from_millis(100);
 const IMAGE_SMOKE_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE";
 const IMAGE_SMOKE_PET_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE_PET";
-const DEFAULT_IMAGE_SMOKE_PET: &str = "custom:cubby";
+const DEFAULT_IMAGE_SMOKE_PET: &str = crate::tui::pets::RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
 
 pub(crate) fn run() -> Result<i32> {
     let mut state = ShellState::for_current_dir()?;
@@ -281,6 +281,8 @@ impl ImageSmokeState {
             let _guard = runtime.enter();
             crate::tui::FrameRequester::new(draw_tx)
         };
+        crate::tui::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
+            .with_context(|| format!("prepare {pet_id} in {}", codex_home.display()))?;
         let mut pet =
             crate::tui::pets::AmbientPet::load(Some(&pet_id), &codex_home, frame_requester, true)
                 .with_context(|| format!("load {pet_id} from {}", codex_home.display()))?;

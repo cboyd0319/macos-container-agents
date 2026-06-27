@@ -272,8 +272,10 @@ Why this is a small RunHaven adapter instead of a custom renderer:
 
 - The smoke path uses Codex's vendored `AmbientPet`, frame extraction,
   `FrameRequester`, and `render_ambient_pet_image` terminal-image writer.
-- It loads the same local Codex custom pet selector the native Codex TUI uses:
-  `custom:cubby` from `$CODEX_HOME/pets/cubby/`.
+- It materializes RunHaven's verified bundled Cubby package into the same
+  Codex custom-pet package shape, using `custom:runhaven-cubby` under
+  `$CODEX_HOME/pets/runhaven-cubby/`.
+- It does not overwrite or depend on a user's own `$CODEX_HOME/pets/cubby/`.
 - It gives the vendored `FrameRequester` a small Tokio runtime instead of
   replacing the scheduler with local code.
 - It is off by default and only runs with `RUNHAVEN_TUI_IMAGE_SMOKE=1`.

@@ -139,12 +139,15 @@ Active stale doc paths were corrected in the research and Tauri/TUI design docs;
 historical evidence logs were left as records of what happened at the time.
 
 TUI native-pet image smoke follow-up: the temporary `app_shell.rs` can now run
-an opt-in visual check with `RUNHAVEN_TUI_IMAGE_SMOKE=1`. The smoke path loads
-`custom:cubby` from `$CODEX_HOME/pets/cubby/`, uses Codex's vendored
+an opt-in visual check with `RUNHAVEN_TUI_IMAGE_SMOKE=1`. RunHaven now bundles
+the verified Cubby Codex pet package from `docs/assets/installed-pet/cubby/`
+and materializes it as `custom:runhaven-cubby` under
+`$CODEX_HOME/pets/runhaven-cubby/` before calling Codex's vendored
 `AmbientPet`, frame cache, Tokio `FrameRequester`, and
-`render_ambient_pet_image` writer, and clears the terminal image on exit. This
-is only for checking terminal image quality before the full Codex app shell and
-bottom pane are adapted.
+`render_ambient_pet_image` writer. This keeps the renderer source-first while
+avoiding collisions with a user's own `$CODEX_HOME/pets/cubby/` package. The
+smoke path is only for checking terminal image quality before the full Codex
+app shell and bottom pane are adapted.
 
 TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
 defines the first tagged RunHaven payload enum with `AgentCatalogData` and
@@ -215,6 +218,8 @@ Verified:
 Latest TUI smoke verification:
 
 - `cargo fmt --check`
+- `cargo test -p runhaven-tui --locked runhaven_cubby --quiet`
+- `cargo test -p runhaven-tui --locked picker_ --quiet`
 - `cargo test -p runhaven-core --locked ui_contracts --quiet`
 - `cargo test -p runhaven-tui --locked app_shell --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
@@ -224,11 +229,14 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked ambient_pet_image_restores_cursor_after_drawing --quiet`
 - `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
 - `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`
+- `cargo test --workspace --locked --quiet`
 - `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
 - `cargo run --locked --bin runhaven-check-pins --quiet`
-- `RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven` in a PTY,
-  quit with `q`; it emitted Codex Kitty local-file frames from the Cubby frame
-  cache and exited cleanly.
+- `CODEX_HOME=$(mktemp -d) RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin
+  runhaven` in a PTY, quit with `q`; it materialized
+  `pets/runhaven-cubby/{pet.json,spritesheet.webp}`, emitted Codex Kitty
+  local-file frames from the `custom-runhaven-cubby` frame cache, and exited
+  cleanly.
 
 ## Blockers
 

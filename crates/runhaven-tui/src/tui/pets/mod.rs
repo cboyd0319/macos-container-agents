@@ -17,6 +17,7 @@ use std::io::Write;
 
 mod ambient;
 mod asset_pack;
+mod bundled_custom;
 mod catalog;
 mod frames;
 mod image_protocol;
@@ -36,6 +37,10 @@ pub(crate) use ambient::test_ambient_pet;
 pub(crate) use asset_pack::builtin_spritesheet_path;
 #[cfg(test)]
 pub(crate) use asset_pack::write_test_pack;
+pub(crate) use bundled_custom::RUNHAVEN_BUNDLED_CUBBY_DESCRIPTION;
+pub(crate) use bundled_custom::RUNHAVEN_BUNDLED_CUBBY_DISPLAY_NAME;
+pub(crate) use bundled_custom::RUNHAVEN_BUNDLED_CUBBY_ID;
+pub(crate) use bundled_custom::RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
 #[cfg(test)]
 pub(crate) use image_protocol::ImageProtocol;
 pub(crate) use image_protocol::PetImageSupport;
@@ -47,24 +52,30 @@ pub(crate) use picker::PET_PICKER_VIEW_ID;
 pub(crate) use picker::build_pet_picker_params;
 pub(crate) use preview::PetPickerPreviewState;
 
-pub(crate) const DEFAULT_PET_ID: &str = "codex";
+pub(crate) const DEFAULT_PET_ID: &str = RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
 pub(crate) const DISABLED_PET_ID: &str = "disabled";
 
-/// Ensure that a selected built-in pet has a locally cached spritesheet.
+/// Ensure that a selected pet has any RunHaven-owned or Codex-owned assets ready.
 ///
-/// Custom pets are intentionally a no-op here because their source of truth is
-/// already local. Callers should invoke this before loading a built-in pet for
-/// preview or selection; skipping it would make first-use preview and
-/// persistence failures depend on deeper image-loading errors instead of the
-/// asset-fetch boundary.
-pub(crate) fn ensure_builtin_pack_for_pet(
+/// User custom pets are intentionally a no-op here because their source of truth
+/// is already local. Callers should invoke this before previewing or selecting
+/// app-owned pets so asset errors surface at the selection boundary.
+pub(crate) fn ensure_pet_assets_for_selector(
     pet_id: &str,
     codex_home: &std::path::Path,
 ) -> Result<()> {
+    bundled_custom::ensure_runhaven_bundled_pet_for_selector(pet_id, codex_home)?;
     if let Some(pet) = catalog::builtin_pet(pet_id) {
         asset_pack::ensure_builtin_pet(codex_home, pet)?;
     }
     Ok(())
+}
+
+pub(crate) fn ensure_bundled_pet_for_selector(
+    pet_id: &str,
+    codex_home: &std::path::Path,
+) -> Result<()> {
+    bundled_custom::ensure_runhaven_bundled_pet_for_selector(pet_id, codex_home)
 }
 
 #[derive(Debug)]

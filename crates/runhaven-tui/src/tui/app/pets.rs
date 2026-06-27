@@ -83,7 +83,7 @@ impl App {
         let animations_enabled = self.config.animations;
         let tx = self.app_event_tx.clone();
         std::mem::drop(tokio::task::spawn_blocking(move || {
-            let result = crate::pets::ensure_builtin_pack_for_pet(&pet_id, &codex_home)
+            let result = crate::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
                 .and_then(|()| {
                     crate::pets::AmbientPet::load(
                         Some(&pet_id),

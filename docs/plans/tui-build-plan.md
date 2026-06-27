@@ -68,8 +68,9 @@ RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
 ```
 
 This is only a smoke path for checking terminal image quality while the full
-Codex app shell and bottom pane are being adapted. It loads `custom:cubby` from
-`$CODEX_HOME/pets/cubby/` and uses Codex's vendored `AmbientPet`,
+Codex app shell and bottom pane are being adapted. By default it materializes
+the bundled RunHaven Cubby package as `custom:runhaven-cubby` under
+`$CODEX_HOME/pets/runhaven-cubby/`, then uses Codex's vendored `AmbientPet`,
 `FrameRequester`, and terminal image writer. Quit with `q`.
 
 Immediate integration order:
