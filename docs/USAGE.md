@@ -20,10 +20,11 @@ a launcher and manager over the same agents and run planner as the CLI:
 runhaven
 ```
 
-The TUI is early (a home screen today; the agent picker, plan and egress review,
-and run dashboard land in later slices). The CLI stays the complete, scriptable
-surface: any subcommand, or a piped or redirected invocation, uses the CLI
-directly and never opens the TUI. Press `q` to quit.
+The TUI is early: today it is a navigable agent picker (up/down to move, enter to
+open a per-agent detail view, esc to go back); workspace selection, plan and
+egress review, and the run dashboard land in later slices. The CLI stays the
+complete, scriptable surface: any subcommand, or a piped or redirected
+invocation, uses the CLI directly and never opens the TUI. Press `q` to quit.
 
 ## Guided Setup
 

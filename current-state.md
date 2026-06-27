@@ -140,6 +140,14 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: TUI slice 2 (agent picker). The home screen is a navigable agent
+  list (up/down or j/k, clamped) via a ratatui `ListState`; enter opens a
+  per-agent detail screen (description, image, support tiers) and esc/backspace
+  returns home. The detail tiers reuse the shared `agent_sign_in`/`agent_broker`
+  helpers (now `pub(crate)`) plus `default_network_mode`, so the TUI and
+  `runhaven agents` share one source. Input is a testable `handle_key`. Verified:
+  cargo fmt, `cargo test --locked` (74 lib incl. 5 TUI tests + 6 integration),
+  clippy `-D warnings`, non-TTY help fallback, `git diff --check`.
 - 2026-06-26: Started the terminal UI (TUI). Decision: reference the Codex TUI
   (`codex-rs/tui`) for quality and patterns, not fork it; it is ~214k lines,
   Apache-2.0, an agent-chat domain welded to ~30 `codex-*` internal crates (even
@@ -808,7 +816,8 @@ TUI for quality and patterns only (not forked).
 Slice 1 (scaffold) is done: bare `runhaven` on a TTY opens a home screen listing
 the agents; the CLI stays the complete surface. Remaining TUI slices:
 
-- Agent picker and workspace picker (navigate and select from the home screen).
+- Agent picker (done, slice 2). Next: workspace picker (choose the project
+  directory for the selected agent) and an action to launch.
 - Plan and egress review screen (render the run plan and security notices before
   launch, over the existing planner and policy objects).
 - Launch and run dashboard (start a run, then live status, attach, stop, kill,

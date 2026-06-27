@@ -2,20 +2,22 @@
 //! subcommand. It is a launcher and manager over the same profiles and planner
 //! the CLI uses, never a replacement for the explicit CLI surface.
 //!
-//! This first slice is the scaffold: terminal setup via `ratatui::init` (which
-//! also installs a panic hook that restores the terminal), a draw and key-event
-//! loop, and a home screen listing the bundled agents. Later slices add the
-//! agent picker, plan and egress review, the run dashboard, and brand graphics.
+//! Slices so far: the scaffold (terminal setup via `ratatui::init`, a draw and
+//! key-event loop) and an agent picker (a navigable home list and a per-agent
+//! detail screen). Later slices add workspace selection, plan and egress review,
+//! the run dashboard, and brand graphics.
 
 use anyhow::Result;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::{Constraint, Layout};
-use ratatui::style::Stylize;
-use ratatui::text::Line;
-use ratatui::widgets::{Block, List, ListItem, Paragraph};
+use ratatui::style::{Style, Stylize};
+use ratatui::text::{Line, Text};
+use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
 
-use crate::profiles::profiles;
+use super::app::{agent_broker, agent_sign_in};
+use crate::plans::default_network_mode;
+use crate::profiles::{AgentProfile, profiles};
 
 /// Launch the terminal UI. The terminal is restored on exit and on panic.
 pub fn run() -> Result<i32> {
@@ -25,17 +27,30 @@ pub fn run() -> Result<i32> {
     result
 }
 
+#[derive(Clone, Copy)]
+enum Screen {
+    Home,
+    Detail,
+}
+
 struct App {
-    agents: Vec<(&'static str, &'static str)>,
+    agents: Vec<AgentProfile>,
+    list: ListState,
+    screen: Screen,
 }
 
 impl App {
     fn new() -> Self {
-        let agents = profiles()
-            .into_iter()
-            .map(|profile| (profile.name, profile.description))
-            .collect();
-        Self { agents }
+        let agents = profiles();
+        let mut list = ListState::default();
+        if !agents.is_empty() {
+            list.select(Some(0));
+        }
+        Self {
+            agents,
+            list,
+            screen: Screen::Home,
+        }
     }
 
     fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<i32> {
@@ -43,20 +58,60 @@ impl App {
             terminal.draw(|frame| self.render(frame))?;
             if let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
-                && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
+                && let Some(code) = self.handle_key(key.code)
             {
-                return Ok(0);
+                return Ok(code);
             }
         }
     }
 
-    fn render(&self, frame: &mut Frame) {
-        let [header, body, footer] = Layout::vertical([
-            Constraint::Length(3),
-            Constraint::Min(0),
-            Constraint::Length(1),
-        ])
-        .areas(frame.area());
+    /// Handle a key press. Returns `Some(exit_code)` to quit, `None` to continue.
+    fn handle_key(&mut self, code: KeyCode) -> Option<i32> {
+        match self.screen {
+            Screen::Home => match code {
+                KeyCode::Char('q') | KeyCode::Esc => return Some(0),
+                KeyCode::Down | KeyCode::Char('j') => self.select_next(),
+                KeyCode::Up | KeyCode::Char('k') => self.select_previous(),
+                KeyCode::Enter | KeyCode::Char('l') => self.screen = Screen::Detail,
+                _ => {}
+            },
+            Screen::Detail => match code {
+                KeyCode::Char('q') => return Some(0),
+                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
+                    self.screen = Screen::Home;
+                }
+                _ => {}
+            },
+        }
+        None
+    }
+
+    fn select_next(&mut self) {
+        if self.agents.is_empty() {
+            return;
+        }
+        let next = self.list.selected().unwrap_or(0) + 1;
+        self.list.select(Some(next.min(self.agents.len() - 1)));
+    }
+
+    fn select_previous(&mut self) {
+        let current = self.list.selected().unwrap_or(0);
+        self.list.select(Some(current.saturating_sub(1)));
+    }
+
+    fn selected(&self) -> Option<&AgentProfile> {
+        self.list.selected().and_then(|i| self.agents.get(i))
+    }
+
+    fn render(&mut self, frame: &mut Frame) {
+        match self.screen {
+            Screen::Home => self.render_home(frame),
+            Screen::Detail => self.render_detail(frame),
+        }
+    }
+
+    fn render_home(&mut self, frame: &mut Frame) {
+        let [header, body, footer] = layout(frame);
 
         let title = Paragraph::new(Line::from("RunHaven".bold()))
             .block(Block::bordered().title(format!(" v{} ", env!("CARGO_PKG_VERSION"))))
@@ -66,14 +121,57 @@ impl App {
         let items: Vec<ListItem> = self
             .agents
             .iter()
-            .map(|(name, description)| ListItem::new(format!("{name:<12}  {description}")))
+            .map(|profile| ListItem::new(format!("{:<12}  {}", profile.name, profile.description)))
             .collect();
-        let list = List::new(items).block(Block::bordered().title(" Agents "));
-        frame.render_widget(list, body);
+        let list = List::new(items)
+            .block(Block::bordered().title(" Agents "))
+            .highlight_symbol("> ")
+            .highlight_style(Style::new().reversed());
+        frame.render_stateful_widget(list, body, &mut self.list);
 
-        let hint = Paragraph::new(Line::from("q quit".dim())).centered();
+        let hint =
+            Paragraph::new(Line::from("up/down move · enter select · q quit".dim())).centered();
         frame.render_widget(hint, footer);
     }
+
+    fn render_detail(&self, frame: &mut Frame) {
+        let [header, body, footer] = layout(frame);
+        let Some(agent) = self.selected() else {
+            return;
+        };
+
+        let title = Paragraph::new(Line::from(agent.name.bold()))
+            .block(Block::bordered())
+            .centered();
+        frame.render_widget(title, header);
+
+        let lines = vec![
+            Line::from(agent.description),
+            Line::from(""),
+            Line::from(format!("image:           {}", agent.image)),
+            Line::from(format!("sign-in:         {}", agent_sign_in(agent.name))),
+            Line::from(format!(
+                "default network: {}",
+                default_network_mode(agent).as_str()
+            )),
+            Line::from(format!("api-key broker:  {}", agent_broker(agent.name))),
+        ];
+        let detail = Paragraph::new(Text::from(lines)).block(Block::bordered().title(" Agent "));
+        frame.render_widget(detail, body);
+
+        let hint = Paragraph::new(Line::from("esc back · q quit".dim())).centered();
+        frame.render_widget(hint, footer);
+    }
+}
+
+/// The shared three-row layout: a header, a flexible body, and a one-line hint.
+fn layout(frame: &Frame) -> [ratatui::layout::Rect; 3] {
+    Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Min(0),
+        Constraint::Length(1),
+    ])
+    .areas(frame.area())
 }
 
 #[cfg(test)]
@@ -85,16 +183,50 @@ mod tests {
     #[test]
     fn app_loads_all_agent_profiles() {
         let app = App::new();
-        let names: Vec<&str> = app.agents.iter().map(|(name, _)| *name).collect();
-        assert!(names.contains(&"claude"));
-        assert!(names.contains(&"shell"));
         assert_eq!(app.agents.len(), 6);
+        assert_eq!(app.list.selected(), Some(0));
     }
 
     #[test]
-    fn home_screen_renders_without_panicking() {
+    fn navigation_clamps_within_bounds() {
+        let mut app = App::new();
+        let last = app.agents.len() - 1;
+        // Up at the top stays at 0.
+        app.handle_key(KeyCode::Up);
+        assert_eq!(app.list.selected(), Some(0));
+        app.handle_key(KeyCode::Down);
+        assert_eq!(app.list.selected(), Some(1));
+        // Past the end clamps to the last row.
+        for _ in 0..app.agents.len() + 3 {
+            app.handle_key(KeyCode::Down);
+        }
+        assert_eq!(app.list.selected(), Some(last));
+    }
+
+    #[test]
+    fn enter_opens_detail_and_esc_returns_home() {
+        let mut app = App::new();
+        assert!(matches!(app.screen, Screen::Home));
+        app.handle_key(KeyCode::Enter);
+        assert!(matches!(app.screen, Screen::Detail));
+        app.handle_key(KeyCode::Esc);
+        assert!(matches!(app.screen, Screen::Home));
+    }
+
+    #[test]
+    fn q_quits_from_either_screen() {
+        let mut app = App::new();
+        assert_eq!(app.handle_key(KeyCode::Char('q')), Some(0));
+        app.handle_key(KeyCode::Enter);
+        assert_eq!(app.handle_key(KeyCode::Char('q')), Some(0));
+    }
+
+    #[test]
+    fn both_screens_render_without_panicking() {
         let mut terminal = Terminal::new(TestBackend::new(80, 20)).expect("terminal");
-        let app = App::new();
-        terminal.draw(|frame| app.render(frame)).expect("draw");
+        let mut app = App::new();
+        terminal.draw(|frame| app.render(frame)).expect("home");
+        app.handle_key(KeyCode::Enter);
+        terminal.draw(|frame| app.render(frame)).expect("detail");
     }
 }

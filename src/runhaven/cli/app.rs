@@ -152,8 +152,9 @@ fn list_agents() -> Result<i32> {
 }
 
 /// How a user signs this agent in: a `runhaven login` command, an in-sandbox
-/// login at first run, or not applicable (the generic shell profile).
-fn agent_sign_in(name: &str) -> &'static str {
+/// login at first run, or not applicable (the generic shell profile). Shared
+/// with the TUI agent detail screen.
+pub(crate) fn agent_sign_in(name: &str) -> &'static str {
     if crate::login::supports_login(name) {
         "runhaven login"
     } else if name == "shell" {
@@ -163,8 +164,8 @@ fn agent_sign_in(name: &str) -> &'static str {
     }
 }
 
-/// Whether the host-side API-key broker covers this agent.
-fn agent_broker(name: &str) -> &'static str {
+/// Whether the host-side API-key broker covers this agent. Shared with the TUI.
+pub(crate) fn agent_broker(name: &str) -> &'static str {
     if name == "shell" {
         "n/a"
     } else if crate::auth_profiles::is_brokered(name) {
