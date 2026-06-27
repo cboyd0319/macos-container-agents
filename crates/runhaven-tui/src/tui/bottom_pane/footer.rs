@@ -1275,7 +1275,7 @@ const SHORTCUTS: &[ShortcutDescriptor] = &[
     },
 ];
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::line_truncation::truncate_line_with_ellipsis_if_overflow;

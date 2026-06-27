@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
@@ -45,6 +46,7 @@ pub(crate) struct AgentLaunchPreview {
 }
 
 pub(crate) struct LaunchWizardView {
+    workspace_title: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
     picker: ListSelectionView,
@@ -92,8 +94,10 @@ impl LaunchWizardView {
             AppEventSender::default(),
             RuntimeKeymap::defaults().list,
         );
+        let workspace_title = workspace_title(&workspace);
 
         Self {
+            workspace_title,
             decisions,
             selected_idx,
             picker,
@@ -139,7 +143,6 @@ impl LaunchWizardView {
         self.selected_idx.load(Ordering::Relaxed)
     }
 
-    #[cfg(test)]
     pub(crate) fn selected_agent_name(&self) -> Option<&str> {
         selected_decision(&self.decisions, &self.selected_idx)
             .map(|decision| decision.agent.name.as_str())
@@ -160,9 +163,55 @@ impl LaunchWizardView {
         })
     }
 
-    #[cfg(test)]
     pub(crate) fn is_reviewing(&self) -> bool {
         self.screen == LaunchWizardScreen::ReviewPlan
+    }
+
+    pub(crate) fn footer_status_line(&self) -> Line<'static> {
+        let mut line = Line::from(vec![
+            Span::styled("RunHaven", selected_row_style()),
+            Span::raw(format!(" v{}", env!("CARGO_PKG_VERSION"))),
+            Span::raw(" · "),
+            Span::styled(self.step_label(), boundary_style()),
+        ]);
+
+        if let Some(decision) = selected_decision(&self.decisions, &self.selected_idx) {
+            line.push_span(" · ");
+            line.push_span(Span::styled(
+                decision.agent.name.clone(),
+                decision.status_style(),
+            ));
+            line.push_span(" · ");
+            line.push_span(Span::styled(
+                decision.network_label.clone(),
+                decision.network_style(),
+            ));
+            line.push_span(" · ");
+            line.push_span(Span::styled(
+                decision.boundary_label.clone(),
+                boundary_style(),
+            ));
+        }
+
+        line.push_span(" · ");
+        line.push_span(Span::styled("? help", muted_but_readable_style()));
+        line
+    }
+
+    pub(crate) fn terminal_title(&self) -> String {
+        let agent = self.selected_agent_name().unwrap_or("no agent");
+        format!(
+            "RunHaven | {} | {} | {agent}",
+            self.workspace_title,
+            self.step_label()
+        )
+    }
+
+    fn step_label(&self) -> &'static str {
+        match self.screen {
+            LaunchWizardScreen::ChooseAgent => "Choose agent",
+            LaunchWizardScreen::ReviewPlan => "Review plan",
+        }
     }
 }
 
@@ -732,6 +781,15 @@ fn worktree_label(plan: &LaunchPlanData) -> String {
         .unwrap_or_else(|| "off".to_string())
 }
 
+fn workspace_title(workspace: &Path) -> String {
+    workspace
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or("workspace")
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -850,5 +908,31 @@ mod tests {
 
         assert!(!view.is_reviewing());
         assert_eq!(view.selected_agent_name(), Some("claude"));
+    }
+
+    #[test]
+    fn footer_status_and_title_track_selected_plan() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex"), ready_preview("claude")],
+            None,
+        );
+
+        let footer = format!("{:?}", view.footer_status_line());
+        assert!(footer.contains("Choose agent"));
+        assert!(footer.contains("codex"));
+        assert!(footer.contains("provider allowlist"));
+        assert!(view.terminal_title().contains("project"));
+        assert!(view.terminal_title().contains("Choose agent"));
+        assert!(view.terminal_title().contains("codex"));
+
+        view.handle_key(key(KeyCode::Down));
+        view.handle_key(key(KeyCode::Enter));
+
+        let footer = format!("{:?}", view.footer_status_line());
+        assert!(footer.contains("Review plan"));
+        assert!(footer.contains("claude"));
+        assert!(view.terminal_title().contains("Review plan"));
+        assert!(view.terminal_title().contains("claude"));
     }
 }

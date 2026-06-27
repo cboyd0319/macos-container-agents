@@ -61,6 +61,14 @@ RunHaven-owned because it maps `AgentCatalogData` and `LaunchPlanData` into
 security facts: boundary, host home, credentials, auth scope, network mode, and
 the exact command preview. The generic picker remains source-first Codex code.
 
+The temporary app shell now uses Codex shell chrome for the current picker and
+review step. It reserves a footer area rendered by the vendored
+`bottom_pane/footer.rs`, feeds that footer with RunHaven status text from the
+launch-wizard view model, shows `?` help through Codex footer hint rendering,
+and writes sanitized terminal titles with the vendored `terminal_title.rs`
+helper. The product-specific data still lives under `tui/runhaven/`; the footer
+and terminal-title mechanics stay Codex-owned.
+
 Temporary visual check for the native Codex pet renderer:
 
 ```bash
@@ -79,7 +87,8 @@ Immediate integration order:
 2. Define presentation-neutral RunHaven UI payloads from existing domain data.
 3. Continue replacing temporary shell glue with Codex app-shell, bottom-pane,
    footer, status, title, and keymap pieces while keeping RunHaven domain data
-   isolated under `tui/runhaven/`.
+   isolated under `tui/runhaven/`. Footer and terminal-title basics are now
+   active; the next launch flow slice is the final confirmation screen.
 4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
    and render lifecycle where they fit the RunHaven product.
 5. Remove vendored code only after recording why removal is better than leaving

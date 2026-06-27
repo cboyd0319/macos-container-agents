@@ -188,6 +188,16 @@ command. `b`, backspace, or Esc returns to the picker; `q` exits from either
 screen. Blocked plans cannot open review. Launch and preflight execution remain
 disabled in the TUI.
 
+TUI shell-chrome follow-up: the temporary app shell now reserves a real Codex
+footer area around the launch picker and review screen. The footer is rendered
+through Codex's vendored `bottom_pane/footer.rs` with a RunHaven status line
+showing step, selected agent, network posture, boundary, and `? help`. The
+shell also uses Codex's sanitized `terminal_title.rs` writer so terminal tab
+titles track the workspace, step, and selected agent, and clears the managed
+title on exit. The vendored footer snapshot tests are gated behind
+`codex-vendored-tests`, matching the list-selection snapshot policy because
+upstream `.snap` goldens are intentionally not tracked.
+
 Verified:
 
 - `cargo fmt --check`
@@ -220,8 +230,10 @@ Latest TUI smoke verification:
 - `cargo fmt --check`
 - `cargo test -p runhaven-tui --locked runhaven_cubby --quiet`
 - `cargo test -p runhaven-tui --locked picker_ --quiet`
+- `cargo test -p runhaven-tui --locked launch_wizard --quiet`
 - `cargo test -p runhaven-core --locked ui_contracts --quiet`
 - `cargo test -p runhaven-tui --locked app_shell --quiet`
+- `cargo test -p runhaven-tui --locked terminal_title --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
 - `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
 - `cargo test -p runhaven-tui --locked pets --quiet`
@@ -237,6 +249,10 @@ Latest TUI smoke verification:
   `pets/runhaven-cubby/{pet.json,spritesheet.webp}`, emitted Codex Kitty
   local-file frames from the `custom-runhaven-cubby` frame cache, and exited
   cleanly.
+- `cargo run --locked --bin runhaven` in a PTY, pressed `?` to show footer
+  help, Enter to open review, `b` to return to the picker, and `q` to quit;
+  the terminal title changed between Choose agent and Review plan and cleared
+  on exit.
 
 ## Blockers
 
@@ -247,8 +263,7 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is to adapt more of the
-Codex shell around the current launch picker and review screen: status/footer
-behavior, terminal title updates, and the later confirm screen. Feed
-RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
-instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is the launch confirmation
+screen on top of the current review step, followed by deeper Codex bottom-pane
+runtime/composer integration. Feed RunHaven-specific surfaces from the shared
+`RunHavenComponentPayload` contracts instead of ad hoc screen structs.

@@ -108,6 +108,8 @@ pub(crate) mod bottom_pane {
         pub(crate) use super::ViewCompletion;
     }
 
+    #[path = "footer.rs"]
+    mod footer;
     #[path = "list_selection_view.rs"]
     mod list_selection_view;
     #[path = "popup_consts.rs"]
@@ -119,6 +121,12 @@ pub(crate) mod bottom_pane {
     #[path = "selection_tabs.rs"]
     mod selection_tabs;
 
+    pub(crate) use footer::FooterKeyHints;
+    pub(crate) use footer::FooterMode;
+    pub(crate) use footer::FooterProps;
+    pub(crate) use footer::footer_height;
+    pub(crate) use footer::render_footer_from_props;
+    pub(crate) use footer::render_footer_hint_items;
     pub(crate) use list_selection_view::ColumnWidthMode;
     pub(crate) use list_selection_view::ListSelectionView;
     pub(crate) use list_selection_view::OnSelectionChangedCallback;
@@ -282,6 +290,49 @@ pub(crate) mod shimmer;
 #[allow(dead_code)]
 pub(crate) mod style;
 #[allow(dead_code)]
+pub(crate) mod status {
+    pub(crate) fn format_tokens_compact(value: i64) -> String {
+        let value = value.max(0);
+        if value == 0 {
+            return "0".to_string();
+        }
+        if value < 1_000 {
+            return value.to_string();
+        }
+
+        let value_f64 = value as f64;
+        let (scaled, suffix) = if value >= 1_000_000_000_000 {
+            (value_f64 / 1_000_000_000_000.0, "T")
+        } else if value >= 1_000_000_000 {
+            (value_f64 / 1_000_000_000.0, "B")
+        } else if value >= 1_000_000 {
+            (value_f64 / 1_000_000.0, "M")
+        } else {
+            (value_f64 / 1_000.0, "K")
+        };
+
+        let decimals = if scaled < 10.0 {
+            2
+        } else if scaled < 100.0 {
+            1
+        } else {
+            0
+        };
+
+        let mut formatted = format!("{scaled:.decimals$}");
+        if formatted.contains('.') {
+            while formatted.ends_with('0') {
+                formatted.pop();
+            }
+            if formatted.ends_with('.') {
+                formatted.pop();
+            }
+        }
+
+        format!("{formatted}{suffix}")
+    }
+}
+#[allow(dead_code)]
 pub(crate) mod terminal_detection;
 #[allow(dead_code)]
 pub(crate) mod terminal_palette;
@@ -289,8 +340,13 @@ pub(crate) mod terminal_palette;
 pub(crate) mod terminal_probe;
 #[allow(dead_code)]
 pub(crate) mod terminal_title;
+#[cfg(test)]
+#[allow(dead_code)]
+pub(crate) mod test_backend;
 #[allow(dead_code)]
 pub(crate) mod text_formatting;
+#[allow(dead_code)]
+pub(crate) mod ui_consts;
 #[allow(dead_code)]
 pub(crate) mod wrapping;
 

@@ -11,14 +11,24 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
+use ratatui::widgets::Clear;
+use ratatui::widgets::Widget;
 
 use super::runhaven::launch_wizard::AgentLaunchPreview;
 use super::runhaven::launch_wizard::LaunchWizardView;
+use crate::key_hint;
 use crate::render::renderable::Renderable;
+use crate::tui::bottom_pane::FooterKeyHints;
+use crate::tui::bottom_pane::FooterMode;
+use crate::tui::bottom_pane::FooterProps;
+use crate::tui::terminal_title::SetTerminalTitleResult;
+use crate::tui::terminal_title::clear_terminal_title;
+use crate::tui::terminal_title::set_terminal_title;
 use runhaven_core::runtime::plans::AuthScope;
 use runhaven_core::runtime::plans::RunOptions;
 use runhaven_core::runtime::plans::WorkspaceScope;
@@ -48,6 +58,7 @@ struct TerminalRestoreGuard;
 
 impl Drop for TerminalRestoreGuard {
     fn drop(&mut self) {
+        let _ = clear_terminal_title();
         let _ = ratatui::try_restore();
     }
 }
@@ -60,6 +71,7 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
         }
 
         if redraw {
+            state.refresh_terminal_title();
             terminal.draw(|frame| render(frame, state))?;
             state.draw_image_smoke(terminal)?;
             redraw = false;
@@ -88,6 +100,8 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
 struct ShellState {
     launch_wizard: LaunchWizardView,
     image_smoke: ImageSmoke,
+    show_footer_help: bool,
+    last_terminal_title: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,6 +159,8 @@ impl ShellState {
         Ok(Self {
             launch_wizard,
             image_smoke,
+            show_footer_help: false,
+            last_terminal_title: None,
         })
     }
 
@@ -155,6 +171,16 @@ impl ShellState {
 
         if matches!(key.code, KeyCode::Char('q')) {
             return ShellAction::Quit;
+        }
+
+        if matches!(key.code, KeyCode::Char('?')) {
+            self.show_footer_help = !self.show_footer_help;
+            return ShellAction::Continue;
+        }
+
+        if self.show_footer_help && matches!(key.code, KeyCode::Esc) {
+            self.show_footer_help = false;
+            return ShellAction::Continue;
         }
 
         self.launch_wizard.handle_key(key);
@@ -191,6 +217,112 @@ impl ShellState {
 
     fn drain_image_smoke_draws(&mut self) -> bool {
         self.image_smoke.drain_draws()
+    }
+
+    fn refresh_terminal_title(&mut self) {
+        let title = self.terminal_title();
+        if self.last_terminal_title.as_deref() == Some(title.as_str()) {
+            return;
+        }
+
+        match set_terminal_title(&title) {
+            Ok(SetTerminalTitleResult::Applied) => {
+                self.last_terminal_title = Some(title);
+            }
+            Ok(SetTerminalTitleResult::NoVisibleContent) => {
+                self.last_terminal_title = None;
+                let _ = clear_terminal_title();
+            }
+            Err(_) => {}
+        }
+    }
+
+    fn terminal_title(&self) -> String {
+        self.launch_wizard.terminal_title()
+    }
+
+    fn footer_height(&self) -> u16 {
+        if self.show_footer_help {
+            return 2;
+        }
+        crate::tui::bottom_pane::footer_height(&self.footer_props())
+    }
+
+    fn render_footer(&self, area: Rect, buf: &mut ratatui::buffer::Buffer) {
+        Clear.render(area, buf);
+        let props = self.footer_props();
+        if self.show_footer_help {
+            let status_area = Rect { height: 1, ..area };
+            let help_area = Rect {
+                y: area.y.saturating_add(1),
+                height: area.height.saturating_sub(1),
+                ..area
+            };
+            crate::tui::bottom_pane::render_footer_from_props(
+                status_area,
+                buf,
+                &props,
+                None,
+                false,
+                false,
+                false,
+            );
+            crate::tui::bottom_pane::render_footer_hint_items(
+                help_area,
+                buf,
+                &self.footer_help_items(),
+            );
+            return;
+        }
+
+        crate::tui::bottom_pane::render_footer_from_props(
+            area, buf, &props, None, false, false, false,
+        );
+    }
+
+    fn footer_props(&self) -> FooterProps {
+        FooterProps {
+            mode: FooterMode::ComposerEmpty,
+            esc_backtrack_hint: false,
+            use_shift_enter_hint: false,
+            is_task_running: false,
+            queue_submissions: false,
+            collaboration_modes_enabled: false,
+            is_wsl: false,
+            quit_shortcut_key: key_hint::plain(KeyCode::Char('q')),
+            status_line_value: Some(self.launch_wizard.footer_status_line()),
+            status_line_enabled: true,
+            key_hints: FooterKeyHints {
+                toggle_shortcuts: Some(key_hint::plain(KeyCode::Char('?'))),
+                queue: None,
+                insert_newline: None,
+                external_editor: None,
+                edit_previous: Some(key_hint::plain(KeyCode::Esc)),
+                show_transcript: None,
+                history_search: None,
+                reasoning_down: None,
+                reasoning_up: None,
+            },
+            active_agent_label: None,
+        }
+    }
+
+    fn footer_help_items(&self) -> Vec<(String, String)> {
+        let mut items = if self.launch_wizard.is_reviewing() {
+            vec![
+                ("b".to_string(), "back".to_string()),
+                ("esc".to_string(), "back".to_string()),
+                ("q".to_string(), "quit".to_string()),
+            ]
+        } else {
+            vec![
+                ("up/down".to_string(), "choose".to_string()),
+                ("enter".to_string(), "review".to_string()),
+                ("q".to_string(), "quit".to_string()),
+            ]
+        };
+        items.push(("?".to_string(), "hide help".to_string()));
+        items
     }
 }
 
@@ -375,8 +507,21 @@ fn codex_home() -> Option<PathBuf> {
 
 fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     let area = frame.area();
-    state.launch_wizard.render(area, frame.buffer_mut());
-    state.prepare_image_smoke_draw(area, area.y.saturating_add(area.height));
+    Clear.render(area, frame.buffer_mut());
+    let footer_height = state.footer_height().min(area.height);
+    let content_height = area.height.saturating_sub(footer_height);
+    let content_area = Rect {
+        height: content_height,
+        ..area
+    };
+    let footer_area = Rect {
+        y: area.y.saturating_add(content_height),
+        height: footer_height,
+        ..area
+    };
+    state.launch_wizard.render(content_area, frame.buffer_mut());
+    state.render_footer(footer_area, frame.buffer_mut());
+    state.prepare_image_smoke_draw(content_area, footer_area.y);
 }
 
 #[cfg(test)]
@@ -578,6 +723,54 @@ mod tests {
             ShellAction::Continue
         );
         assert_eq!(state.launch_wizard.selected_agent_name(), Some("claude"));
+    }
+
+    #[test]
+    fn shell_footer_shows_status_and_help_overlay() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(output.contains("? help"));
+        assert!(output.contains("Choose agent"));
+        assert!(output.contains("provider allowlist"));
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        let output = render_to_text(&mut state, 120, 32);
+
+        assert!(output.contains("up/down"));
+        assert!(output.contains("review"));
+        assert!(output.contains("hide help"));
+    }
+
+    #[test]
+    fn shell_terminal_title_tracks_selected_agent_and_step() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        let title = state.terminal_title();
+        assert!(title.contains("RunHaven"));
+        assert!(title.contains("Choose agent"));
+        assert!(title.contains("antigravity"));
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        let title = state.terminal_title();
+        assert!(title.contains("Choose agent"));
+        assert!(title.contains("claude"));
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        let title = state.terminal_title();
+        assert!(title.contains("Review plan"));
+        assert!(title.contains("claude"));
     }
 
     #[test]

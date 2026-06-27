@@ -10,7 +10,9 @@ pub(crate) use tui::key_hint;
 pub(crate) use tui::keymap;
 pub(crate) use tui::line_truncation;
 pub(crate) use tui::render;
+pub(crate) use tui::status;
 pub(crate) use tui::style;
+pub(crate) use tui::ui_consts;
 pub(crate) use tui::wrapping;
 
 pub use tui::run;
