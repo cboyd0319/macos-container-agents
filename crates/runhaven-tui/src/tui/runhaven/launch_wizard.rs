@@ -15,6 +15,7 @@ use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
+use ratatui::widgets::WidgetRef;
 use ratatui::widgets::Wrap;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
@@ -37,7 +38,9 @@ use crate::tui::bottom_pane::SelectionItem;
 use crate::tui::bottom_pane::SelectionRowDisplay;
 use crate::tui::bottom_pane::SelectionViewParams;
 use crate::tui::bottom_pane::SideContentWidth;
+use crate::tui::bottom_pane::TextArea;
 use crate::tui::bottom_pane::ViewCompletion;
+use crate::tui::bottom_pane::menu_surface_inset;
 use crate::tui::bottom_pane::render_menu_surface;
 
 pub(crate) struct AgentLaunchPreview {
@@ -51,7 +54,7 @@ pub(crate) struct LaunchWizardView {
     selected_idx: Arc<AtomicUsize>,
     picker: ListSelectionView,
     screen: LaunchWizardScreen,
-    confirm_input: String,
+    confirm_composer: TextArea,
     confirm_notice: Option<String>,
 }
 
@@ -107,7 +110,7 @@ impl LaunchWizardView {
             selected_idx,
             picker,
             screen: LaunchWizardScreen::ChooseAgent,
-            confirm_input: String::new(),
+            confirm_composer: TextArea::new(),
             confirm_notice: None,
         }
     }
@@ -143,27 +146,24 @@ impl LaunchWizardView {
     }
 
     fn handle_confirm_key(&mut self, key: KeyEvent) {
+        if self.selected_plan_requires_typed_confirmation() {
+            match key.code {
+                KeyCode::Esc => self.screen = LaunchWizardScreen::ReviewPlan,
+                KeyCode::Enter => self.confirm_current_plan(),
+                _ => {
+                    self.confirm_composer.input(key);
+                    self.confirm_notice = None;
+                }
+            }
+            return;
+        }
+
         match key.code {
-            KeyCode::Esc => self.screen = LaunchWizardScreen::ReviewPlan,
+            KeyCode::Esc | KeyCode::Backspace => self.screen = LaunchWizardScreen::ReviewPlan,
             KeyCode::Char('b') if key.modifiers == KeyModifiers::NONE => {
                 self.screen = LaunchWizardScreen::ReviewPlan;
             }
-            KeyCode::Backspace if self.confirm_input.is_empty() => {
-                self.screen = LaunchWizardScreen::ReviewPlan;
-            }
-            KeyCode::Backspace => {
-                self.confirm_input.pop();
-                self.confirm_notice = None;
-            }
             KeyCode::Enter => self.confirm_current_plan(),
-            KeyCode::Char(ch)
-                if self.selected_plan_requires_typed_confirmation()
-                    && accepts_confirmation_char(key.modifiers, ch)
-                    && self.confirm_input.len() < 32 =>
-            {
-                self.confirm_input.push(ch.to_ascii_lowercase());
-                self.confirm_notice = None;
-            }
             _ => {}
         }
     }
@@ -172,7 +172,7 @@ impl LaunchWizardView {
         if self.selected_plan().is_none() {
             return;
         }
-        self.confirm_input.clear();
+        self.confirm_composer = TextArea::new();
         self.confirm_notice = None;
         self.screen = LaunchWizardScreen::ConfirmLaunch;
     }
@@ -183,7 +183,7 @@ impl LaunchWizardView {
             return;
         };
 
-        if plan.confirm_required && self.confirm_input.trim() != CONFIRM_PHRASE {
+        if plan.confirm_required && !confirmation_matches(self.confirm_composer.text()) {
             self.confirm_notice = Some(format!("Type {CONFIRM_PHRASE} before confirming."));
             return;
         }
@@ -239,6 +239,40 @@ impl LaunchWizardView {
         self.screen == LaunchWizardScreen::ConfirmLaunch
     }
 
+    pub(crate) fn confirm_accepts_text_input(&self) -> bool {
+        self.is_confirming() && self.selected_plan_requires_typed_confirmation()
+    }
+
+    pub(crate) fn handle_paste(&mut self, pasted: &str) {
+        if !self.confirm_accepts_text_input() {
+            return;
+        }
+        if !pasted.is_empty() {
+            self.confirm_notice = Some(format!(
+                "Type {CONFIRM_PHRASE} by hand. Paste is ignored here."
+            ));
+        }
+    }
+
+    pub(crate) fn confirm_cursor_position(&self, area: Rect) -> Option<(u16, u16)> {
+        if !self.confirm_accepts_text_input() {
+            return None;
+        }
+        let composer_area = ConfirmLaunch {
+            decisions: Arc::clone(&self.decisions),
+            selected_idx: Arc::clone(&self.selected_idx),
+            confirm_composer: &self.confirm_composer,
+            confirm_notice: self.confirm_notice.clone(),
+        }
+        .composer_text_area(area)?;
+        self.confirm_composer.cursor_pos(composer_area)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn confirm_text(&self) -> &str {
+        self.confirm_composer.text()
+    }
+
     pub(crate) fn footer_status_line(&self) -> Line<'static> {
         let mut line = Line::from(vec![
             Span::styled("RunHaven", selected_row_style()),
@@ -265,8 +299,10 @@ impl LaunchWizardView {
             ));
         }
 
-        line.push_span(" · ");
-        line.push_span(Span::styled("? help", muted_but_readable_style()));
+        if !self.confirm_accepts_text_input() {
+            line.push_span(" · ");
+            line.push_span(Span::styled("? help", muted_but_readable_style()));
+        }
         line
     }
 
@@ -300,7 +336,7 @@ impl Renderable for LaunchWizardView {
             LaunchWizardScreen::ConfirmLaunch => ConfirmLaunch {
                 decisions: Arc::clone(&self.decisions),
                 selected_idx: Arc::clone(&self.selected_idx),
-                confirm_input: self.confirm_input.clone(),
+                confirm_composer: &self.confirm_composer,
                 confirm_notice: self.confirm_notice.clone(),
             }
             .render(area, buf),
@@ -318,7 +354,7 @@ impl Renderable for LaunchWizardView {
             LaunchWizardScreen::ConfirmLaunch => ConfirmLaunch {
                 decisions: Arc::clone(&self.decisions),
                 selected_idx: Arc::clone(&self.selected_idx),
-                confirm_input: self.confirm_input.clone(),
+                confirm_composer: &self.confirm_composer,
                 confirm_notice: self.confirm_notice.clone(),
             }
             .desired_height(width),
@@ -631,15 +667,14 @@ impl Renderable for ReviewPlan {
     }
 }
 
-#[derive(Clone)]
-struct ConfirmLaunch {
+struct ConfirmLaunch<'a> {
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
-    confirm_input: String,
+    confirm_composer: &'a TextArea,
     confirm_notice: Option<String>,
 }
 
-impl ConfirmLaunch {
+impl ConfirmLaunch<'_> {
     fn selected(&self) -> Option<&AgentDecisionVm> {
         selected_decision(&self.decisions, &self.selected_idx)
     }
@@ -653,7 +688,7 @@ impl ConfirmLaunch {
                     Span::styled("Step 4/4: Confirm launch", boundary_style()),
                 ]),
                 Line::from("No agent plan is selected."),
-                confirm_footer_line(),
+                confirm_footer_line(false),
             ];
         };
 
@@ -684,7 +719,7 @@ impl ConfirmLaunch {
             Ok(plan) => append_confirm_plan_lines(
                 &mut lines,
                 plan,
-                self.confirm_input.as_str(),
+                self.confirm_composer.text(),
                 self.confirm_notice.as_deref(),
             ),
             Err(message) => {
@@ -697,21 +732,111 @@ impl ConfirmLaunch {
             }
         }
 
+        let text_field_active = decision
+            .plan
+            .as_ref()
+            .is_ok_and(|plan| plan.confirm_required);
         lines.push(Line::from(""));
-        lines.push(confirm_footer_line());
+        lines.push(confirm_footer_line(text_field_active));
         lines
+    }
+
+    fn layout(&self, area: Rect) -> (Rect, Option<Rect>) {
+        let content = menu_surface_inset(area);
+        let Some(plan) = self
+            .selected()
+            .and_then(|decision| decision.plan.as_ref().ok())
+        else {
+            return (content, None);
+        };
+        if !plan.confirm_required || content.height < 6 {
+            return (content, None);
+        }
+
+        let composer_height = self
+            .confirm_composer
+            .desired_height(content.width.saturating_sub(2).max(1))
+            .clamp(1, 3)
+            .saturating_add(1);
+        let composer_height = composer_height.min(content.height.saturating_sub(1));
+        let body_height = content
+            .height
+            .saturating_sub(composer_height)
+            .saturating_sub(1);
+        let body = Rect {
+            height: body_height,
+            ..content
+        };
+        let composer = Rect {
+            y: body.y.saturating_add(body.height).saturating_add(1),
+            height: composer_height,
+            ..content
+        };
+        (body, Some(composer))
+    }
+
+    fn composer_text_area(&self, area: Rect) -> Option<Rect> {
+        let (_, composer) = self.layout(area);
+        composer.map(|area| Rect {
+            x: area.x.saturating_add(2),
+            width: area.width.saturating_sub(2),
+            height: area.height.saturating_sub(1).max(1),
+            ..area
+        })
+    }
+
+    fn render_composer(&self, area: Rect, buf: &mut Buffer) {
+        let label_area = Rect { height: 1, ..area };
+        Paragraph::new(Line::from(vec![
+            Span::styled("> ", accent_style()),
+            Span::styled("confirmation phrase", muted_but_readable_style()),
+        ]))
+        .render(label_area, buf);
+
+        let text_area = Rect {
+            x: area.x.saturating_add(2),
+            y: area.y.saturating_add(1),
+            width: area.width.saturating_sub(2),
+            height: area.height.saturating_sub(1).max(1),
+        };
+        if self.confirm_composer.is_empty() {
+            Paragraph::new(Line::from(Span::styled(
+                "type launch",
+                muted_but_readable_style(),
+            )))
+            .render(text_area, buf);
+        } else {
+            (&self.confirm_composer).render_ref(text_area, buf);
+        }
     }
 }
 
-impl Renderable for ConfirmLaunch {
+impl Renderable for ConfirmLaunch<'_> {
     fn render(&self, area: Rect, buf: &mut Buffer) {
         Clear.render(area, buf);
         let content = render_menu_surface(area, buf);
-        paragraph(self.lines()).render(content, buf);
+        let (body, composer) = self.layout(area);
+        let body = if body == content { content } else { body };
+        paragraph(self.lines()).render(body, buf);
+        if let Some(composer) = composer {
+            self.render_composer(composer, buf);
+        }
     }
 
     fn desired_height(&self, width: u16) -> u16 {
-        paragraph(self.lines()).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+        let body = paragraph(self.lines()).line_count(width.saturating_sub(4).max(1)) as u16 + 2;
+        let composer = self
+            .selected()
+            .and_then(|decision| decision.plan.as_ref().ok())
+            .filter(|plan| plan.confirm_required)
+            .map(|_| {
+                self.confirm_composer
+                    .desired_height(width.saturating_sub(6).max(1))
+                    .clamp(1, 3)
+                    .saturating_add(2)
+            })
+            .unwrap_or(0);
+        body.saturating_add(composer)
     }
 }
 
@@ -839,15 +964,13 @@ fn append_confirm_plan_lines(
             Span::raw(", then press Enter."),
         ]));
         lines.push(Line::from("This preview will not start the container yet."));
-        lines.push(label_value(
-            "Typed",
-            if confirm_input.is_empty() {
-                "<nothing>".to_string()
-            } else {
-                confirm_input.to_string()
-            },
-            muted_but_readable_style(),
-        ));
+        if !confirm_input.trim().is_empty() {
+            lines.push(label_value(
+                "Typed",
+                confirm_input.trim().to_string(),
+                muted_but_readable_style(),
+            ));
+        }
     } else {
         lines.push(Line::from(
             "Press Enter to confirm. This preview will not start the container yet.",
@@ -985,19 +1108,23 @@ fn review_footer_line() -> Line<'static> {
     ])
 }
 
-fn confirm_footer_line() -> Line<'static> {
-    Line::from(vec![
-        key_hint::plain(KeyCode::Char('b')).into(),
-        Span::raw(" or "),
+fn confirm_footer_line(text_field_active: bool) -> Line<'static> {
+    let mut line = Line::from(vec![
         key_hint::plain(KeyCode::Esc).into(),
         Span::raw(" goes back. "),
         key_hint::plain(KeyCode::Enter).into(),
-        Span::raw(" confirms. q quits."),
-    ])
+        Span::raw(" confirms."),
+    ]);
+    if !text_field_active {
+        line.push_span(" ");
+        line.push_span(key_hint::plain(KeyCode::Char('q')));
+        line.push_span(" quits.");
+    }
+    line
 }
 
-fn accepts_confirmation_char(modifiers: KeyModifiers, ch: char) -> bool {
-    matches!(modifiers, KeyModifiers::NONE | KeyModifiers::SHIFT) && ch.is_ascii_alphanumeric()
+fn confirmation_matches(value: &str) -> bool {
+    value.trim().eq_ignore_ascii_case(CONFIRM_PHRASE)
 }
 
 fn network_label(plan: &LaunchPlanData) -> String {
@@ -1278,8 +1405,62 @@ mod tests {
         }
         view.handle_key(modified_key(KeyCode::Char('!'), KeyModifiers::SHIFT));
 
-        assert_eq!(view.confirm_input, "launch");
+        assert_eq!(view.confirm_text(), "Launch!");
 
+        view.handle_key(key(KeyCode::Enter));
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Type launch before confirming.")
+        );
+
+        view.handle_key(key(KeyCode::Backspace));
+        assert_eq!(view.confirm_text(), "Launch");
+        view.handle_key(key(KeyCode::Enter));
+
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Confirmed. TUI launch is still disabled.")
+        );
+    }
+
+    #[test]
+    fn confirm_required_composer_treats_q_as_text() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        view.handle_key(key(KeyCode::Char('q')));
+
+        assert!(view.is_confirming());
+        assert_eq!(view.confirm_text(), "q");
+    }
+
+    #[test]
+    fn confirm_required_plan_rejects_pasted_phrase() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        view.handle_paste("launch");
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.confirm_text().is_empty());
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Type launch before confirming.")
+        );
+
+        for ch in ['l', 'a', 'u', 'n', 'c', 'h'] {
+            view.handle_key(key(KeyCode::Char(ch)));
+        }
         view.handle_key(key(KeyCode::Enter));
 
         assert_eq!(

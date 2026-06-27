@@ -17,8 +17,8 @@ use crate::keymap::RuntimeKeymap;
 use crate::keymap::VimNormalKeymap;
 use crate::keymap::VimOperatorKeymap;
 use crate::keymap::VimTextObjectKeymap;
-use codex_protocol::user_input::ByteRange;
-use codex_protocol::user_input::TextElement as UserTextElement;
+use crate::tui::codex_protocol::user_input::ByteRange;
+use crate::tui::codex_protocol::user_input::TextElement as UserTextElement;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
@@ -36,6 +36,7 @@ use textwrap::Options;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
+#[path = "textarea/vim.rs"]
 mod vim;
 use self::vim::VimMode;
 use self::vim::VimMotion;
@@ -2001,8 +2002,10 @@ mod tests {
     use crate::key_hint;
     // crossterm types are intentionally not imported here to avoid unused warnings
     use pretty_assertions::assert_eq;
+    #[cfg(feature = "codex-vendored-tests")]
     use rand::prelude::*;
 
+    #[cfg(feature = "codex-vendored-tests")]
     fn rand_grapheme(rng: &mut rand::rngs::StdRng) -> String {
         let r: u8 = rng.random_range(0..100);
         match r {
@@ -2624,6 +2627,10 @@ mod tests {
         assert_eq!(t.kill_buffer, "c");
     }
 
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "vendored Codex snapshot tests are opt-in"
+    )]
     #[test]
     fn vim_e_advances_from_each_word_end() {
         let mut t = ta_with("alpha beta gamma");
@@ -3604,6 +3611,7 @@ mod tests {
         assert_eq!(t.cursor(), "👍👍".len());
     }
 
+    #[cfg(feature = "codex-vendored-tests")]
     #[test]
     fn fuzz_textarea_randomized() {
         // Deterministic seed for reproducibility

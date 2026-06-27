@@ -21,6 +21,13 @@ The dbt-wizard comparison note at
 `/Users/c/Downloads/runhaven-dbt-wizard-codex-tui-direction.md` is useful
 evidence, not a product direction to copy wholesale.
 
+The Codex capability map at
+[`codex-tui-capabilities.md`](codex-tui-capabilities.md) is the repo-owned
+source map for what the Codex TUI already provides. Use it before deciding to
+write custom TUI code, especially for the bottom pane, composer, keymaps,
+terminal runtime, streaming output, history cells, approvals, sessions, status,
+pets, and VT100/snapshot tests.
+
 The lesson to carry forward is:
 
 - Copy the architecture move: domain truth becomes a stable UI payload, then

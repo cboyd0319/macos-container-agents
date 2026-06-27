@@ -251,6 +251,8 @@ not active TUI code.
 
 Source-first candidates to evaluate before adding custom TUI behavior:
 
+- `codex-tui-capabilities.md`: source map for Codex TUI capabilities and reuse
+  risk.
 - `chatwidget/status_surfaces.rs`: status line and terminal-title model.
 - `status/card.rs`: `/status` card structure.
 - `theme_picker.rs` and `render/highlight`: syntax/highlighting themes.

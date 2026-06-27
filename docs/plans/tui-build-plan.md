@@ -4,8 +4,10 @@ The master plan for building the RunHaven terminal UI as a first-class,
 reference-quality, reusable implementation. This is the build sequence and the
 vendoring strategy; the rendering patterns live in
 [`tui-architecture.md`](tui-architecture.md) and the brand and graphics vision
-lives in [`ratatui-brand-graphics.md`](ratatui-brand-graphics.md). Durable
-decisions are logged in `current-state.md`; this doc is the working plan.
+lives in [`ratatui-brand-graphics.md`](ratatui-brand-graphics.md). The Codex
+source capability map lives in
+[`codex-tui-capabilities.md`](codex-tui-capabilities.md). Durable decisions are
+logged in `current-state.md`; this doc is the working plan.
 
 ## Purpose
 
@@ -53,6 +55,15 @@ Codex's default list navigation keys. The upstream list-selection snapshot tests
 are opt-in behind `codex-vendored-tests` because their Codex snapshot goldens
 were intentionally removed during the vendor reset.
 
+The first Codex text-entry source slice is also staged. Step 4 confirmation now
+uses the vendored `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs`
+editor primitive through the same temporary facade. This gives the confirmation
+field Codex text editing, cursor placement, and Vim-keymap coverage without
+adopting the full chat composer yet. Paste is intentionally ignored for the
+lower-security typed confirmation phrase so the extra intent still means
+typing. The full Codex `BottomPane` and `ChatComposer` remain the next
+source-first target.
+
 The first RunHaven product card over that Codex picker is now active. The
 temporary `app_shell.rs` no longer draws its own agent list; it hosts a
 RunHaven launch-wizard view model in `tui/runhaven/launch_wizard.rs`, rendered
@@ -94,8 +105,8 @@ Immediate integration order:
 3. Continue replacing temporary shell glue with Codex app-shell, bottom-pane,
    footer, status, title, and keymap pieces while keeping RunHaven domain data
    isolated under `tui/runhaven/`. Footer and terminal-title basics are now
-   active; launch confirmation is now present, but real launch execution is not
-   wired yet.
+   active; launch confirmation now uses Codex `TextArea`, but real launch
+   execution is not wired yet.
 4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
    and render lifecycle where they fit the RunHaven product.
 5. Wire real launch execution from the confirmation step only after the
@@ -193,6 +204,8 @@ terminal image overlay ownership.
 | `key_hint.rs` | foundation | consistent keyboard-hint rendering |
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
 | `bottom_pane/list_selection_view.rs` + helpers | staged foundation | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; currently behind a RunHaven facade while the full bottom pane is adapted |
+| `bottom_pane/textarea.rs` + `textarea/vim.rs` | staged foundation | native Codex text editor for the Step 4 confirmation phrase; deterministic upstream tests run by default, snapshot/randomized tests stay opt-in |
+| `bottom_pane/chat_composer.rs` + `public_widgets/composer_input.rs` | evaluate next | full Codex composer and public wrapper; likely next step after TextArea so RunHaven stops hand-routing prompt-like input |
 | `terminal_hyperlinks.rs` | foundation | OSC 8 clickable paths and URLs |
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
@@ -217,7 +230,7 @@ terminal image overlay ownership.
 | `keymap.rs` (6176 lines) | superseded by evaluation row above | full rebindable-keybinding config is probably too broad, but command vocabulary and conflict handling should be evaluated |
 | `file_search.rs` | skip | codex-event glue; use a fuzzy crate (e.g. `nucleo`) directly |
 | `get_git_diff` | skip | uses `codex_git_utils`; RunHaven has its own git handling |
-| chat domain (chatwidget, composer, bottom_pane input, markdown_stream, transcript, token_usage, model_catalog) | skip | agent chat runs inside the container, not in the TUI |
+| chat domain (chatwidget, markdown_stream, transcript, token_usage, model_catalog) | skip | agent chat runs inside the container, not in the TUI; still review renderer and streaming patterns before rebuilding equivalent output surfaces |
 | app-server / MCP / IDE backend | skip | codex backend, not applicable |
 
 Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,

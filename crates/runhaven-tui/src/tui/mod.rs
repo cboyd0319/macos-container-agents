@@ -120,6 +120,8 @@ pub(crate) mod bottom_pane {
     mod selection_popup_common;
     #[path = "selection_tabs.rs"]
     mod selection_tabs;
+    #[path = "textarea.rs"]
+    pub(crate) mod textarea;
 
     pub(crate) use footer::FooterKeyHints;
     pub(crate) use footer::FooterMode;
@@ -135,7 +137,10 @@ pub(crate) mod bottom_pane {
     pub(crate) use list_selection_view::SelectionRowDisplay;
     pub(crate) use list_selection_view::SelectionViewParams;
     pub(crate) use list_selection_view::SideContentWidth;
+    pub(crate) use selection_popup_common::menu_surface_inset;
     pub(crate) use selection_popup_common::render_menu_surface;
+    pub(crate) use textarea::TextArea;
+    pub(crate) use textarea::TextAreaState;
 }
 
 #[allow(dead_code)]
@@ -146,24 +151,417 @@ pub(crate) mod clipboard_paste {
     }
 }
 
+#[allow(dead_code)]
+pub(crate) mod codex_protocol {
+    pub(crate) mod user_input {
+        #[derive(Debug, Clone, PartialEq)]
+        pub(crate) struct TextElement {
+            pub(crate) byte_range: ByteRange,
+            placeholder: Option<String>,
+        }
+
+        impl TextElement {
+            pub(crate) fn new(byte_range: ByteRange, placeholder: Option<String>) -> Self {
+                Self {
+                    byte_range,
+                    placeholder,
+                }
+            }
+
+            pub(crate) fn map_range<F>(&self, map: F) -> Self
+            where
+                F: FnOnce(ByteRange) -> ByteRange,
+            {
+                Self {
+                    byte_range: map(self.byte_range),
+                    placeholder: self.placeholder.clone(),
+                }
+            }
+
+            pub(crate) fn placeholder<'a>(&'a self, text: &'a str) -> Option<&'a str> {
+                self.placeholder
+                    .as_deref()
+                    .or_else(|| text.get(self.byte_range.start..self.byte_range.end))
+            }
+        }
+
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        pub(crate) struct ByteRange {
+            pub(crate) start: usize,
+            pub(crate) end: usize,
+        }
+
+        impl From<std::ops::Range<usize>> for ByteRange {
+            fn from(range: std::ops::Range<usize>) -> Self {
+                Self {
+                    start: range.start,
+                    end: range.end,
+                }
+            }
+        }
+    }
+}
+
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
 #[allow(dead_code)]
 pub(crate) mod keymap {
     use crossterm::event::KeyCode;
+    use crossterm::event::KeyModifiers;
 
     use super::key_hint;
     use super::key_hint::KeyBinding;
 
     #[derive(Clone, Debug)]
     pub(crate) struct RuntimeKeymap {
+        pub(crate) chat: ChatKeymap,
+        pub(crate) composer: ComposerKeymap,
+        pub(crate) editor: EditorKeymap,
+        pub(crate) vim_normal: VimNormalKeymap,
+        pub(crate) vim_operator: VimOperatorKeymap,
+        pub(crate) vim_text_object: VimTextObjectKeymap,
         pub(crate) list: ListKeymap,
     }
 
     impl RuntimeKeymap {
         pub(crate) fn defaults() -> Self {
             Self {
+                chat: ChatKeymap {
+                    interrupt_turn: vec![key_hint::plain(KeyCode::Esc)],
+                    decrease_reasoning_effort: vec![
+                        key_hint::alt(KeyCode::Char(',')),
+                        key_hint::shift(KeyCode::Down),
+                    ],
+                    increase_reasoning_effort: vec![
+                        key_hint::alt(KeyCode::Char('.')),
+                        key_hint::shift(KeyCode::Up),
+                    ],
+                    edit_queued_message: vec![
+                        key_hint::alt(KeyCode::Up),
+                        key_hint::shift(KeyCode::Left),
+                    ],
+                },
+                composer: ComposerKeymap {
+                    submit: vec![key_hint::plain(KeyCode::Enter)],
+                    queue: vec![key_hint::plain(KeyCode::Tab)],
+                    toggle_shortcuts: vec![
+                        key_hint::plain(KeyCode::Char('?')),
+                        key_hint::shift(KeyCode::Char('?')),
+                    ],
+                    history_search_previous: vec![key_hint::ctrl(KeyCode::Char('r'))],
+                    history_search_next: vec![key_hint::ctrl(KeyCode::Char('s'))],
+                },
+                editor: EditorKeymap {
+                    insert_newline: vec![
+                        key_hint::ctrl(KeyCode::Char('j')),
+                        key_hint::ctrl(KeyCode::Char('m')),
+                        key_hint::plain(KeyCode::Enter),
+                        key_hint::shift(KeyCode::Enter),
+                        key_hint::alt(KeyCode::Enter),
+                    ],
+                    move_left: vec![
+                        key_hint::plain(KeyCode::Left),
+                        key_hint::ctrl(KeyCode::Char('b')),
+                    ],
+                    move_right: vec![
+                        key_hint::plain(KeyCode::Right),
+                        key_hint::ctrl(KeyCode::Char('f')),
+                    ],
+                    move_up: vec![
+                        key_hint::plain(KeyCode::Up),
+                        key_hint::ctrl(KeyCode::Char('p')),
+                    ],
+                    move_down: vec![
+                        key_hint::plain(KeyCode::Down),
+                        key_hint::ctrl(KeyCode::Char('n')),
+                    ],
+                    move_word_left: vec![
+                        key_hint::alt(KeyCode::Char('b')),
+                        KeyBinding::new(KeyCode::Left, KeyModifiers::ALT),
+                        KeyBinding::new(KeyCode::Left, KeyModifiers::CONTROL),
+                    ],
+                    move_word_right: vec![
+                        key_hint::alt(KeyCode::Char('f')),
+                        KeyBinding::new(KeyCode::Right, KeyModifiers::ALT),
+                        KeyBinding::new(KeyCode::Right, KeyModifiers::CONTROL),
+                    ],
+                    move_line_start: vec![
+                        key_hint::plain(KeyCode::Home),
+                        key_hint::ctrl(KeyCode::Char('a')),
+                    ],
+                    move_line_end: vec![
+                        key_hint::plain(KeyCode::End),
+                        key_hint::ctrl(KeyCode::Char('e')),
+                    ],
+                    delete_backward: vec![
+                        key_hint::plain(KeyCode::Backspace),
+                        key_hint::shift(KeyCode::Backspace),
+                        key_hint::ctrl(KeyCode::Char('h')),
+                    ],
+                    delete_forward: vec![
+                        key_hint::plain(KeyCode::Delete),
+                        key_hint::shift(KeyCode::Delete),
+                        key_hint::ctrl(KeyCode::Char('d')),
+                    ],
+                    delete_backward_word: vec![
+                        key_hint::alt(KeyCode::Backspace),
+                        key_hint::ctrl(KeyCode::Backspace),
+                        KeyBinding::new(
+                            KeyCode::Backspace,
+                            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+                        ),
+                        key_hint::ctrl(KeyCode::Char('w')),
+                        KeyBinding::new(
+                            KeyCode::Char('h'),
+                            KeyModifiers::CONTROL | KeyModifiers::ALT,
+                        ),
+                    ],
+                    delete_forward_word: vec![
+                        key_hint::alt(KeyCode::Delete),
+                        key_hint::ctrl(KeyCode::Delete),
+                        KeyBinding::new(
+                            KeyCode::Delete,
+                            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+                        ),
+                        key_hint::alt(KeyCode::Char('d')),
+                    ],
+                    kill_line_start: vec![key_hint::ctrl(KeyCode::Char('u'))],
+                    kill_whole_line: Vec::new(),
+                    kill_line_end: vec![key_hint::ctrl(KeyCode::Char('k'))],
+                    yank: vec![key_hint::ctrl(KeyCode::Char('y'))],
+                },
+                vim_normal: VimNormalKeymap::defaults(),
+                vim_operator: VimOperatorKeymap::defaults(),
+                vim_text_object: VimTextObjectKeymap::defaults(),
                 list: ListKeymap::defaults(),
+            }
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct ChatKeymap {
+        pub(crate) interrupt_turn: Vec<KeyBinding>,
+        pub(crate) decrease_reasoning_effort: Vec<KeyBinding>,
+        pub(crate) increase_reasoning_effort: Vec<KeyBinding>,
+        pub(crate) edit_queued_message: Vec<KeyBinding>,
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct ComposerKeymap {
+        pub(crate) submit: Vec<KeyBinding>,
+        pub(crate) queue: Vec<KeyBinding>,
+        pub(crate) toggle_shortcuts: Vec<KeyBinding>,
+        pub(crate) history_search_previous: Vec<KeyBinding>,
+        pub(crate) history_search_next: Vec<KeyBinding>,
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct EditorKeymap {
+        pub(crate) insert_newline: Vec<KeyBinding>,
+        pub(crate) move_left: Vec<KeyBinding>,
+        pub(crate) move_right: Vec<KeyBinding>,
+        pub(crate) move_up: Vec<KeyBinding>,
+        pub(crate) move_down: Vec<KeyBinding>,
+        pub(crate) move_word_left: Vec<KeyBinding>,
+        pub(crate) move_word_right: Vec<KeyBinding>,
+        pub(crate) move_line_start: Vec<KeyBinding>,
+        pub(crate) move_line_end: Vec<KeyBinding>,
+        pub(crate) delete_backward: Vec<KeyBinding>,
+        pub(crate) delete_forward: Vec<KeyBinding>,
+        pub(crate) delete_backward_word: Vec<KeyBinding>,
+        pub(crate) delete_forward_word: Vec<KeyBinding>,
+        pub(crate) kill_line_start: Vec<KeyBinding>,
+        pub(crate) kill_whole_line: Vec<KeyBinding>,
+        pub(crate) kill_line_end: Vec<KeyBinding>,
+        pub(crate) yank: Vec<KeyBinding>,
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct VimNormalKeymap {
+        pub(crate) enter_insert: Vec<KeyBinding>,
+        pub(crate) append_after_cursor: Vec<KeyBinding>,
+        pub(crate) append_line_end: Vec<KeyBinding>,
+        pub(crate) insert_line_start: Vec<KeyBinding>,
+        pub(crate) open_line_below: Vec<KeyBinding>,
+        pub(crate) open_line_above: Vec<KeyBinding>,
+        pub(crate) move_left: Vec<KeyBinding>,
+        pub(crate) move_right: Vec<KeyBinding>,
+        pub(crate) move_up: Vec<KeyBinding>,
+        pub(crate) move_down: Vec<KeyBinding>,
+        pub(crate) move_word_forward: Vec<KeyBinding>,
+        pub(crate) move_word_backward: Vec<KeyBinding>,
+        pub(crate) move_word_end: Vec<KeyBinding>,
+        pub(crate) move_line_start: Vec<KeyBinding>,
+        pub(crate) move_line_end: Vec<KeyBinding>,
+        pub(crate) delete_char: Vec<KeyBinding>,
+        pub(crate) substitute_char: Vec<KeyBinding>,
+        pub(crate) delete_to_line_end: Vec<KeyBinding>,
+        pub(crate) change_to_line_end: Vec<KeyBinding>,
+        pub(crate) yank_line: Vec<KeyBinding>,
+        pub(crate) paste_after: Vec<KeyBinding>,
+        pub(crate) start_delete_operator: Vec<KeyBinding>,
+        pub(crate) start_yank_operator: Vec<KeyBinding>,
+        pub(crate) start_change_operator: Vec<KeyBinding>,
+        pub(crate) cancel_operator: Vec<KeyBinding>,
+    }
+
+    impl VimNormalKeymap {
+        fn defaults() -> Self {
+            Self {
+                enter_insert: vec![
+                    key_hint::plain(KeyCode::Char('i')),
+                    key_hint::plain(KeyCode::Insert),
+                ],
+                append_after_cursor: vec![key_hint::plain(KeyCode::Char('a'))],
+                append_line_end: vec![
+                    key_hint::shift(KeyCode::Char('a')),
+                    key_hint::plain(KeyCode::Char('A')),
+                ],
+                insert_line_start: vec![
+                    key_hint::shift(KeyCode::Char('i')),
+                    key_hint::plain(KeyCode::Char('I')),
+                ],
+                open_line_below: vec![key_hint::plain(KeyCode::Char('o'))],
+                open_line_above: vec![
+                    key_hint::shift(KeyCode::Char('o')),
+                    key_hint::plain(KeyCode::Char('O')),
+                ],
+                move_left: vec![
+                    key_hint::plain(KeyCode::Char('h')),
+                    key_hint::plain(KeyCode::Left),
+                ],
+                move_right: vec![
+                    key_hint::plain(KeyCode::Char('l')),
+                    key_hint::plain(KeyCode::Right),
+                ],
+                move_up: vec![
+                    key_hint::plain(KeyCode::Char('k')),
+                    key_hint::plain(KeyCode::Up),
+                ],
+                move_down: vec![
+                    key_hint::plain(KeyCode::Char('j')),
+                    key_hint::plain(KeyCode::Down),
+                ],
+                move_word_forward: vec![key_hint::plain(KeyCode::Char('w'))],
+                move_word_backward: vec![key_hint::plain(KeyCode::Char('b'))],
+                move_word_end: vec![key_hint::plain(KeyCode::Char('e'))],
+                move_line_start: vec![key_hint::plain(KeyCode::Char('0'))],
+                move_line_end: vec![
+                    key_hint::plain(KeyCode::Char('$')),
+                    key_hint::shift(KeyCode::Char('$')),
+                ],
+                delete_char: vec![key_hint::plain(KeyCode::Char('x'))],
+                substitute_char: vec![key_hint::plain(KeyCode::Char('s'))],
+                delete_to_line_end: vec![
+                    key_hint::shift(KeyCode::Char('d')),
+                    key_hint::plain(KeyCode::Char('D')),
+                ],
+                change_to_line_end: vec![
+                    key_hint::shift(KeyCode::Char('c')),
+                    key_hint::plain(KeyCode::Char('C')),
+                ],
+                yank_line: vec![
+                    key_hint::shift(KeyCode::Char('y')),
+                    key_hint::plain(KeyCode::Char('Y')),
+                ],
+                paste_after: vec![key_hint::plain(KeyCode::Char('p'))],
+                start_delete_operator: vec![key_hint::plain(KeyCode::Char('d'))],
+                start_yank_operator: vec![key_hint::plain(KeyCode::Char('y'))],
+                start_change_operator: vec![key_hint::plain(KeyCode::Char('c'))],
+                cancel_operator: vec![key_hint::plain(KeyCode::Esc)],
+            }
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct VimOperatorKeymap {
+        pub(crate) delete_line: Vec<KeyBinding>,
+        pub(crate) yank_line: Vec<KeyBinding>,
+        pub(crate) motion_left: Vec<KeyBinding>,
+        pub(crate) motion_right: Vec<KeyBinding>,
+        pub(crate) motion_up: Vec<KeyBinding>,
+        pub(crate) motion_down: Vec<KeyBinding>,
+        pub(crate) motion_word_forward: Vec<KeyBinding>,
+        pub(crate) motion_word_backward: Vec<KeyBinding>,
+        pub(crate) motion_word_end: Vec<KeyBinding>,
+        pub(crate) motion_line_start: Vec<KeyBinding>,
+        pub(crate) motion_line_end: Vec<KeyBinding>,
+        pub(crate) select_inner_text_object: Vec<KeyBinding>,
+        pub(crate) select_around_text_object: Vec<KeyBinding>,
+        pub(crate) cancel: Vec<KeyBinding>,
+    }
+
+    impl VimOperatorKeymap {
+        fn defaults() -> Self {
+            Self {
+                delete_line: vec![key_hint::plain(KeyCode::Char('d'))],
+                yank_line: vec![key_hint::plain(KeyCode::Char('y'))],
+                motion_left: vec![key_hint::plain(KeyCode::Char('h'))],
+                motion_right: vec![key_hint::plain(KeyCode::Char('l'))],
+                motion_up: vec![key_hint::plain(KeyCode::Char('k'))],
+                motion_down: vec![key_hint::plain(KeyCode::Char('j'))],
+                motion_word_forward: vec![key_hint::plain(KeyCode::Char('w'))],
+                motion_word_backward: vec![key_hint::plain(KeyCode::Char('b'))],
+                motion_word_end: vec![key_hint::plain(KeyCode::Char('e'))],
+                motion_line_start: vec![key_hint::plain(KeyCode::Char('0'))],
+                motion_line_end: vec![
+                    key_hint::plain(KeyCode::Char('$')),
+                    key_hint::shift(KeyCode::Char('$')),
+                ],
+                select_inner_text_object: vec![key_hint::plain(KeyCode::Char('i'))],
+                select_around_text_object: vec![key_hint::plain(KeyCode::Char('a'))],
+                cancel: vec![key_hint::plain(KeyCode::Esc)],
+            }
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    pub(crate) struct VimTextObjectKeymap {
+        pub(crate) word: Vec<KeyBinding>,
+        pub(crate) big_word: Vec<KeyBinding>,
+        pub(crate) parentheses: Vec<KeyBinding>,
+        pub(crate) brackets: Vec<KeyBinding>,
+        pub(crate) braces: Vec<KeyBinding>,
+        pub(crate) double_quote: Vec<KeyBinding>,
+        pub(crate) single_quote: Vec<KeyBinding>,
+        pub(crate) backtick: Vec<KeyBinding>,
+        pub(crate) cancel: Vec<KeyBinding>,
+    }
+
+    impl VimTextObjectKeymap {
+        fn defaults() -> Self {
+            Self {
+                word: vec![key_hint::plain(KeyCode::Char('w'))],
+                big_word: vec![
+                    key_hint::shift(KeyCode::Char('w')),
+                    key_hint::plain(KeyCode::Char('W')),
+                ],
+                parentheses: vec![
+                    key_hint::plain(KeyCode::Char('(')),
+                    key_hint::shift(KeyCode::Char('(')),
+                    key_hint::plain(KeyCode::Char(')')),
+                    key_hint::shift(KeyCode::Char(')')),
+                    key_hint::plain(KeyCode::Char('b')),
+                ],
+                brackets: vec![
+                    key_hint::plain(KeyCode::Char('[')),
+                    key_hint::plain(KeyCode::Char(']')),
+                ],
+                braces: vec![
+                    key_hint::plain(KeyCode::Char('{')),
+                    key_hint::shift(KeyCode::Char('{')),
+                    key_hint::plain(KeyCode::Char('}')),
+                    key_hint::shift(KeyCode::Char('}')),
+                    key_hint::shift(KeyCode::Char('b')),
+                    key_hint::plain(KeyCode::Char('B')),
+                ],
+                double_quote: vec![
+                    key_hint::plain(KeyCode::Char('"')),
+                    key_hint::shift(KeyCode::Char('"')),
+                ],
+                single_quote: vec![key_hint::plain(KeyCode::Char('\''))],
+                backtick: vec![key_hint::plain(KeyCode::Char('`'))],
+                cancel: vec![key_hint::plain(KeyCode::Esc)],
             }
         }
     }

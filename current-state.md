@@ -200,13 +200,37 @@ upstream `.snap` goldens are intentionally not tracked.
 
 TUI launch-confirmation follow-up: the launch wizard now has Step 4 confirmation
 on top of the current Codex menu-surface review. Enter from review opens
-confirmation, `b`, Backspace, or Esc returns to review, and `q` still exits from
-the shell. The confirmation screen keeps the exact planner command visible and
-uses `LaunchPlanData.confirm_required` as the only typed-confirm gate. Plans
-that need extra intent require typing `launch`; secure/default plans confirm
-with Enter. This remains a read-only preview: confirmation shows an
+confirmation, and the confirmation screen keeps the exact planner command
+visible while using `LaunchPlanData.confirm_required` as the only typed-confirm
+gate. Plans that need extra intent now use the vendored Codex `TextArea`
+editor primitive for the confirmation phrase. While that text field is focused,
+plain `q` and `?` are text input instead of shell shortcuts; Esc returns to
+review. Paste is ignored for the lower-security confirmation phrase so the
+extra intent still means typing. Secure/default plans still confirm with Enter
+and keep `q` as the shell quit shortcut. This remains a read-only preview:
+confirmation shows an
 acknowledgement, but the TUI does not start containers, run preflight commands,
 or write launch state yet.
+
+TUI confirm-composer follow-up: `crates/runhaven-tui` now compiles the vendored
+Codex `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs` through the
+staging facade. The facade has the Codex editor/Vim keymap defaults and a tiny
+local `codex_protocol::user_input` compatibility module for the byte-range text
+element types used by the textarea. The upstream deterministic textarea tests
+run by default; the snapshot and randomized stress tests remain opt-in with the
+same `codex-vendored-tests` policy as the other upstream snapshot goldens.
+The full Codex `BottomPane` and `ChatComposer` remain the next source-first
+integration target.
+
+TUI capabilities-doc follow-up: `docs/plans/codex-tui-capabilities.md` now
+locks the full local Codex TUI capability survey into repo docs. Use it as the
+source map before custom TUI work. It confirms Codex already has mature terminal
+runtime, bottom-pane/composer, keymap, selection popup, approval, markdown,
+diff, streaming, history-cell, session, status, pet, terminal-title, and
+VT100/snapshot-test systems. For RunHaven, the next source-first target remains
+the full Codex `BottomPane` and `ChatComposer`, followed by runtime/event-stream
+alignment, streaming/history cells, approval surfaces, status, sessions, and
+terminal UI regression tests.
 
 Verified:
 
@@ -246,7 +270,9 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`
 - `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
 - `cargo test -p runhaven-tui --locked terminal_title --quiet`
+- `cargo test -p runhaven-tui --locked textarea --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
+- `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
 - `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
 - `cargo test -p runhaven-tui --locked pets --quiet`
 - `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
@@ -284,8 +310,8 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is deeper Codex bottom-pane
-runtime/composer integration, then real launch execution from the confirmation
-step once the command path stays planner-owned and inspectable. Feed
-RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
-instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is the full Codex
+`BottomPane`/`ChatComposer` path for the launch confirmation surface, then real
+launch execution from the confirmation step once the command path stays
+planner-owned and inspectable. Feed RunHaven-specific surfaces from the shared
+`RunHavenComponentPayload` contracts instead of ad hoc screen structs.

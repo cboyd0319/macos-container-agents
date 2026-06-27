@@ -89,6 +89,10 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
                 ShellAction::Continue => redraw = true,
                 ShellAction::Quit => break,
             },
+            Event::Paste(pasted) => {
+                state.handle_paste(&pasted);
+                redraw = true;
+            }
             Event::Resize(_, _) => redraw = true,
             _ => {}
         }
@@ -169,6 +173,12 @@ impl ShellState {
             return ShellAction::Continue;
         }
 
+        if self.launch_wizard.confirm_accepts_text_input() {
+            self.show_footer_help = false;
+            self.launch_wizard.handle_key(key);
+            return ShellAction::Continue;
+        }
+
         if matches!(key.code, KeyCode::Char('q')) {
             return ShellAction::Quit;
         }
@@ -184,11 +194,19 @@ impl ShellState {
         }
 
         self.launch_wizard.handle_key(key);
+        if self.launch_wizard.confirm_accepts_text_input() {
+            self.show_footer_help = false;
+        }
         if self.launch_wizard.is_cancelled() {
             ShellAction::Quit
         } else {
             ShellAction::Continue
         }
+    }
+
+    fn handle_paste(&mut self, pasted: &str) {
+        self.show_footer_help = false;
+        self.launch_wizard.handle_paste(pasted);
     }
 
     fn tick_rate(&self) -> Duration {
@@ -293,7 +311,11 @@ impl ShellState {
             status_line_value: Some(self.launch_wizard.footer_status_line()),
             status_line_enabled: true,
             key_hints: FooterKeyHints {
-                toggle_shortcuts: Some(key_hint::plain(KeyCode::Char('?'))),
+                toggle_shortcuts: if self.launch_wizard.confirm_accepts_text_input() {
+                    None
+                } else {
+                    Some(key_hint::plain(KeyCode::Char('?')))
+                },
                 queue: None,
                 insert_newline: None,
                 external_editor: None,
@@ -308,7 +330,12 @@ impl ShellState {
     }
 
     fn footer_help_items(&self) -> Vec<(String, String)> {
-        let mut items = if self.launch_wizard.is_reviewing() || self.launch_wizard.is_confirming() {
+        let mut items = if self.launch_wizard.confirm_accepts_text_input() {
+            vec![
+                ("esc".to_string(), "back".to_string()),
+                ("enter".to_string(), "confirm".to_string()),
+            ]
+        } else if self.launch_wizard.is_reviewing() || self.launch_wizard.is_confirming() {
             vec![
                 ("b".to_string(), "back".to_string()),
                 ("esc".to_string(), "back".to_string()),
@@ -523,6 +550,9 @@ fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     state.launch_wizard.render(content_area, frame.buffer_mut());
     state.render_footer(footer_area, frame.buffer_mut());
     state.prepare_image_smoke_draw(content_area, footer_area.y);
+    if let Some(cursor) = state.launch_wizard.confirm_cursor_position(content_area) {
+        frame.set_cursor_position(cursor);
+    }
 }
 
 #[cfg(test)]
@@ -690,6 +720,55 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             ShellAction::Quit
         );
+    }
+
+    #[test]
+    fn shell_typed_confirm_captures_shortcuts_and_rejects_paste() {
+        let mut state = confirm_required_shell_state();
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert!(state.show_footer_help);
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+
+        assert!(state.launch_wizard.confirm_accepts_text_input());
+        assert!(!state.show_footer_help);
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(!output.contains("? help"));
+        assert!(!output.contains("q quits"));
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert_eq!(state.launch_wizard.confirm_text(), "?q");
+        assert!(!state.show_footer_help);
+
+        state.handle_paste("launch");
+        assert_eq!(state.launch_wizard.confirm_text(), "?q");
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(output.contains("Paste is ignored here."));
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 32)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, &mut state))
+            .expect("draw");
+        let cursor = terminal.backend().cursor_position();
+        assert!(cursor.x > 0);
+        assert!(cursor.y > 0);
     }
 
     #[test]
@@ -960,6 +1039,64 @@ mod tests {
         assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("0"))));
         assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("false"))));
         assert!(!env_flag_enabled(None));
+    }
+
+    fn confirm_required_shell_state() -> ShellState {
+        let agent = AgentCatalogItemData {
+            name: "codex".to_string(),
+            description: "Codex test profile".to_string(),
+            image: "runhaven/codex:0.1.0".to_string(),
+            sign_in: "runhaven login codex".to_string(),
+            broker: "no".to_string(),
+            default_network: "provider".to_string(),
+            provider_host_count: 1,
+        };
+        let plan = LaunchPlanData {
+            profile_name: "codex".to_string(),
+            workspace: "/tmp/project".to_string(),
+            workspace_scope: "current".to_string(),
+            workspace_scope_note: None,
+            auth_scope: "agent".to_string(),
+            session: "none".to_string(),
+            state_volume: "runhaven-codex-shared-home".to_string(),
+            container_name: "runhaven-codex".to_string(),
+            image: "runhaven/codex:0.1.0".to_string(),
+            worktree: None,
+            network: runhaven_core::ui_contracts::LaunchNetworkData {
+                mode: "provider".to_string(),
+                name: Some("runhaven-provider".to_string()),
+                summary: "provider allowlist".to_string(),
+                provider_allowed_hosts: vec!["api.openai.com".to_string()],
+                api_key_broker_env: None,
+            },
+            boundary: runhaven_core::ui_contracts::LaunchBoundaryData {
+                mounted_workspace: "/tmp/project -> /workspace".to_string(),
+                mounted_state_volume: "runhaven-codex-shared-home -> /home/agent".to_string(),
+                not_shared: vec![
+                    "host home folder".to_string(),
+                    "raw SSH keys".to_string(),
+                    "browser profiles".to_string(),
+                ],
+            },
+            preflight_commands: Vec::new(),
+            command: "container run --name runhaven-codex runhaven/codex:0.1.0".to_string(),
+            safety_notes: vec!["This plan uses a less safe launch option.".to_string()],
+            confirm_required: true,
+        };
+
+        ShellState {
+            launch_wizard: LaunchWizardView::new(
+                PathBuf::from("/tmp/project"),
+                vec![AgentLaunchPreview {
+                    agent,
+                    plan: Ok(plan),
+                }],
+                None,
+            ),
+            image_smoke: ImageSmoke::Disabled,
+            show_footer_help: false,
+            last_terminal_title: None,
+        }
     }
 
     fn render_to_text(state: &mut ShellState, width: u16, height: u16) -> String {
