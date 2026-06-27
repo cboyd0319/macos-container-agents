@@ -7,8 +7,3 @@ pub use run_history::{
     run_diff_text, runs_diff, runs_list, runs_log, runs_show, summarize_auth_broker,
     summarize_provider_policy, write_run_record,
 };
-
-/// Compatibility facade for callers that still use the pre-facade module name.
-pub mod history {
-    pub use super::run_history::*;
-}

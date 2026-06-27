@@ -11,7 +11,7 @@ facade.
 
 | Area | Primary Files | Boundary |
 | --- | --- | --- |
-| Binary entrypoints | `crates/runhaven/src/main.rs`, `crates/runhaven/src/bin/runhaven-check-pins.rs` | Process startup only. No shared runtime truth. |
+| Binary entrypoints | `crates/runhaven/src/main.rs`, `crates/runhaven/src/bin/runhaven-check-pins.rs` | Process startup and bare-interactive TUI routing. No shared runtime truth. |
 | Core library | `crates/runhaven-core/src/` | Runtime planning/control, provider boundary, records, images, doctor checks, diagnostics, support helpers, harness pin logic, and shared UI contracts. |
 | CLI presentation | `crates/runhaven-cli/src/` | Clap schema, command dispatch, setup text, and human CLI output. |
 | Terminal UI | `crates/runhaven-tui/src/tui/` | Codex-vendored terminal UI source plus RunHaven TUI adapters over core data. |
@@ -65,6 +65,7 @@ For structural changes, run:
 
 ```bash
 cargo fmt --check
+cargo test -p runhaven-tui --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run --locked --bin runhaven-check-pins

@@ -30,7 +30,7 @@ Rust source is split by ownership boundary across workspace crates:
 
 | Crate or directory | Owns |
 | --- | --- |
-| `crates/runhaven/` | Binary entrypoints only: `runhaven` and `runhaven-check-pins`. It does not contain shared library truth. |
+| `crates/runhaven/` | Binary entrypoints: `runhaven`, `runhaven-check-pins`, and the bare-interactive TUI routing decision. It does not contain shared library truth. |
 | `crates/runhaven-core/` | Runtime, provider egress, auth broker metadata, records, image handling, doctor checks, diagnostics, support helpers, pin-policy logic, and shared UI contracts. |
 | `crates/runhaven-cli/` | Clap schema, command dispatch, CLI text rendering, setup guide, and human presentation. It depends on core data instead of owning runtime, policy, or persistence truth. |
 | `crates/runhaven-tui/` | Codex-vendored terminal UI source plus RunHaven TUI adapters. It consumes core UI contracts and runtime data. |

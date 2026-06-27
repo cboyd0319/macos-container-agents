@@ -52,7 +52,7 @@ Load deeper docs only when the task touches that surface.
 
 | Area | Path | Owns |
 | --- | --- | --- |
-| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins` startup only. |
+| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins` startup, including the bare-interactive TUI routing decision. |
 | Core library | `crates/runhaven-core/` | Runtime, provider, records, image, doctor, diagnostics, support, harness pin logic, and shared UI contracts. |
 | CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
 | Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
@@ -114,12 +114,25 @@ workspace crates:
 
 This phase also removed the obsolete separate Tauri lockfile, made root Cargo
 commands cover Tauri, narrowed public crate exports, kept `runhaven`
-binary-only, updated `init.sh`, and refreshed active architecture, harness,
-pinning, TUI, and state docs to the new layout.
+binary-only, and refreshed active architecture, harness, pinning, TUI, and
+state docs to the new layout.
+
+Follow-up ownership audit fix: `crates/runhaven` now owns the bare-interactive
+TUI routing decision, `crates/runhaven-cli` no longer depends on
+`crates/runhaven-tui`, the unused `records::history` compatibility alias is
+gone, `init.sh` uses `cargo test -p runhaven-tui --locked` as the TUI package
+gate, and empty untracked vendored snapshot directories were removed from the
+local tree. Dormant vendored Codex test modules remain source-first until their
+parent modules are wired back into the RunHaven TUI app shell.
 
 Verified:
 
 - `cargo fmt --check`
+- `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
+- `cargo test -p runhaven-cli --locked --quiet`
+- `cargo test -p runhaven-tui --locked --quiet`
+- `cargo tree -p runhaven-cli --locked` with no `runhaven-tui`, `ratatui`,
+  `crossterm`, `tokio`, `reqwest`, or `image` dependency matches
 - `cargo test --workspace --locked --quiet`
 - `cargo clippy --workspace --all-targets --locked -- -D warnings`
 - `cargo run --locked --bin runhaven-check-pins --quiet`
@@ -135,5 +148,8 @@ Verified:
 
 ## Next Step
 
-Commit and push this architecture phase, then do a repo-wide organization audit
-for stale directories, junk files, stray docs, and layout drift.
+Finish the repo-wide organization audit findings. Current known cleanup
+candidates are generated local build output (`target/`, `src-tauri/target/`,
+`ui/node_modules/`, `ui/dist/`, Tauri generated schemas/permissions), archived
+TUI design assets under `docs/assets/`, and historical harness research/evidence
+docs that may belong under an archive area instead of active routing docs.

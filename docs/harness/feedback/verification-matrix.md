@@ -26,6 +26,7 @@ changes a security boundary.
 
 ```bash
 cargo fmt --check
+cargo test -p runhaven-tui --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run --locked --bin runhaven-check-pins

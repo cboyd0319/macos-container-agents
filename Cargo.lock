@@ -3595,6 +3595,7 @@ version = "0.5.0"
 dependencies = [
  "runhaven-cli",
  "runhaven-core",
+ "runhaven-tui",
  "tempfile",
 ]
 
@@ -3605,7 +3606,6 @@ dependencies = [
  "anyhow",
  "clap",
  "runhaven-core",
- "runhaven-tui",
  "serde_json",
  "tempfile",
  "uuid",

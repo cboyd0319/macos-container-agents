@@ -1,6 +1,24 @@
 use std::process::Command;
 
 #[test]
+fn bare_non_tty_prints_cli_help() {
+    let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
+        .output()
+        .expect("run runhaven");
+
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Usage: runhaven"));
+    assert!(stdout.contains("Commands:"));
+}
+
+#[test]
 fn plan_shell_dry_run_prints_container_boundary() {
     let workspace = tempfile::tempdir().expect("temp workspace");
     let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
