@@ -48,6 +48,18 @@ Immediate work:
   views.
 - Add tests for the service mapping independent of Ratatui rendering.
 
+Status:
+
+- Complete as of 2026-06-27. `app_shell.rs` now calls
+  `RunHavenTuiService::launch_preview_payload` instead of direct
+  `runhaven-core` planner/profile APIs.
+- `runhaven/service.rs` returns `AgentLaunchPreview` payloads with typed
+  per-agent `LaunchPreviewError` values, and `launch_wizard.rs` remains
+  UI-owned.
+- Service tests cover profile-name mapping, default network and auth scope,
+  provider metadata, shell internet confirmation, shared agent state volumes,
+  nested git workspace notes, and missing-workspace errors.
+
 ### Phase 2: Build The Codex-Shaped Backend Facade
 
 Create the local client/protocol/service described above.

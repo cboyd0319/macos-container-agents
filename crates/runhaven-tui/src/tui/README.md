@@ -49,10 +49,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 364.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 365.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 8.
+- RunHaven-only files: 9.
 - Copied Codex files with local edits: 20.
 
 RunHaven-only files:
@@ -64,6 +64,7 @@ mod.rs
 pets/bundled_custom.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
+runhaven/service.rs
 terminal_detection.rs
 terminal_tests.rs
 ```
@@ -139,8 +140,11 @@ Local integration exceptions:
 - `app_shell.rs` is temporary RunHaven-owned shell glue. It restores bare
   interactive `runhaven` to a read-only launch preview while the full Codex app
   shell is still being adapted. It now hosts a Codex `ListSelectionView`
-  launch picker through `runhaven/launch_wizard.rs`, which consumes
-  `LaunchPlanData` from `crates/runhaven-core/src/ui_contracts.rs`.
+  launch picker through `runhaven/launch_wizard.rs`.
+- `runhaven/service.rs` is the temporary RunHaven TUI service seam. It turns
+  `runhaven-core` profiles and planner output into launch preview payloads, so
+  `app_shell.rs` does not call core planner APIs directly and
+  `launch_wizard.rs` stays UI-owned.
 
 Known integration gap:
 
@@ -148,9 +152,9 @@ Known integration gap:
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
 - The launch picker, read-only review, and confirmation screen are staged in
-  `app_shell.rs`, not the real Codex `App` loop. Workspace selection, policy
-  changes, and final foreground launch still need to be reattached through the
-  Codex-shaped runtime and typed backend facade.
+  `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
+  Workspace selection, policy changes, and final foreground launch still need
+  to be reattached through the Codex-shaped runtime and typed backend facade.
 - Foreground launch must be prepared by the RunHaven service but executed by the
   UI loop only after Codex terminal restore. Backend service tasks must not own
   raw terminal state.

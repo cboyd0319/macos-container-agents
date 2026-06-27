@@ -4,6 +4,8 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+use super::service::AgentLaunchPreview;
+use super::service::LaunchPreviewError;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
@@ -43,11 +45,6 @@ use crate::tui::bottom_pane::ViewCompletion;
 use crate::tui::bottom_pane::menu_surface_inset;
 use crate::tui::bottom_pane::render_menu_surface;
 
-pub(crate) struct AgentLaunchPreview {
-    pub(crate) agent: AgentCatalogItemData,
-    pub(crate) plan: Result<LaunchPlanData, String>,
-}
-
 pub(crate) struct LaunchWizardView {
     workspace_title: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
@@ -61,7 +58,7 @@ pub(crate) struct LaunchWizardView {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct AgentDecisionVm {
     agent: AgentCatalogItemData,
-    plan: Result<LaunchPlanData, String>,
+    plan: Result<LaunchPlanData, LaunchPreviewError>,
     status_label: String,
     auth_scope_label: String,
     auth_label: String,
@@ -409,7 +406,7 @@ impl AgentDecisionVm {
                 self.agent.description, self.agent.broker, self.agent.image
             )),
             is_disabled: plan_error.is_some(),
-            disabled_reason: plan_error,
+            disabled_reason: plan_error.map(|error| error.to_string()),
             dismiss_on_select: false,
             search_value: Some(self.search_value()),
             ..Default::default()
@@ -639,13 +636,13 @@ impl ReviewPlan {
 
         match &decision.plan {
             Ok(plan) => append_review_plan_lines(&mut lines, plan),
-            Err(message) => {
+            Err(error) => {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![Span::styled(
-                    "Plan could not be built.",
+                    error.reason(),
                     danger_style(),
                 )]));
-                lines.push(Line::from(message.clone()));
+                lines.push(Line::from(error.detail().to_string()));
             }
         }
 
@@ -722,13 +719,13 @@ impl ConfirmLaunch<'_> {
                 self.confirm_composer.text(),
                 self.confirm_notice.as_deref(),
             ),
-            Err(message) => {
+            Err(error) => {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![Span::styled(
-                    "Plan could not be built.",
+                    error.reason(),
                     danger_style(),
                 )]));
-                lines.push(Line::from(message.clone()));
+                lines.push(Line::from(error.detail().to_string()));
             }
         }
 
@@ -885,13 +882,13 @@ impl PlanPreview {
 
         match &decision.plan {
             Ok(plan) => append_plan_lines(&mut lines, plan),
-            Err(message) => {
+            Err(error) => {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![Span::styled(
-                    "Plan could not be built.",
+                    error.reason(),
                     danger_style(),
                 )]));
-                lines.push(Line::from(message.clone()));
+                lines.push(Line::from(error.detail().to_string()));
             }
         }
 
@@ -1159,6 +1156,7 @@ fn workspace_title(workspace: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::runhaven::service::LaunchPreviewError;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use runhaven_core::ui_contracts::LaunchBoundaryData;
@@ -1185,7 +1183,9 @@ mod tests {
     fn blocked_preview(name: &str) -> AgentLaunchPreview {
         AgentLaunchPreview {
             agent: agent(name),
-            plan: Err("workspace is blocked".to_string()),
+            plan: Err(LaunchPreviewError::PlanBuildFailed {
+                detail: "workspace is blocked".to_string(),
+            }),
         }
     }
 

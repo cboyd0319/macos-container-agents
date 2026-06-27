@@ -376,17 +376,35 @@ Latest TUI Phase 0 baseline lock:
   `python3 -m json.tool feature_list.json`, whitespace and ASCII scans, and
   `git diff --check`.
 
+Latest TUI Phase 1 service extraction:
+
+- 2026-06-27: Completed Phase 1 of the Strategy C plan. `app_shell.rs` no
+  longer calls `runhaven-core` planner/profile APIs directly. The temporary
+  RunHaven TUI service in `crates/runhaven-tui/src/tui/runhaven/service.rs`
+  builds launch preview payloads from core profiles and `LaunchPlanData`, keeps
+  per-agent planner errors typed, and leaves
+  `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs` as the UI-owned view
+  model over Codex `ListSelectionView`. Service tests cover agent-name
+  mapping, default network and auth scope, provider metadata, shell internet
+  confirmation, shared agent state volumes, nested git workspace notes, and
+  fail-per-agent missing-workspace errors. Current vendor audit: 894 upstream
+  files, 365 RunHaven files, 356 common paths, 538 upstream `.snap` files
+  external by default, 9 RunHaven-only files, and 20 copied Codex files with
+  local edits.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/`, starting with
-Phase 1: stop growing `app_shell.rs` by moving direct core calls into a
-RunHaven TUI service that returns payloads and events while
-`launch_wizard.rs` stays UI-owned. Then build the Codex-shaped backend facade,
-compile the dormant runtime spine with the smallest
-protocol/utility surface, prove terminal handoff, and only then adapt the
-native `App`/`BottomPane`/`ChatWidget` path. Foreground launch remains
-read-only until the UI thread owns terminal restore and `launch_run_plan`.
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 2:
+build the Codex-shaped backend facade. Add the local typed client/protocol
+service with `request_typed`, `next_event`, `shutdown`, request-handle
+cancellation, bounded events, lag signaling, lossless transcript/completion
+delivery, best-effort progress/log delivery, typed unsupported and validation
+errors, and the fail-closed method matrix. After that, compile the dormant
+runtime spine with the smallest protocol/utility surface, prove terminal
+handoff, and only then adapt the native `App`/`BottomPane`/`ChatWidget` path.
+Foreground launch remains read-only until the UI thread owns terminal restore
+and `launch_run_plan`.

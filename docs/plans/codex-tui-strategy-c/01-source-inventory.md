@@ -8,13 +8,14 @@ Observed current state:
   `crates/runhaven-tui/src/tui/`.
 - The pinned Codex source has 894 total files under `codex-rs/tui/src`: 355
   Rust files, one non-snapshot instruction file, and 538 upstream `.snap`
-  goldens. RunHaven shares the 356 non-snapshot upstream paths and adds seven
+  goldens. RunHaven shares the 356 non-snapshot upstream paths and adds eight
   local Rust files:
   - `app_shell.rs`
   - `mod.rs`
   - `pets/bundled_custom.rs`
   - `runhaven/mod.rs`
   - `runhaven/launch_wizard.rs`
+  - `runhaven/service.rs`
   - `terminal_detection.rs`
   - `terminal_tests.rs`
 - RunHaven currently does not copy upstream `.snap` files. With the
@@ -29,6 +30,8 @@ Observed current state:
   - `crates/runhaven-tui/src/tui/app_shell.rs` hosts a read-only launch picker,
     review step, confirmation step, footer, terminal title, and opt-in pet image
     smoke path.
+  - `crates/runhaven-tui/src/tui/runhaven/service.rs` owns the temporary core
+    service seam for launch preview payloads.
   - `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs` maps
     `AgentCatalogData` and `LaunchPlanData` into Codex `ListSelectionView`.
 - The currently wired Codex primitives are only a subset:
@@ -120,6 +123,7 @@ These files are intentionally not upstream Codex files:
 | `tui/mod.rs` | Temporary staged facade for compiling selected Codex modules. | Shrink and eventually replace with a Codex-shaped module tree. |
 | `tui/app_shell.rs` | Temporary read-only launch preview shell. | Delete or reduce once Codex `App` is adapted. |
 | `tui/runhaven/mod.rs` | RunHaven TUI adapter namespace. | Keep. |
+| `tui/runhaven/service.rs` | Temporary RunHaven service seam over core planner/profile payloads. | Keep until the Codex-shaped app-server facade absorbs it. |
 | `tui/runhaven/launch_wizard.rs` | RunHaven-owned mapping from planner payloads to Codex picker/review UI. | Keep, but make it a normal view launched by Codex `App`, not the app itself. |
 | `tui/pets/bundled_custom.rs` | Materializes the bundled Cubby pet package into Codex custom-pet shape. | Keep. |
 | `tui/terminal_detection.rs`, `tui/terminal_tests.rs` | Copied from Codex `terminal-detection` crate. | Prefer moving to a local `codex-terminal-detection` vendor crate when the workspace can absorb it cleanly. |

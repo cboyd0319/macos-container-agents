@@ -19,8 +19,8 @@ use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
 
-use super::runhaven::launch_wizard::AgentLaunchPreview;
 use super::runhaven::launch_wizard::LaunchWizardView;
+use super::runhaven::service::RunHavenTuiService;
 use crate::key_hint;
 use crate::render::renderable::Renderable;
 use crate::tui::bottom_pane::FooterKeyHints;
@@ -29,14 +29,6 @@ use crate::tui::bottom_pane::FooterProps;
 use crate::tui::terminal_title::SetTerminalTitleResult;
 use crate::tui::terminal_title::clear_terminal_title;
 use crate::tui::terminal_title::set_terminal_title;
-use runhaven_core::runtime::plans::AuthScope;
-use runhaven_core::runtime::plans::RunOptions;
-use runhaven_core::runtime::plans::WorkspaceScope;
-use runhaven_core::runtime::plans::build_run_plan;
-use runhaven_core::runtime::plans::default_network_mode;
-use runhaven_core::runtime::profiles::profiles;
-use runhaven_core::ui_contracts::AgentCatalogItemData;
-use runhaven_core::ui_contracts::LaunchPlanData;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
 
@@ -120,45 +112,14 @@ impl ShellState {
     }
 
     fn for_workspace(workspace: impl AsRef<Path>) -> Result<Self> {
-        let workspace = workspace.as_ref().to_path_buf();
         let image_smoke = ImageSmoke::from_env();
         let image_smoke_status = image_smoke.status_line();
-        let previews = profiles()
-            .into_iter()
-            .map(|profile| {
-                let network = default_network_mode(&profile);
-                let agent = AgentCatalogItemData::from_profile(&profile);
-                let plan = build_run_plan(RunOptions {
-                    profile,
-                    workspace: workspace.clone(),
-                    agent_args: Vec::new(),
-                    image: None,
-                    cpus: "4".to_string(),
-                    memory: "4g".to_string(),
-                    network,
-                    workspace_scope: WorkspaceScope::Current,
-                    session: None,
-                    auth_scope: AuthScope::Agent,
-                    read_only_workspace: false,
-                    ssh: false,
-                    env: Vec::new(),
-                    user: "agent".to_string(),
-                    interactive: true,
-                    tty: true,
-                    allow_sensitive_workspace: false,
-                    allow_root_user: false,
-                    provider_hosts: Vec::new(),
-                    api_key_broker_env: None,
-                    worktree: None,
-                    run_id: None,
-                })
-                .map(|plan| LaunchPlanData::from(&plan))
-                .map_err(|error| error.to_string());
-
-                AgentLaunchPreview { agent, plan }
-            })
-            .collect();
-        let launch_wizard = LaunchWizardView::new(workspace, previews, image_smoke_status);
+        let launch_payload = RunHavenTuiService::new().launch_preview_payload(workspace);
+        let launch_wizard = LaunchWizardView::new(
+            launch_payload.workspace,
+            launch_payload.previews,
+            image_smoke_status,
+        );
 
         Ok(Self {
             launch_wizard,
@@ -558,6 +519,7 @@ fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::runhaven::service::confirm_required_preview_for_tests;
     use crossterm::event::KeyModifiers;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
@@ -1042,55 +1004,10 @@ mod tests {
     }
 
     fn confirm_required_shell_state() -> ShellState {
-        let agent = AgentCatalogItemData {
-            name: "codex".to_string(),
-            description: "Codex test profile".to_string(),
-            image: "runhaven/codex:0.1.0".to_string(),
-            sign_in: "runhaven login codex".to_string(),
-            broker: "no".to_string(),
-            default_network: "provider".to_string(),
-            provider_host_count: 1,
-        };
-        let plan = LaunchPlanData {
-            profile_name: "codex".to_string(),
-            workspace: "/tmp/project".to_string(),
-            workspace_scope: "current".to_string(),
-            workspace_scope_note: None,
-            auth_scope: "agent".to_string(),
-            session: "none".to_string(),
-            state_volume: "runhaven-codex-shared-home".to_string(),
-            container_name: "runhaven-codex".to_string(),
-            image: "runhaven/codex:0.1.0".to_string(),
-            worktree: None,
-            network: runhaven_core::ui_contracts::LaunchNetworkData {
-                mode: "provider".to_string(),
-                name: Some("runhaven-provider".to_string()),
-                summary: "provider allowlist".to_string(),
-                provider_allowed_hosts: vec!["api.openai.com".to_string()],
-                api_key_broker_env: None,
-            },
-            boundary: runhaven_core::ui_contracts::LaunchBoundaryData {
-                mounted_workspace: "/tmp/project -> /workspace".to_string(),
-                mounted_state_volume: "runhaven-codex-shared-home -> /home/agent".to_string(),
-                not_shared: vec![
-                    "host home folder".to_string(),
-                    "raw SSH keys".to_string(),
-                    "browser profiles".to_string(),
-                ],
-            },
-            preflight_commands: Vec::new(),
-            command: "container run --name runhaven-codex runhaven/codex:0.1.0".to_string(),
-            safety_notes: vec!["This plan uses a less safe launch option.".to_string()],
-            confirm_required: true,
-        };
-
         ShellState {
             launch_wizard: LaunchWizardView::new(
                 PathBuf::from("/tmp/project"),
-                vec![AgentLaunchPreview {
-                    agent,
-                    plan: Ok(plan),
-                }],
+                vec![confirm_required_preview_for_tests()],
                 None,
             ),
             image_smoke: ImageSmoke::Disabled,
