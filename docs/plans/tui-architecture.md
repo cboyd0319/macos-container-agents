@@ -1,7 +1,7 @@
 # TUI Architecture Patterns
 
-Design guidance for the RunHaven terminal UI (`src/runhaven/cli/tui.rs` and its
-future submodules), drawn from studying the Codex `ratatui` TUI and adapting its
+Design guidance for the RunHaven terminal UI (`src/runhaven/cli/tui/` and its
+submodules), drawn from studying the Codex `ratatui` TUI and adapting its
 component approach to RunHaven's launcher and manager domain.
 
 RunHaven's TUI is not an agent chat; the agent's own chat runs inside the
@@ -70,6 +70,12 @@ from one source; hand-synced tokens drift.
 The brand graphics, startup chrome, and the mascot easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
+
+The first cut of this lives in `tui/mascot.rs`: a small "cube buddy", a glass
+container cube with a tiny agent spark inside, drawn as a half-block sprite (the
+guaranteed-portable rendering floor) and shown in the home banner. It is pure
+branding with no data plumbing, the smallest concrete step toward the lifecycle
+mark in `ratatui-brand-graphics.md`.
 
 ## Parity and tests
 

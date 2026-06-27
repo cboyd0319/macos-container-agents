@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
@@ -18,6 +18,8 @@ use ratatui::{DefaultTerminal, Frame};
 use super::app::{agent_broker, agent_sign_in};
 use crate::plans::default_network_mode;
 use crate::profiles::{AgentProfile, profiles};
+
+mod mascot;
 
 /// Launch the terminal UI. The terminal is restored on exit and on panic.
 pub fn run() -> Result<i32> {
@@ -111,12 +113,14 @@ impl App {
     }
 
     fn render_home(&mut self, frame: &mut Frame) {
-        let [header, body, footer] = layout(frame);
+        let [banner, body, footer] = Layout::vertical([
+            Constraint::Length(mascot::cell_height()),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .areas(frame.area());
 
-        let title = Paragraph::new(Line::from("RunHaven".bold()))
-            .block(Block::bordered().title(format!(" v{} ", env!("CARGO_PKG_VERSION"))))
-            .centered();
-        frame.render_widget(title, header);
+        render_banner(frame, banner);
 
         let items: Vec<ListItem> = self
             .agents
@@ -164,8 +168,28 @@ impl App {
     }
 }
 
+/// The home banner: the mascot on the left, brand and tagline on the right.
+fn render_banner(frame: &mut Frame, area: Rect) {
+    let [mascot_area, brand_area] = Layout::horizontal([
+        Constraint::Length(mascot::CELL_WIDTH + 2),
+        Constraint::Min(0),
+    ])
+    .areas(area);
+
+    frame.render_widget(Paragraph::new(mascot::lines()), mascot_area);
+
+    let brand = Paragraph::new(vec![
+        Line::from(""),
+        Line::from("RunHaven".bold()),
+        Line::from(format!("v{}", env!("CARGO_PKG_VERSION")).dim()),
+        Line::from(""),
+        Line::from("run agents in a safe haven".dim()),
+    ]);
+    frame.render_widget(brand, brand_area);
+}
+
 /// The shared three-row layout: a header, a flexible body, and a one-line hint.
-fn layout(frame: &Frame) -> [ratatui::layout::Rect; 3] {
+fn layout(frame: &Frame) -> [Rect; 3] {
     Layout::vertical([
         Constraint::Length(3),
         Constraint::Min(0),
@@ -185,6 +209,22 @@ mod tests {
         let app = App::new();
         assert_eq!(app.agents.len(), 6);
         assert_eq!(app.list.selected(), Some(0));
+    }
+
+    #[test]
+    fn home_banner_shows_mascot_and_brand() {
+        let mut terminal = Terminal::new(TestBackend::new(48, 22)).unwrap();
+        let mut app = App::new();
+        terminal.draw(|f| app.render(f)).unwrap();
+        let buf = terminal.backend().buffer();
+        // The mascot occupies the top-left of the banner.
+        assert_eq!(buf[(2, 0)].symbol(), "\u{2580}");
+        // The brand sits to the right of the mascot.
+        let brand_row: String = (0..buf.area.width).map(|x| buf[(x, 1)].symbol()).collect();
+        assert!(
+            brand_row.contains("RunHaven"),
+            "banner row was {brand_row:?}"
+        );
     }
 
     #[test]

@@ -140,6 +140,16 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: TUI slice 2b (mascot). Moved `tui.rs` to `tui/mod.rs` and added a
+  `tui/mascot.rs` submodule so branding stays separate from the functional cards.
+  The mascot is the "cube buddy": a glass container cube with a tiny gold agent
+  spark inside, on a layered base, hand-built as a Unicode half-block sprite (the
+  guaranteed-portable rendering floor, no image protocol) using a logo-derived
+  blue/cyan/teal palette. It renders in the home banner (mascot left, brand and
+  tagline right); the detail screen is unchanged. The reference render is in
+  `docs/assets/mascot-cube-buddy.png`. Sprite width and even-row-count are
+  enforced by a test. Verified: cargo fmt, `cargo test --locked` (77 lib incl. 7
+  TUI tests + 6 integration), clippy `-D warnings`, pin check, `git diff --check`.
 - 2026-06-26: Captured TUI architecture patterns in
   `docs/plans/tui-architecture.md` (study of the Codex `ratatui` TUI): the
   planner and policy objects are the single source of truth; adapters build and
