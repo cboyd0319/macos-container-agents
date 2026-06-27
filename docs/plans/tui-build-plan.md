@@ -245,8 +245,8 @@ terminal image overlay ownership.
 | `diff_render.rs` + `diff_model.rs` | evaluated at Phase 4, not vendored | RunHaven uses its own `records::run_diff_text` data path and text diff view rather than pulling Codex git helpers |
 | `pager_overlay.rs` | evaluated at Phase 3, not vendored | upstream transcript/chat overlay is tied to Codex history cells, keymaps, and app events; RunHaven ships a dedicated bounded log viewer instead |
 | `status_indicator_widget.rs` / throbber | not vendored | doctor and diagnostics remain static/plain until a real async spinner is needed |
-| `onboarding/` | referenced at Phase 5, not vendored | RunHaven ships its own first-run guide over the shared planner/run surfaces |
-| `notifications/` | referenced at Phase 5, not vendored | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
+| `onboarding/` | evaluate during product-screen reattachment | RunHaven ships its own first-run guide over the shared planner/run surfaces |
+| `notifications/` | evaluate during product-screen reattachment | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
 | `markdown_render.rs` / `markdown.rs` | reference | rich help/remediation (or `pulldown-cmark` directly) |
 | `terminal_palette.rs` / `terminal_probe.rs` | reference (heavy) | true terminal-aware default colors |
 | `tooltips.{rs,txt}` | superseded by evaluation row above | keep RunHaven's current tips until Codex timing/suppression/accessibility behavior is reviewed |
@@ -273,12 +273,14 @@ Current phase order:
 1. Lock the vendor baseline.
 2. Stop growing the temporary shell.
 3. Build the Codex-shaped backend facade.
-4. Compile the dormant runtime spine.
-5. Prove terminal handoff before real foreground launch.
-6. Adapt `App` and `BottomPane`.
-7. Adapt `ChatWidget` transcript and status.
-8. Reattach RunHaven product screens.
-9. Cull or stub unsupported Codex product features.
+4. Adapt `App` and `BottomPane`.
+5. Adapt `ChatWidget` transcript and status.
+6. Reattach RunHaven product screens.
+7. Cull or stub unsupported Codex product features.
+
+The runtime-spine compile and terminal-handoff proof completed on 2026-06-27 as
+supporting gates for Phase 3. They do not renumber the canonical Strategy C
+plan.
 
 Key corrections from the Strategy C review:
 
@@ -287,9 +289,9 @@ Key corrections from the Strategy C review:
   events; the UI turns them into views.
 - Foreground launch is prepared through the typed facade, but the UI loop owns
   terminal restore and `launch_run_plan`.
-- Broad Codex backend crates are not default workspace members or runtime
-  authorities. Prefer narrow adapters plus the smallest protocol/utility crates
-  required by the next compiled slice.
+- Vendor Codex protocol, utility, and TUI-adjacent crates first, preserving
+  original crate names where practical. Keep active RunHaven behavior behind
+  the RunHaven backend boundary.
 - Upstream `.snap` files remain external by default in the local Codex checkout.
   RunHaven snapshots are generated only for wired RunHaven behavior.
 

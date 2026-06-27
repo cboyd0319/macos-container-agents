@@ -2,15 +2,13 @@
 
 ## Dependency And Protocol Strategy
 
-Use a vendor-first dependency strategy, but keep the active workspace ownership
-small. The default is `runhaven-tui`-local adapters plus the smallest Codex
-protocol and utility crates needed by the next compiled slice.
+Use a vendor-first dependency strategy.
 
 ### Recommended For RunHaven: Vendored Codex Shape, RunHaven Backend
 
-Keep Codex TUI source layout and preserve original crate names where that is the
-smallest path for the next compiled slice. Replace only the active backend path
-with RunHaven-owned adapters:
+Keep Codex TUI source layout and vendor as many Codex crates as practical with
+their original crate names. Replace only the active backend path with
+RunHaven-owned adapters:
 
 ```text
 crates/runhaven-tui/src/tui/app_server_session.rs
@@ -46,10 +44,9 @@ impl AppServerClient {
 This preserves the Codex TUI's mental model while keeping RunHaven's runtime
 authority in `runhaven-core`.
 
-Use vendored or locally mirrored Codex request and notification types where
-practical. Add RunHaven-specific protocol extensions beside the Codex-shaped
-surface rather than replacing it. Do not invent direct widget-to-core calls as
-shortcuts.
+Use vendored Codex request and notification types where practical. Add
+RunHaven-specific protocol extensions beside the Codex-shaped surface rather
+than replacing it. Do not invent direct widget-to-core calls as shortcuts.
 
 ### Vendor Priority
 
@@ -80,9 +77,7 @@ Vendor in this order:
 - selected backend-adjacent crates as inert compatibility crates if keeping
   their names removes broad import rewrites
 
-Treat this as a priority list, not permission to add a broad parallel Codex
-workspace in one slice. This lets many upstream TUI imports remain unchanged,
-for example:
+This lets many upstream TUI imports remain unchanged, for example:
 
 ```rust
 use codex_app_server_protocol::ClientRequest;
@@ -105,11 +100,9 @@ The preferred path is:
 3. Swap the transport target to a RunHaven in-process service.
 4. Stub or feature-disable methods that would activate Codex backend behavior.
 
-If preserving the unchanged crate is cheaper than copying its shape, document
-the exact need first. Vendored Codex backend crates must not become runtime
-authorities or workspace members by default. Add them only when a later slice
-shows that the smaller adapter path is worse and records how `runhaven-core`
-stays authoritative.
+If preserving the unchanged crate is cheaper than copying its shape, vendor its
+transitive dependencies too, but keep them disconnected from active RunHaven
+actions until each behavior is reviewed.
 
 ### Codex TUI Manifest Coverage
 
@@ -122,7 +115,7 @@ slice. With the vendor-first assumption, classify them instead of omitting them:
 | `codex-app-server-client` | Vendor or mirror its public shape aggressively. Swap active transport to RunHaven service unless the full backend is intentionally reviewed. |
 | `codex-ansi-escape`, `codex-terminal-detection`, `codex-utils-*` | Vendor first. These are compatibility and terminal/helper crates, not product authority. |
 | `codex-config`, `codex-login`, `codex-cloud-config`, `codex-state`, `codex-rollout` | Vendor as compatibility source if needed, but keep active RunHaven config/auth/state paths separate. |
-| `codex-core`, `codex-app-server`, `codex-exec-server` | Do not add as default workspace members. Vendor only as inert or reviewed compatibility source after a specific slice proves the need. Do not let TUI actions call these instead of `runhaven-core`. |
+| `codex-core`, `codex-app-server`, `codex-exec-server` | Vendor only as inert or reviewed compatibility source. Do not let TUI actions call these instead of `runhaven-core`. |
 | `codex-connectors`, `codex-core-plugins`, `codex-core-skills`, `codex-plugin` | Vendor for source closeness. Keep plugin/app/connector/skill behavior fail-closed until RunHaven designs that boundary. |
 | `codex-file-search`, `codex-git-utils`, `codex-message-history` | Vendor where it avoids rewrites. Activate only within RunHaven workspace and record boundaries. |
 | `codex-model-provider`, `codex-model-provider-info`, `codex-models-manager` | Keep dormant unless RunHaven adds model/provider selection distinct from agent profiles. |
@@ -130,9 +123,10 @@ slice. With the vendor-first assumption, classify them instead of omitting them:
 | `codex-sandboxing`, `codex-windows-sandbox` | Vendor as source reference. RunHaven's macOS container boundary remains authoritative. |
 | `codex-arg0` | Needed only if RunHaven preserves Codex-style binary dispatch or remote app-server startup paths. |
 
-This table is source-first but not broad-crate-first. The mistake to avoid is
-not copying useful Codex TUI source. The other mistake is letting copied Codex
-backend paths become the path that launches or mutates RunHaven runs.
+This table is intentionally permissive about vendoring and strict about active
+authority. The mistake to avoid is not copying Codex source. The mistake is
+letting copied Codex backend paths become the path that launches or mutates
+RunHaven runs.
 
 ## Dependency Plan
 

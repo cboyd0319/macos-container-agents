@@ -195,6 +195,10 @@ Known integration gap:
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   Workspace selection, policy changes, and final foreground launch still need
   to be reattached through the Codex-shaped runtime.
+- `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If
+  `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
+  editor, clipboard copy, or hooks RPC modules are activated, the test requires
+  their risky upstream markers to be removed or fail-closed first.
 - Foreground launch must be prepared by the RunHaven service but executed by the
   UI loop only after Codex terminal restore. Backend service tasks must not own
   raw terminal state.

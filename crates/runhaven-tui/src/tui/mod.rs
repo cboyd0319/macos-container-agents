@@ -770,3 +770,90 @@ pub fn run() -> Result<i32> {
 
     app_shell::run()
 }
+
+#[cfg(test)]
+mod drift_tests {
+    fn module_declared(module_source: &str, module: &str) -> bool {
+        let private_decl = format!("mod {module};");
+        let crate_decl = format!("pub(crate) mod {module};");
+        let public_decl = format!("pub mod {module};");
+        module_source
+            .lines()
+            .map(str::trim)
+            .any(|line| line == private_decl || line == crate_decl || line == public_decl)
+    }
+
+    fn assert_risky_markers_absent_when_active(
+        module_source: &str,
+        module: &str,
+        source_path: &str,
+        source: &str,
+        markers: &[&str],
+    ) {
+        if !module_declared(module_source, module) {
+            return;
+        }
+
+        for marker in markers {
+            assert!(
+                !source.contains(marker),
+                "{module} is declared in tui/mod.rs, but {source_path} still contains risky upstream marker {marker:?}; remove or fail-close that behavior before activating the module"
+            );
+        }
+    }
+
+    #[test]
+    fn host_reaching_codex_surfaces_stay_dormant_until_sanitized() {
+        let module_source = include_str!("mod.rs");
+
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "app",
+            "app.rs",
+            include_str!("app.rs"),
+            &["std::env::vars().collect"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "app_server_session",
+            "app_server_session.rs",
+            include_str!("app_server_session.rs"),
+            &["mod fs;"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "onboarding",
+            "onboarding/auth.rs",
+            include_str!("onboarding/auth.rs"),
+            &["read_openai_api_key_from_env", "webbrowser::open"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "local_chatgpt_auth",
+            "local_chatgpt_auth.rs",
+            include_str!("local_chatgpt_auth.rs"),
+            &["OPENAI_API_KEY", "ChatGPT"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "external_editor",
+            "external_editor.rs",
+            include_str!("external_editor.rs"),
+            &["std::process::Command", "EDITOR"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "clipboard_copy",
+            "clipboard_copy.rs",
+            include_str!("clipboard_copy.rs"),
+            &["std::process::Command"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "hooks_rpc",
+            "hooks_rpc.rs",
+            include_str!("hooks_rpc.rs"),
+            &["hook", "Hook"],
+        );
+    }
+}

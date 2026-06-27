@@ -447,10 +447,21 @@ Latest TUI Phase 2 backend facade:
   `scripts/compare-codex-tui.sh`, `cargo run --locked --bin runhaven-check-pins --quiet`,
   JSON validation, ASCII and whitespace scans, and `git diff --check`.
 
-Latest TUI Phase 4 terminal handoff:
+Latest TUI Strategy C drift correction:
 
-- 2026-06-27: Completed Phase 4 of the Strategy C plan without wiring real
-  agent launch. `Tui::with_restored(...)` now has deterministic sequencing tests
+- 2026-06-27: Imported
+  `docs/plans/codex-tui-strategy-c/05-adversarial-drift-ledger.md` and restored
+  the plan's vendor-first wording. The canonical Strategy C phase order is back
+  to Phase 4 = adapt native `App` and `BottomPane`; the runtime-spine compile
+  and terminal-handoff proof are recorded as completed Phase 3 gates, not a
+  separate phase that shifts the target later. `tui/mod.rs` now has a guard
+  test that fails if dormant host-reaching Codex surfaces are declared before
+  their risky upstream markers are removed or fail-closed.
+
+Latest TUI Phase 3 runtime and handoff gate:
+
+- 2026-06-27: Completed the terminal-handoff proof without wiring real agent
+  launch. `Tui::with_restored(...)` now has deterministic sequencing tests
   for normal and alt-screen handoff, including child-error resume. The event
   broker has a pause/drop/resume regression to prove events sent while the
   source is dropped do not leak into the resumed TUI. Added the local
@@ -470,7 +481,7 @@ Latest TUI Phase 4 terminal handoff:
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 5:
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
 adapt the native `App` and `BottomPane` path. Foreground launch remains
 read-only until the native Codex app loop owns terminal restore and
 `launch_run_plan` is wired through the UI thread.

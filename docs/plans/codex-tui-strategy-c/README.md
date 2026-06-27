@@ -69,6 +69,7 @@ The finished integration is successful when:
 2. [02-vendoring-and-protocol.md](02-vendoring-and-protocol.md): vendor-first dependency strategy, protocol/client shape, and dependency additions.
 3. [03-runtime-wiring.md](03-runtime-wiring.md): target runtime wiring, RunHaven backend interface, Codex concept mapping, method surface, notifications, and launch flow.
 4. [04-implementation-and-verification.md](04-implementation-and-verification.md): migration phases, ownership rules, security requirements, verification, sync workflow, and remaining decisions.
+5. [05-adversarial-drift-ledger.md](05-adversarial-drift-ledger.md): independent drift audit, severity-ranked remediation backlog, and guardrails against regrowing the temporary shell.
 
 ## Bottom Line
 

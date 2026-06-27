@@ -127,20 +127,23 @@ Status:
   best-effort progress and log dropping, validation, backend, and deserialize
   errors, plus the fail-closed disabled-method matrix.
 
-### Phase 3: Compile The Dormant Runtime Spine
+### Phase 3: Switch To Codex Terminal Runtime
 
-Before switching runtime ownership, make the dormant Codex runtime spine compile
-with the smallest useful compatibility surface:
+Replace the `ratatui::try_init()` loop in `app_shell.rs` with Codex `Tui`.
+Bring the Codex runtime spine active with vendor-first crate wiring wherever
+practical:
 
 - `tui.rs` and `tui/*`
 - `custom_terminal.rs`
-- `app_server_session.rs` with unsupported backend methods stubbed or routed to
-  the local RunHaven facade
-- a minimal `App` shell shape, without activating the full product loop
+- terminal stderr guard
+- terminal title cleanup
+- pet image cleanup
+- `app_server_session.rs` with unsupported backend methods stubbed or routed
+  through the RunHaven backend boundary
+- enough `App` shape to host the current launch picker inside the Codex runtime
 
-Prefer local adapters and small protocol/utility crates over broad Codex backend
-workspace members. Required dependencies and crossterm features belong in this
-phase, with exact pins and pin-check evidence.
+Keep the current visual launch picker as the first screen if needed, but host it
+inside the Codex runtime.
 
 Phase gate:
 
@@ -148,38 +151,6 @@ Phase gate:
 - focused tests for the newly compiled adapter surface
 - `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
 - `cargo run --locked --bin runhaven-check-pins`
-
-Status 2026-06-27: complete. RunHaven compiles the vendored Codex `tui.rs`
-runtime spine as `codex_runtime`, including `tui/event_stream.rs`,
-`frame_requester.rs`, `frame_rate_limiter.rs`, `job_control.rs`,
-`terminal_stderr.rs`, and `custom_terminal.rs`. `app_server_session.rs` is a
-local RunHaven session bridge over the Phase 2 facade instead of importing the
-broader Codex backend workspace crates. Unsupported Codex method families stay
-typed and fail closed. Two upstream `insert_history.rs` snapshot tests are
-opt-in behind `codex-vendored-tests` because upstream `.snap` goldens remain
-external.
-
-### Phase 4: Prove Terminal Handoff
-
-Before wiring real foreground launch, prove terminal restoration independently.
-Use Codex `Tui`, but avoid creating a large throwaway custom runtime wrapper
-inside `app_shell.rs`; keep `app_shell.rs` working as a staging shell until the
-real `App` loop migration.
-
-Bring active enough to test:
-
-- `tui.rs`
-- `tui/event_stream.rs`
-- `tui/frame_requester.rs`
-- `tui/frame_rate_limiter.rs`
-- `tui/job_control.rs`
-- `custom_terminal.rs`
-- terminal stderr guard
-- terminal title cleanup
-- pet image cleanup
-
-Phase gate:
-
 - deterministic tests for `Tui::with_restored(...)` pause/restore/resume
   behavior
 - event-stream pause/resume test coverage where practical
@@ -190,16 +161,22 @@ Phase gate:
 Do not wire `runhaven/launch/prepare` to foreground
 `launch_run_plan` until this gate passes.
 
-Status 2026-06-27: complete. `Tui::with_restored(...)` now has deterministic
-sequencing tests for normal and alt-screen handoff, including child-error
-resume. The event broker has a pause/drop/resume regression. The env-gated
+Status 2026-06-27: supporting runtime and handoff gates are complete. RunHaven
+compiles the vendored Codex `tui.rs` runtime spine as `codex_runtime`,
+including `tui/event_stream.rs`, `frame_requester.rs`,
+`frame_rate_limiter.rs`, `job_control.rs`, `terminal_stderr.rs`, and
+`custom_terminal.rs`. Unsupported Codex method families stay typed and fail
+closed. `Tui::with_restored(...)` now has deterministic sequencing tests for
+normal and alt-screen handoff, including child-error resume. The event broker
+has a pause/drop/resume regression. The env-gated
 `RUNHAVEN_TUI_HANDOFF_SMOKE=success|error` path initializes the Codex runtime,
 clears managed title and pet image state before handoff, runs only a harmless
 foreground child or an intentional missing child, restores terminal ownership,
-and exits without wiring real agent launch. Ambient and picker-preview pet image
-state now share a combined cleanup helper, including native `App` shutdown.
+and exits without wiring real agent launch. This completed gate does not
+renumber the canonical plan. The next phase remains Phase 4: adapt `App` and
+`BottomPane`.
 
-### Phase 5: Adapt `App` And `BottomPane`
+### Phase 4: Adapt `App` And `BottomPane`
 
 Make the real app loop active and move from the staging shell to Codex terminal
 runtime ownership in the same migration. Avoid a separate permanent
@@ -233,7 +210,7 @@ matrix. Include at least `80x24` and `120x48` coverage for picker, review,
 confirm, transition-clearing cases, transcript, history, diff, log, diagnostics,
 and any visible fail-closed unsupported surface.
 
-### Phase 6: Adapt `ChatWidget` Transcript And Status
+### Phase 5: Adapt `ChatWidget` Transcript And Status
 
 Bring active:
 
@@ -250,7 +227,7 @@ Bring active:
 Map RunHaven service events into history cells. Keep unsupported Codex commands
 hidden or clearly unavailable.
 
-### Phase 7: Reattach RunHaven Product Screens
+### Phase 6: Reattach RunHaven Product Screens
 
 Move existing RunHaven screens into Codex-shaped surfaces:
 
@@ -268,7 +245,7 @@ Move existing RunHaven screens into Codex-shaped surfaces:
   trigger. It must stay offline, attributed, TUI-local, and constrained to the
   private RunHaven save slot.
 
-### Phase 8: Cull Or Stub Unsupported Codex Product Features
+### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
 After the Codex-shaped app shell is active, decide each dormant Codex product
 surface:
