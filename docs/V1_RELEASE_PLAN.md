@@ -252,7 +252,14 @@ Unsupported or intentionally limited users:
   rush new credential brokers into v1.
 - Raw active-container output can contain secrets or workspace contents. v1
   should keep bounded, acknowledged snapshots and avoid persistent frontend
-  storage.
+  storage. A dedicated non-UI security slice should add a shared sanitizer before
+  any raw or semi-raw output reaches CLI, Tauri, TUI, JSONL records, or support
+  output.
+- Because RunHaven only targets macOS 26+, host-held RunHaven secret material
+  should prefer macOS Keychain storage where practical. This applies to
+  RunHaven-owned secrets such as Claude setup tokens or future broker-owned
+  credentials, not provider-owned Keychain entries, browser profiles, cloud
+  credential stores, or arbitrary host credentials.
 - Run records intentionally omit secrets and contents, but workspace paths,
   changed file names, provider hostnames, and run metadata can still reveal
   private project structure.

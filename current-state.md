@@ -129,6 +129,18 @@ evidence and a recorded reason.
   registrable domain) is built and used for Antigravity. Remaining: graceful
   degradation, plain-language foreign-host messaging, and the auto-updating
   policy. This is still an allowlist (default-deny); it just speaks in families.
+- Log sanitization and host-held secret storage are a separate non-TUI security
+  slice, not part of the TUI build phases (2026-06-27 user direction). Existing
+  structured records are intended to be secret-free and raw log views are
+  bounded/acknowledged, but the backlog now requires a centralized sanitizer for
+  untrusted agent/container stdout/stderr, provider CLI output, raw log
+  snapshots, JSONL records, UI state, support bundles, and docs examples. Because
+  RunHaven is macOS 26+ only, host-held RunHaven secret material should prefer
+  macOS Keychain where practical (for example Claude setup tokens or future
+  broker-owned secrets), with a fail-closed or explicit fallback if Keychain is
+  unavailable. This does not authorize reading provider-owned Keychain items,
+  browser profiles, cloud credential stores, or arbitrary host credentials, and
+  it does not reopen the rejected host-side OAuth/subscription-token broker.
 - TUI high-resolution mascot rendering must follow codex's protocol choice, not
   a generic crate's auto-detection (2026-06-26 lesson). `ratatui-image` 11.0.6
   auto-selected iTerm2's own OSC 1337 inline-image protocol, which renders blank

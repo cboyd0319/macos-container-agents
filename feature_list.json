@@ -215,6 +215,28 @@
       "notes": "Done and live-verified 2026-06-26: runhaven login <agent> for Claude (host claude setup-token, injected at run time), Codex (codex login --device-auth), Copilot (copilot login), and Antigravity (agy first-run Google OAuth). Once-per-agent reuse via --auth-scope agent (default); --clear removes the stored or shared login. Per-agent login-host pins from observed egress, plus narrow domain-family wildcard patterns (*-name.domain.tld, anchored to one registrable domain, default-deny preserved) used for Antigravity's model host. Non-technical UX pass shipped: image-not-built preflight, login guidance heads-ups, and a calm plain-language blocked-host notice. No host-side OAuth broker (provider ToS; subscription tokens are not drop-in bearers; brokering would cross the boundary). Gemini stays on the API-key broker. Remaining future work is the signed auto-updating provider policy, a separate design-first candidate in NON_UI_BACKLOG.md. Detailed session history is in current-state.md and git."
     },
     {
+      "id": "logs-secret-redaction",
+      "priority": 1,
+      "area": "security",
+      "title": "Log sanitization and token handling hardening",
+      "user_visible_behavior": "Any RunHaven surface that shows or stores agent output, CLI output, provider diagnostics, auth broker logs, or OAuth/login guidance redacts secrets, and host-held RunHaven secret material uses macOS Keychain where practical.",
+      "status": "planned",
+      "dependencies": [
+        "oauth-isolated-login",
+        "multi-provider-broker"
+      ],
+      "verification": [
+        "A shared sanitizer is used before raw or semi-raw logs reach CLI, Tauri, TUI, JSONL records, or support bundles",
+        "Regression fixtures cover Authorization headers, bearer tokens, API keys, OAuth access/refresh/id tokens, URL token query parameters, provider config snippets, and common accidental secret prints",
+        "Sanitization preserves useful diagnostics such as host, port, decision, reason, matched rule, return code, and non-sensitive status text",
+        "Host-held RunHaven secrets use the macOS Keychain on supported macOS 26+ hosts, with a documented fail-closed or explicit fallback path if Keychain access is unavailable",
+        "OAuth token files and setup-token storage are migrated or constrained so tokens never appear in command arguments, JSONL records, active markers, snapshots, or docs examples, and --clear removes the relevant stored login",
+        "Focused tests prove no token-like values are emitted by runs log, auth log, egress log, log snapshots, active status, Tauri commands, or future TUI run-management views"
+      ],
+      "evidence": [],
+      "notes": "Recorded 2026-06-27 from user direction as non-TUI product/security work. Existing behavior already keeps structured records secret-free and raw logs bounded/acknowledged; this item is the stricter centralized sanitizer and token-handling review pass. Trust boundary: untrusted agent/container stdout/stderr/logs and provider CLI output may contain secrets; RunHaven-controlled records, UI state, docs examples, and support output must not. Because RunHaven targets macOS 26+, prefer Keychain-backed storage for host-held RunHaven secret material such as Claude setup tokens and future broker secrets, while preserving the no-host-credential-store-read boundary for provider-owned credentials. Do not treat this as permission to read arbitrary host credential stores or broker OAuth/subscription tokens."
+    },
+    {
       "id": "desktop-first-class-v1",
       "priority": 4,
       "area": "ui",
