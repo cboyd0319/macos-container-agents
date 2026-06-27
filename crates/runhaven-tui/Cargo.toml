@@ -27,6 +27,7 @@ all = { level = "deny", priority = -1 }
 anyhow.workspace = true
 base64.workspace = true
 crossterm.workspace = true
+derive_more.workspace = true
 image.workspace = true
 itertools.workspace = true
 ratatui.workspace = true
@@ -40,6 +41,7 @@ supports-color.workspace = true
 textwrap.workspace = true
 time.workspace = true
 tokio.workspace = true
+tokio-stream.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 unicode-segmentation.workspace = true

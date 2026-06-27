@@ -5,6 +5,8 @@ mod runhaven;
 
 #[allow(dead_code)]
 pub(crate) mod color;
+#[allow(dead_code)]
+pub(crate) mod custom_terminal;
 
 #[allow(dead_code)]
 pub(crate) mod app_event {
@@ -627,6 +629,8 @@ pub(crate) mod keymap {
 pub(crate) mod line_truncation;
 #[allow(dead_code)]
 pub(crate) mod motion;
+#[allow(dead_code)]
+pub(crate) mod notifications;
 #[allow(dead_code, unused_imports)]
 pub(crate) mod pets;
 #[allow(dead_code)]
@@ -733,6 +737,8 @@ pub(crate) mod status {
 #[allow(dead_code)]
 pub(crate) mod terminal_detection;
 #[allow(dead_code)]
+pub(crate) mod terminal_hyperlinks;
+#[allow(dead_code)]
 pub(crate) mod terminal_palette;
 #[allow(dead_code)]
 pub(crate) mod terminal_probe;
@@ -749,13 +755,13 @@ pub(crate) mod ui_consts;
 pub(crate) mod wrapping;
 
 #[allow(dead_code)]
-#[path = "tui/frame_rate_limiter.rs"]
-mod frame_rate_limiter;
-#[allow(dead_code)]
-#[path = "tui/frame_requester.rs"]
-mod frame_requester;
+pub(crate) mod insert_history;
 
-pub use frame_requester::FrameRequester;
+#[allow(dead_code)]
+#[path = "tui.rs"]
+pub(crate) mod codex_runtime;
+
+pub use codex_runtime::FrameRequester;
 
 pub fn run() -> Result<i32> {
     app_shell::run()

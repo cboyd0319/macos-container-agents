@@ -2,6 +2,7 @@
 //!
 //! Layout code measures and wraps ordinary ratatui lines. Hyperlink annotations are applied only
 //! when text reaches a terminal buffer or scrollback writer so OSC 8 bytes never affect geometry.
+#![allow(deprecated)]
 
 use std::ops::Range;
 

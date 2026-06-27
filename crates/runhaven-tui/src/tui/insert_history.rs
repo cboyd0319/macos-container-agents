@@ -32,6 +32,7 @@ use crossterm::style::SetColors;
 use crossterm::style::SetForegroundColor;
 use crossterm::terminal::Clear;
 use crossterm::terminal::ClearType;
+use ratatui::backend::IntoCrossterm;
 use ratatui::layout::Size;
 use ratatui::prelude::Backend;
 use ratatui::style::Color;
@@ -63,7 +64,7 @@ pub fn insert_history_lines<B>(
     lines: Vec<Line>,
 ) -> io::Result<()>
 where
-    B: Backend + Write,
+    B: Backend<Error = io::Error> + Write,
 {
     insert_history_lines_with_wrap_policy(terminal, lines, HistoryLineWrapPolicy::PreWrap)
 }
@@ -74,7 +75,7 @@ pub fn insert_history_lines_with_wrap_policy<B>(
     wrap_policy: HistoryLineWrapPolicy,
 ) -> io::Result<()>
 where
-    B: Backend + Write,
+    B: Backend<Error = io::Error> + Write,
 {
     insert_history_lines_with_mode_and_wrap_policy(
         terminal,
@@ -91,7 +92,7 @@ pub(crate) fn insert_history_lines_with_mode_and_wrap_policy<B>(
     wrap_policy: HistoryLineWrapPolicy,
 ) -> io::Result<()>
 where
-    B: Backend + Write,
+    B: Backend<Error = io::Error> + Write,
 {
     insert_history_hyperlink_lines_with_mode_and_wrap_policy(
         terminal,
@@ -108,7 +109,7 @@ pub(crate) fn insert_history_hyperlink_lines_with_mode_and_wrap_policy<B>(
     wrap_policy: HistoryLineWrapPolicy,
 ) -> io::Result<()>
 where
-    B: Backend + Write,
+    B: Backend<Error = io::Error> + Write,
 {
     let screen_size = terminal.backend().size().unwrap_or(Size::new(0, 0));
 
@@ -299,12 +300,12 @@ fn write_history_line<W: Write>(
             line.line
                 .style
                 .fg
-                .map(std::convert::Into::into)
+                .map(IntoCrossterm::into_crossterm)
                 .unwrap_or(CColor::Reset),
             line.line
                 .style
                 .bg
-                .map(std::convert::Into::into)
+                .map(IntoCrossterm::into_crossterm)
                 .unwrap_or(CColor::Reset)
         ))
     )?;
@@ -459,7 +460,10 @@ where
         if next_fg != fg || next_bg != bg {
             queue!(
                 writer,
-                SetColors(Colors::new(next_fg.into(), next_bg.into()))
+                SetColors(Colors::new(
+                    next_fg.into_crossterm(),
+                    next_bg.into_crossterm()
+                ))
             )?;
             fg = next_fg;
             bg = next_bg;
@@ -479,10 +483,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::markdown_render::render_markdown_text;
     use crate::test_backend::VT100Backend;
     use ratatui::layout::Rect;
     use ratatui::style::Color;
+    use ratatui::style::Style;
 
     #[test]
     fn writes_bold_then_regular_spans() {
@@ -686,10 +690,18 @@ mod tests {
 
     #[test]
     fn vt100_deep_nested_mixed_list_third_level_marker_is_colored() {
-        // Markdown with five levels (ordered → unordered → ordered → unordered → unordered).
-        let md = "1. First\n   - Second level\n     1. Third level (ordered)\n        - Fourth level (bullet)\n          - Fifth level to test indent consistency\n";
-        let text = render_markdown_text(md);
-        let lines: Vec<Line<'static>> = text.lines.clone();
+        let marker_style = Style::default().fg(Color::LightBlue);
+        let lines: Vec<Line<'static>> = vec![
+            Line::from("1. First"),
+            Line::from("   - Second level"),
+            Line::from(vec![
+                "     ".into(),
+                Span::styled("1.", marker_style),
+                " Third level (ordered)".into(),
+            ]),
+            Line::from("        - Fourth level (bullet)"),
+            Line::from("          - Fifth level to test indent consistency"),
+        ];
 
         let width: u16 = 60;
         let height: u16 = 12;
@@ -911,6 +923,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "vendored Codex snapshot tests are opt-in"
+    )]
     fn vt100_zellij_raw_insert_keeps_soft_wrapped_tail_above_viewport() {
         let width: u16 = 20;
         let height: u16 = 8;
@@ -951,6 +967,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "vendored Codex snapshot tests are opt-in"
+    )]
     fn vt100_zellij_raw_replay_keeps_overflowing_soft_wrapped_tail_above_viewport() {
         let width: u16 = 20;
         let height: u16 = 8;

@@ -49,11 +49,11 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 367.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 368.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 11.
-- Copied Codex files with local edits: 20.
+- RunHaven-only files: 12.
+- Copied Codex files with local edits: 25.
 
 RunHaven-only files:
 
@@ -63,6 +63,7 @@ app_shell.rs
 mod.rs
 pets/bundled_custom.rs
 runhaven/app_server_client.rs
+runhaven/app_server_session.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
 runhaven/protocol.rs
@@ -80,6 +81,8 @@ bottom_pane/list_selection_view.rs
 bottom_pane/mod.rs
 bottom_pane/textarea.rs
 chatwidget/pets.rs
+custom_terminal.rs
+insert_history.rs
 markdown_render_tests.rs
 motion.rs
 pets/image_protocol.rs
@@ -90,9 +93,12 @@ pets/preview.rs
 render/renderable.rs
 shimmer.rs
 style.rs
+terminal_hyperlinks.rs
 terminal_palette.rs
 terminal_probe.rs
 test_backend.rs
+tui.rs
+tui/event_stream.rs
 wrapping.rs
 ```
 
@@ -151,12 +157,31 @@ Local integration exceptions:
   Strategy C backend facade. They mirror Codex's app-server client shape while
   keeping RunHaven runtime authority in `runhaven-core` and fail-closing
   unsupported Codex method families.
+- `runhaven/app_server_session.rs` is the local Strategy C session bridge for
+  this phase. It routes supported bootstrap, agent-catalog, and workspace
+  validation calls into the RunHaven facade and returns typed unsupported errors
+  for method families that are not promoted into the RunHaven security model.
+- `tui.rs` now compiles as `codex_runtime` under the temporary RunHaven module
+  entrypoint. The local edits only adapt nested module paths and the Ratatui
+  backend error bound for RunHaven's pinned dependency set.
+- `tui/event_stream.rs` uses local `super::job_control` paths because
+  `tui.rs` is nested as `codex_runtime` during integration.
+- `custom_terminal.rs`, `insert_history.rs`, `terminal_hyperlinks.rs`, and
+  `test_backend.rs` keep Codex runtime behavior with Ratatui 0.30 compatibility
+  edits for color conversion, backend error bounds, scrolling-region test
+  support, and deprecated `Cell::skip` usage that remains part of the pinned
+  upstream source shape.
+- Two upstream `insert_history.rs` snapshot tests are opt-in behind
+  `codex-vendored-tests` so default RunHaven tests do not create untracked
+  `.snap.new` files from external Codex goldens.
 
 Known integration gap:
 
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
+- The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
+  it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen are staged in
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   Workspace selection, policy changes, and final foreground launch still need

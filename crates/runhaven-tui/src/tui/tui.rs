@@ -37,7 +37,11 @@ use ratatui::text::Line;
 use tokio::sync::broadcast;
 use tokio_stream::Stream;
 
+use self::event_stream::EventBroker;
+use self::event_stream::TuiEventStream;
 pub use self::frame_requester::FrameRequester;
+#[cfg(unix)]
+use self::job_control::SuspendContext;
 use crate::custom_terminal;
 use crate::custom_terminal::Terminal as CustomTerminal;
 use crate::insert_history::HistoryLineWrapPolicy;
@@ -46,21 +50,24 @@ use crate::notifications::DesktopNotificationBackend;
 use crate::notifications::detect_backend;
 use crate::terminal_hyperlinks::HyperlinkLine;
 use crate::terminal_hyperlinks::plain_hyperlink_lines;
-use crate::tui::event_stream::EventBroker;
-use crate::tui::event_stream::TuiEventStream;
-#[cfg(unix)]
-use crate::tui::job_control::SuspendContext;
 use codex_config::types::NotificationCondition;
 use codex_config::types::NotificationMethod;
 
+#[path = "tui/event_stream.rs"]
 mod event_stream;
+#[path = "tui/frame_rate_limiter.rs"]
 mod frame_rate_limiter;
+#[path = "tui/frame_requester.rs"]
 mod frame_requester;
 #[cfg(unix)]
+#[path = "tui/job_control.rs"]
 mod job_control;
+#[path = "tui/keyboard_modes.rs"]
 mod keyboard_modes;
+#[path = "tui/terminal_stderr.rs"]
 mod terminal_stderr;
 #[cfg(test)]
+#[path = "tui/test_support.rs"]
 pub(crate) mod test_support;
 
 /// Target frame interval for UI redraw scheduling.
@@ -557,7 +564,7 @@ struct PendingHistoryLines {
 
 fn clear_for_viewport_change<B>(terminal: &mut CustomTerminal<B>, new_area: Rect) -> Result<()>
 where
-    B: Backend + Write,
+    B: Backend<Error = std::io::Error> + Write,
 {
     let clear_position = if terminal.viewport_area.is_empty() {
         new_area.as_position()

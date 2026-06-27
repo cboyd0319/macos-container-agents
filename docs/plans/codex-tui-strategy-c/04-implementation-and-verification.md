@@ -149,6 +149,16 @@ Phase gate:
 - `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
 - `cargo run --locked --bin runhaven-check-pins`
 
+Status 2026-06-27: complete. RunHaven compiles the vendored Codex `tui.rs`
+runtime spine as `codex_runtime`, including `tui/event_stream.rs`,
+`frame_requester.rs`, `frame_rate_limiter.rs`, `job_control.rs`,
+`terminal_stderr.rs`, and `custom_terminal.rs`. `app_server_session.rs` is a
+local RunHaven session bridge over the Phase 2 facade instead of importing the
+broader Codex backend workspace crates. Unsupported Codex method families stay
+typed and fail closed. Two upstream `insert_history.rs` snapshot tests are
+opt-in behind `codex-vendored-tests` because upstream `.snap` goldens remain
+external.
+
 ### Phase 4: Prove Terminal Handoff
 
 Before wiring real foreground launch, prove terminal restoration independently.

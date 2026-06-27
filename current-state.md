@@ -249,6 +249,19 @@ a temporary compile bridge for low-coupling modules such as `ComposerInput`,
 wrapping, diff rendering, or selection helpers. It is not the product
 architecture.
 
+Strategy C Phase 3 runtime-spine follow-up: `crates/runhaven-tui` now compiles
+the vendored Codex `tui.rs` runtime spine as `codex_runtime`, including the
+event stream, frame requester, frame limiter, Unix job-control hook, terminal
+stderr guard, custom terminal, insert-history writer, notifications, and
+terminal hyperlinks. The new `runhaven/app_server_session.rs` bridge routes
+supported bootstrap, agent-catalog, and workspace-validation calls into the
+local RunHaven facade and keeps unsupported Codex method families typed and
+fail-closed. Required dependency changes are exact-pinned: crossterm now enables
+the upstream event-stream and bracketed-paste features, Ratatui enables
+scrolling regions, and `tokio-stream` plus `derive_more` are direct workspace
+dependencies for the compiled Codex runtime surface. The Codex runtime is still
+dormant; Phase 4 is terminal handoff proof before native `App` loop activation.
+
 Verified:
 
 - `cargo fmt --check`
@@ -288,6 +301,14 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
 - `cargo test -p runhaven-tui --locked terminal_title --quiet`
 - `cargo test -p runhaven-tui --locked textarea --quiet`
+- `cargo test -p runhaven-tui --locked runhaven::app_server_session -- --nocapture`
+- `cargo test -p runhaven-tui --locked custom_terminal::tests -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell::tests::shell_confirm_enter_shows_disabled_launch_notice_without_launching -- --nocapture`
+- `cargo check -p runhaven-tui --locked`
 - `cargo test -p runhaven-tui --locked --quiet`
 - `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
 - `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
