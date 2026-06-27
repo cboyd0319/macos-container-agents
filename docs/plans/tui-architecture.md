@@ -45,6 +45,19 @@ tagged `RunHavenComponentPayload` enum. Keep adding active-run, history,
 diagnostics, and diff payloads as those screens are reattached to the vendored
 shell.
 
+## Visual Target
+
+Use dbt-wizard as proof that a narrow product payload seam can ship, not as the
+RunHaven visual model. RunHaven should stay closer to native Codex: compact
+intro and status content, bottom composer, bottom status line, source-native
+Cubby pet behavior, Codex wrapping and selection behavior, and RunHaven-specific
+cards that fit inside that shell.
+
+Do not turn the default launcher into an analytics dashboard. Dense grids,
+counts, and health bars belong in explicit diagnostics, history, or dashboard
+views. The first-run and launch-review flow should feel like Codex with a
+RunHaven safety layer, not like a data operations console.
+
 ## Codex Source First
 
 The TUI implementation vendors first from the official local Codex source at

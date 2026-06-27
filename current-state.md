@@ -151,8 +151,11 @@ defines the first tagged RunHaven payload enum with `AgentCatalogData` and
 `LaunchPlanData`. Fixtures live under
 `crates/runhaven-core/tests/fixtures/ui/`. The temporary TUI adapter consumes
 `AgentCatalogItemData` for agent display, but the next visual slice should move
-toward a Codex-native shell with RunHaven product cards, matching the
-dbt-wizard lesson: stable domain payloads first, renderer second.
+toward a Codex-native shell with RunHaven product cards. dbt-wizard is only the
+architecture proof for stable domain payloads first and renderer second. The
+visual target is closer to native Codex: compact intro and status content,
+bottom composer and status line, native Cubby behavior, and no analytics
+dashboard feel in the default launcher.
 
 Verified:
 

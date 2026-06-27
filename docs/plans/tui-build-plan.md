@@ -33,6 +33,12 @@ coherent terminal app substrate, add a narrow product payload seam, and render
 domain-specific cards from that seam. RunHaven should copy that architecture
 move, not the dbt product shape and not Codex chat ontology.
 
+dbt-wizard is not the visual target. RunHaven should stay closer to the native
+Codex look: a compact intro and status area, the bottom composer and status
+line, source-native pet behavior, and small RunHaven cards that feel like Codex
+surfaces. Avoid an analytics-dashboard feel unless the user is explicitly in a
+diagnostics, history, or dashboard view.
+
 The first active payload seam is in `crates/runhaven-core/src/ui_contracts.rs`:
 `AgentCatalogData`, `LaunchPlanData`, and tagged `RunHavenComponentPayload`
 fixtures. New visual work should feed RunHaven cards from those payloads into
