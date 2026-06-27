@@ -20,17 +20,30 @@ a launcher and manager over the same agents and run planner as the CLI:
 runhaven
 ```
 
-The TUI is early: today it is a guided launcher. Use up/down to choose an
-agent, `w` to choose a workspace, `r` to review the run boundary, enter to move
-through detail/review/confirm, and esc to go back. The review screen is built
-from the same planner as `runhaven plan`: it shows the workspace mount, state
-volume, network mode, provider egress posture, explicit non-mounts such as host
-home and credential folders, and the equivalent CLI command. Confirming a plan
-restores the terminal and launches the same run path as `runhaven run`.
+The TUI is a guided launcher plus live run dashboard. Use up/down to choose an
+agent, `w` to choose a workspace, `r` to review the run boundary, `d` to open
+the dashboard, enter to move through detail/review/confirm, and esc to go back.
+The review screen is built from the same planner as `runhaven plan`: it shows
+the workspace mount, state volume, network mode, provider egress posture,
+explicit non-mounts such as host home and credential folders, and the
+equivalent CLI command. Confirming a plan restores the terminal and launches
+the same run path as `runhaven run`.
 
 Lower-security plans show the existing security notices and require typing
 `run` before launch. Secure-default plans launch with enter from the confirm
-screen. The live run dashboard lands in a later slice.
+screen.
+
+The dashboard lists active RunHaven runs and shows the selected run's sanitized
+status, resource summary, network attachments, and provider egress ledger. Press
+enter or `l` from the dashboard to open a bounded log snapshot with search,
+scrolling, and tail-following. The log viewer parses ANSI output into terminal
+cells instead of replaying escape sequences. Raw agent output can contain
+secrets, so log snapshots are explicit and bounded.
+
+Stop, hard-stop, and stale-marker repair are available from the dashboard with
+`s`, `x`, and `e`. Each opens a plain confirmation screen that names the run and
+container and requires typing the action phrase before RunHaven calls the same
+validated run-control core used by the CLI.
 
 Cubby, the RunHaven pet, is visible by default. Press `p` to hide or show it for
 the current session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.

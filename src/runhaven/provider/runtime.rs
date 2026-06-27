@@ -1,5 +1,9 @@
+use std::collections::BTreeMap;
 use std::process::Command;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
+use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
@@ -10,7 +14,7 @@ use crate::active::{
 use crate::auth_broker::{
     ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
 };
-use crate::egress::{EgressPolicy, ThreadedAllowlistProxy};
+use crate::egress::{EgressPolicy, ProxyDecision, ThreadedAllowlistProxy};
 use crate::git::{capture_git_snapshot, summarize_git_change};
 use crate::plans::AgentRunPlan;
 use crate::provider_observability::{
@@ -39,6 +43,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     let mut proxy_thread = None;
     let mut broker: Option<ApiKeyBrokerProxy> = None;
     let mut broker_thread = None;
+    let mut decision_log_stream = None;
     let run_id = plan
         .run_id
         .clone()
@@ -71,6 +76,11 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         );
         let proxy_clone = provider_proxy.clone();
         proxy_thread = Some(thread::spawn(move || proxy_clone.serve_forever()));
+        decision_log_stream = Some(start_provider_decision_log_stream(
+            plan,
+            &run_id,
+            provider_proxy.clone(),
+        ));
         proxy = Some(provider_proxy);
 
         let command = if let Some((broker_profile, api_key)) = broker_secret {
@@ -152,6 +162,9 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     if let Some(handle) = proxy_thread {
         let _ = handle.join();
     }
+    let decision_log_result = decision_log_stream
+        .map(ProviderDecisionLogStream::stop)
+        .unwrap_or(Ok(()));
     if provider_network_created {
         cleanup = cleanup_provider_network(plan).unwrap_or_else(|error| {
             json!({
@@ -172,7 +185,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
             (started_at.as_deref(), finished_at.as_deref(), git)
     {
         (|| -> Result<()> {
-            write_provider_policy_log(plan, &provider_decisions, &run_id)?;
+            decision_log_result?;
             if let Some(decisions) = auth_decisions.as_ref() {
                 write_auth_broker_log(plan, decisions, &run_id, code)?;
             }
@@ -191,7 +204,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
             })
         })()
     } else {
-        Ok(())
+        decision_log_result
     };
     if active_recorded {
         let _ = remove_active_run_record(&run_id);
@@ -201,6 +214,79 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         (Ok(_), Err(error)) => Err(error),
         (Err(error), _) => Err(error),
     }
+}
+
+type DecisionKey = (String, u16, String, String, String);
+type DecisionCounts = BTreeMap<DecisionKey, usize>;
+
+struct ProviderDecisionLogStream {
+    shutdown: Arc<AtomicBool>,
+    handle: thread::JoinHandle<Result<()>>,
+}
+
+impl ProviderDecisionLogStream {
+    fn stop(self) -> Result<()> {
+        self.shutdown.store(true, Ordering::Relaxed);
+        self.handle
+            .join()
+            .map_err(|_| anyhow::anyhow!("provider decision log stream panicked"))?
+    }
+}
+
+fn start_provider_decision_log_stream(
+    plan: &AgentRunPlan,
+    run_id: &str,
+    proxy: ThreadedAllowlistProxy,
+) -> ProviderDecisionLogStream {
+    let plan = plan.clone();
+    let run_id = run_id.to_string();
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let thread_shutdown = Arc::clone(&shutdown);
+    let handle = thread::spawn(move || {
+        let mut seen = DecisionCounts::new();
+        while !thread_shutdown.load(Ordering::Relaxed) {
+            flush_provider_decision_deltas(&plan, &run_id, &proxy, &mut seen)?;
+            thread::sleep(Duration::from_millis(250));
+        }
+        flush_provider_decision_deltas(&plan, &run_id, &proxy, &mut seen)
+    });
+    ProviderDecisionLogStream { shutdown, handle }
+}
+
+fn flush_provider_decision_deltas(
+    plan: &AgentRunPlan,
+    run_id: &str,
+    proxy: &ThreadedAllowlistProxy,
+    seen: &mut DecisionCounts,
+) -> Result<()> {
+    let deltas = provider_decision_deltas(&proxy.policy_decisions(), seen);
+    write_provider_policy_log(plan, &deltas, run_id)
+}
+
+fn provider_decision_deltas(
+    decisions: &[ProxyDecision],
+    seen: &mut DecisionCounts,
+) -> Vec<ProxyDecision> {
+    decisions
+        .iter()
+        .filter_map(|decision| {
+            let key = (
+                decision.host.clone(),
+                decision.port,
+                decision.decision.clone(),
+                decision.reason.clone(),
+                decision.matched_rule.clone(),
+            );
+            let previous = seen.get(&key).copied().unwrap_or_default();
+            if decision.count <= previous {
+                return None;
+            }
+            seen.insert(key, decision.count);
+            let mut delta = decision.clone();
+            delta.count -= previous;
+            Some(delta)
+        })
+        .collect()
 }
 
 pub fn require_api_key_broker_secret(

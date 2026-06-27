@@ -101,8 +101,8 @@ which is TUI-safe. Stick to source for the terminal-specific hard parts.
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
 | `color.rs` | Phase 0 (with theme) | pure color math (light/dark, blend, distance) |
 | `diff_render.rs` + `diff_model.rs` | vendor at Phase 4 | "what did the agent change" run/worktree diff |
-| `pager_overlay.rs` | vendor at Phase 3 | scrollable log/help viewer |
-| `status_indicator_widget.rs` / throbber | Phase 3 (or `throbber-widgets-tui`) | spinners during waits |
+| `pager_overlay.rs` | evaluated at Phase 3, not vendored | upstream transcript/chat overlay is tied to Codex history cells, keymaps, and app events; RunHaven ships a dedicated bounded log viewer instead |
+| `status_indicator_widget.rs` / throbber | Phase 4 or 5 if needed | spinners during waits |
 | `onboarding/` | reference at Phase 5 | guided first-run pattern (build our own) |
 | `notifications/` | Phase 5 | run-done / waiting-for-input alerts |
 | `markdown_render.rs` / `markdown.rs` | reference | rich help/remediation (or `pulldown-cmark` directly) |
@@ -163,14 +163,17 @@ The directory-and-provider front door.
   type-to-confirm only for less-secure choices.
 - Launch a real run.
 
-### Phase 3 — Run management
+### Phase 3 — Run management (complete)
 
-- Live run dashboard: status, resource use, and the streaming egress ledger
-  (every network decision in real time, allowed muted, blocked in the danger
-  token).
-- Bounded log viewer: search, smart tailing, ANSI-preserving, ring-buffered.
-- Stop / kill / repair with plain confirm modals (no motion on destructive
-  surfaces).
+- Live run dashboard: active run list, sanitized live status, resource summary,
+  network attachments, and a streaming egress ledger backed by the provider
+  runtime's decision-delta flusher.
+- Bounded log viewer: explicit active-run log snapshots with search, scrolling,
+  tail-following, and ANSI parsing through `vt100` so escape sequences are not
+  replayed into the user's terminal.
+- Stop / kill / repair with plain typed-confirm screens (no motion on
+  destructive surfaces), routed through the existing validated run-control
+  cores.
 
 ### Phase 4 — History and diagnostics
 
@@ -207,7 +210,9 @@ TUI rather than printed text:
 - Phase 2 (plan/egress review, confirm) needs the resolved run plan, mounts,
   network mode, and egress allow-set as structured values.
 - Phase 3 (dashboard, egress ledger) needs a live run-status and
-  network-decision stream.
+  network-decision stream. Complete: the TUI consumes the existing active-run
+  status/log cores and the provider runtime writes egress decision deltas during
+  provider-mode execution.
 - Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
   data.
 
@@ -239,5 +244,13 @@ phase as they arise.
   state volume, network mode, provider egress posture, explicit non-mounts, and
   equivalent CLI command, requires typed confirmation for plans with security
   notices, restores the terminal, and launches through `launch_run_plan`.
-- Next: Phase 3 run management: live run dashboard, streaming egress ledger,
-  bounded log viewer, and stop/kill/repair controls.
+- Complete: Phase 3 run management. The TUI now has a run dashboard (`d`) with
+  active runs, sanitized status/resource/network details, and a provider egress
+  ledger; provider-mode runs stream egress decisions to the JSONL log as deltas
+  while the run is active; logs open as explicit bounded snapshots with search,
+  scroll, tail-following, and ANSI parsing through `vt100`; and stop, hard-stop,
+  and stale-marker repair use plain typed-confirm screens over the existing
+  validated run-control cores.
+- Next: Phase 4 history and diagnostics: run history, per-run diff review,
+  egress/auth diagnostics, terminal/render capability probe, and TUI doctor
+  remediation.

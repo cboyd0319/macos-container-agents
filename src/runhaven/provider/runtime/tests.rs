@@ -213,3 +213,30 @@ fn codex_broker_injects_custom_provider_with_v1_base() {
     assert!(joined.contains("RUNHAVEN_CODEX_BROKER_TOKEN=runhaven-broker-placeholder"));
     assert!(joined.contains("wire_api=\"responses\""));
 }
+
+#[test]
+fn provider_decision_deltas_only_emit_new_counts() {
+    let mut seen = DecisionCounts::new();
+    let first = vec![ProxyDecision {
+        host: "api.example.com".to_string(),
+        port: 443,
+        decision: "allowed".to_string(),
+        reason: "allowed".to_string(),
+        matched_rule: "api.example.com".to_string(),
+        count: 2,
+    }];
+
+    let deltas = provider_decision_deltas(&first, &mut seen);
+    assert_eq!(deltas.len(), 1);
+    assert_eq!(deltas[0].count, 2);
+
+    assert!(provider_decision_deltas(&first, &mut seen).is_empty());
+
+    let next = vec![ProxyDecision {
+        count: 5,
+        ..first[0].clone()
+    }];
+    let deltas = provider_decision_deltas(&next, &mut seen);
+    assert_eq!(deltas.len(), 1);
+    assert_eq!(deltas[0].count, 3);
+}

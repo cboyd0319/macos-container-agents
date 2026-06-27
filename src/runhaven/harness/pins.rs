@@ -59,7 +59,7 @@ fn check_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
         failures.push("pins.toml: missing [rust] dependency pins".to_string());
         return failures;
     };
-    let rust_dev_deps = ["insta", "tempfile", "vt100"];
+    let rust_dev_deps = ["insta", "tempfile"];
     for (name, pinned) in rust_pins {
         if name == "toolchain" || name == "edition" || rust_dev_deps.contains(&name.as_str()) {
             continue;

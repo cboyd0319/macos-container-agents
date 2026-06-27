@@ -5,8 +5,8 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, ListItem, Paragraph};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use super::launcher;
 use super::theme::{Palette, TuiSettings};
+use super::{launcher, runs};
 use crate::plans::default_network_mode;
 use crate::profiles::AgentProfile;
 
@@ -228,6 +228,201 @@ pub(super) fn plan_review_lines(
     lines
 }
 
+pub(super) fn run_list_item(
+    run: &runs::RunSummary,
+    width: usize,
+    palette: Palette,
+) -> ListItem<'static> {
+    let head = format!(
+        "{:<10} {:<12} {:<9} {:<14}",
+        short_run_id(&run.run_id),
+        run.profile,
+        run.network,
+        run.marker_status
+    );
+    let detail_width = width.saturating_sub(46);
+    ListItem::new(Line::from(vec![
+        Span::styled(head, palette.text()),
+        Span::styled(
+            truncate_to_width(&run.workspace, detail_width),
+            palette.muted(),
+        ),
+    ]))
+}
+
+pub(super) fn run_status_lines(
+    status: Option<&runs::RunStatus>,
+    error: Option<&str>,
+    width: usize,
+    palette: Palette,
+) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    if let Some(error) = error {
+        push_wrapped_line(
+            &mut lines,
+            format!("Status unavailable: {error}"),
+            palette.muted(),
+            width,
+        );
+        return lines;
+    }
+    let Some(status) = status else {
+        push_wrapped_line(
+            &mut lines,
+            "Select an active run and press r to refresh status.",
+            palette.muted(),
+            width,
+        );
+        return lines;
+    };
+    for line in [
+        format!("Marker: {}", status.marker_status),
+        format!("Container: {}", status.container_state),
+        format!("Started: {}", status.started_at),
+        format!("Image: {}", status.image),
+        format!("Resources: {}", status.resources),
+    ] {
+        push_wrapped_line(&mut lines, line, palette.text(), width);
+    }
+    for network in &status.networks {
+        push_wrapped_line(
+            &mut lines,
+            format!("Network: {network}"),
+            palette.muted(),
+            width,
+        );
+    }
+    lines
+}
+
+pub(super) fn egress_ledger_lines(
+    decisions: &[runs::EgressDecision],
+    error: Option<&str>,
+    width: usize,
+    palette: Palette,
+) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    if let Some(error) = error {
+        push_wrapped_line(
+            &mut lines,
+            format!("Egress ledger unavailable: {error}"),
+            palette.muted(),
+            width,
+        );
+        return lines;
+    }
+    push_wrapped_line(
+        &mut lines,
+        format!("Summary: {}", runs::summarize_egress(decisions)),
+        palette.text(),
+        width,
+    );
+    if decisions.is_empty() {
+        push_wrapped_line(
+            &mut lines,
+            "Provider decisions appear here while provider-mode runs log decisions.",
+            palette.muted(),
+            width,
+        );
+        return lines;
+    }
+    for decision in decisions.iter().rev().take(5).rev() {
+        let style = if decision.decision == "denied" {
+            palette.accent()
+        } else {
+            palette.muted()
+        };
+        push_wrapped_line(
+            &mut lines,
+            format!(
+                "{} {}:{} count={} reason={} rule={}",
+                decision.decision,
+                decision.host,
+                decision.port,
+                decision.count,
+                decision.reason,
+                decision.matched_rule
+            ),
+            style,
+            width,
+        );
+    }
+    lines
+}
+
+pub(super) fn log_view_lines(
+    viewer: &runs::LogViewerState,
+    width: u16,
+    height: u16,
+    palette: Palette,
+) -> Vec<Line<'static>> {
+    if let Some(error) = &viewer.error {
+        let mut lines = Vec::new();
+        push_wrapped_line(
+            &mut lines,
+            format!("Log snapshot unavailable: {error}"),
+            palette.muted(),
+            usize::from(width),
+        );
+        return lines;
+    }
+    let mut lines = viewer
+        .visible_lines(width, height)
+        .into_iter()
+        .map(|line| {
+            if line.matched {
+                Line::styled(line.text, palette.accent())
+            } else {
+                Line::styled(line.text, palette.text())
+            }
+        })
+        .collect::<Vec<_>>();
+    if lines.is_empty() {
+        push_wrapped_line(
+            &mut lines,
+            "Press r to load a bounded raw-output snapshot for the selected run.",
+            palette.muted(),
+            usize::from(width),
+        );
+    }
+    lines
+}
+
+pub(super) fn log_header_lines(
+    viewer: &runs::LogViewerState,
+    width: usize,
+    palette: Palette,
+) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let summary = viewer.snapshot.as_ref().map_or_else(
+        || format!("snapshot: not loaded  lines={}", viewer.requested_lines),
+        |snapshot| {
+            format!(
+                "snapshot: {} returned / {} requested  truncated={}  tail={}",
+                snapshot.returned_lines, snapshot.requested_lines, snapshot.truncated, viewer.tail
+            )
+        },
+    );
+    push_wrapped_line(&mut lines, summary, palette.text(), width);
+    push_wrapped_line(
+        &mut lines,
+        format!("search: {}", viewer.search),
+        palette.muted(),
+        width,
+    );
+    if let Some(snapshot) = &viewer.snapshot {
+        for warning in &snapshot.warnings {
+            push_wrapped_line(
+                &mut lines,
+                format!("warning: {warning}"),
+                palette.accent(),
+                width,
+            );
+        }
+    }
+    lines
+}
+
 pub(super) fn push_wrapped_line(
     lines: &mut Vec<Line<'static>>,
     text: impl AsRef<str>,
@@ -300,6 +495,10 @@ pub(super) fn truncate_to_width(text: &str, max_width: usize) -> String {
     }
     out.push_str(suffix);
     out
+}
+
+fn short_run_id(run_id: &str) -> String {
+    truncate_to_width(run_id, 8)
 }
 
 /// The shared three-row layout: a header, a flexible body, and a two-line footer.

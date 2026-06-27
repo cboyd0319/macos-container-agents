@@ -11,11 +11,14 @@ release-readiness are `passing`. The TUI has been re-sequenced by the
 2026-06-26 user directive into a first-class reference implementation to build
 now; the Tauri desktop app remains deferred to the roadmap end.
 
-TUI Phase 2 is complete: the TUI can choose a workspace, choose an agent, review
+TUI Phase 3 is complete: the TUI can choose a workspace, choose an agent, review
 the shared `AgentRunPlan` boundary, type-confirm lower-security plans, restore
-the terminal, and launch through `launch_run_plan`. Next is Phase 3 from
-`docs/plans/tui-build-plan.md`: run management (live dashboard, streaming egress
-ledger, bounded log viewer, and stop/kill/repair controls).
+the terminal, launch through `launch_run_plan`, open a live run dashboard, show
+sanitized run status and provider egress decisions, view explicit bounded log
+snapshots, and run stop/kill/repair through typed-confirm controls. Next is
+Phase 4 from `docs/plans/tui-build-plan.md`: history and diagnostics (run
+history, diff review, egress/auth diagnostics, terminal/render capability probe,
+and TUI doctor remediation).
 
 ## Startup State Contract
 
@@ -227,6 +230,25 @@ evidence and a recorded reason.
   -- -D warnings`, `cargo test --locked`, `cargo run --locked --bin
   runhaven-check-pins`, iTerm2 3.6.11 PTY review-screen smoke, and `git diff
   --check`. Branch: `terminal-ui-build-plan`. Next: Phase 3 run management.
+- 2026-06-27: TUI Phase 3 run management. Added `tui/runs.rs` and
+  `tui/run_views.rs` for active-run dashboard state and rendering while keeping
+  `tui/mod.rs` focused on orchestration. The dashboard opens with `d`, lists
+  active runs, shows sanitized status/resource/network details, filters provider
+  egress log entries by run id, and opens an explicit bounded log viewer with
+  search, scroll, tail-following, and ANSI parsing through `vt100` so escape
+  sequences are not replayed into the terminal. Stop, hard-stop, and stale-marker
+  repair use typed-confirm screens over the existing validated run-control
+  cores. Provider-mode runs now write egress decision deltas while active instead
+  of only at run-record finalization. `vt100 =0.16.2` moved from dev-dependency
+  to runtime dependency for the log renderer; pin checking covers the new
+  manifest shape. Verified: `cargo fmt`, `cargo test --locked tui` (171
+  TUI-filtered tests), `cargo test --locked
+  provider_decision_deltas_only_emit_new_counts`, `cargo clippy --all-targets
+  --locked -- -D warnings`, `cargo test --locked` (241 lib + 6 integration),
+  `cargo run --locked --bin runhaven-check-pins`, and a PTY smoke that opened
+  `runhaven`, pressed `d`, rendered the no-active-runs dashboard, and exited
+  cleanly. Branch: `terminal-ui-build-plan`. Next: Phase 4 history and
+  diagnostics.
 - 2026-06-26: Vendored codex's pet/image rendering stack under
   `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
   three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,

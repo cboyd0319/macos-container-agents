@@ -3,16 +3,16 @@ source: src/runhaven/cli/tui/tests.rs
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                                  antigravity                                 │
+│                                   Run Logs                                   │
 └──────────────────────────────────────────────────────────────────────────────┘
-┌ Agent ───────────────────────────────────────────────────────────────────────┐
-│Google Antigravity CLI with project-scoped home state.                        │
-│                                                                              │
-│image:           runhaven/antigravity:0.1.0                                   │
-│sign-in:         runhaven login                                               │
-│default network: provider                                                     │
-│api-key broker:  no                                                           │
-│                                                                              │
+┌ Snapshot ────────────────────────────────────────────────────────────────────┐
+│snapshot: 2 returned / 200 requested  truncated=false  tail=true              │
+│search: denied                                                                │
+│warning: Raw container output can contain secrets or workspace content.       │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Output ──────────────────────────────────────────────────────────────────────┐
+│allowed api.openai.com                                                        │
+│                      denied example.invalid                                  │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -24,5 +24,5 @@ expression: snapshot
 │                                                                              │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-                 enter review · d dashboard · esc back · q quit
-               RunHaven shows the exact CLI command before launch.
+     / search · r reload · up/down scroll · t tail · esc dashboard · q quit
+    ANSI output is rendered through a parser, not replayed into the terminal.

@@ -26,6 +26,8 @@ mod event_loop;
 mod launcher;
 mod mascot;
 mod pet;
+mod run_views;
+mod runs;
 #[cfg(test)]
 mod snapshot;
 #[cfg(test)]
@@ -60,6 +62,9 @@ enum Screen {
     Workspace,
     Plan,
     Confirm,
+    Runs,
+    Logs,
+    Control,
 }
 
 #[derive(Debug)]
@@ -72,6 +77,7 @@ struct App {
     agents: Vec<AgentProfile>,
     list: ListState,
     launcher: launcher::LauncherState,
+    run_manager: runs::RunManagerState,
     settings: TuiSettings,
     palette: Palette,
     screen: Screen,
@@ -107,6 +113,7 @@ impl App {
             agents,
             list,
             launcher: launcher::LauncherState::new(workspace),
+            run_manager: runs::RunManagerState::default(),
             settings,
             palette,
             screen: Screen::Home,
@@ -149,6 +156,7 @@ impl App {
                 KeyCode::Up | KeyCode::Char('k') => self.select_previous(),
                 KeyCode::Enter | KeyCode::Char('l') => self.screen = Screen::Detail,
                 KeyCode::Char('r') => self.open_plan_review(),
+                KeyCode::Char('d') => self.open_run_dashboard(),
                 KeyCode::Char('w') => {
                     self.launcher.open_workspace_picker();
                     self.screen = Screen::Workspace;
@@ -159,6 +167,7 @@ impl App {
             Screen::Detail => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
                 KeyCode::Enter | KeyCode::Char('r') => self.open_plan_review(),
+                KeyCode::Char('d') => self.open_run_dashboard(),
                 KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
                     self.screen = Screen::Home;
                 }
@@ -210,6 +219,65 @@ impl App {
                 }
                 _ => {}
             },
+            Screen::Runs => match code {
+                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
+                    self.screen = Screen::Home
+                }
+                KeyCode::Down | KeyCode::Char('j') => self.run_manager.select_next(),
+                KeyCode::Up | KeyCode::Char('k') => self.run_manager.select_previous(),
+                KeyCode::Char('r') => self.run_manager.refresh_dashboard(),
+                KeyCode::Char('l') | KeyCode::Enter => {
+                    self.run_manager.refresh_logs();
+                    self.screen = Screen::Logs;
+                }
+                KeyCode::Char('s') => self.begin_run_control(runs::RunControlAction::Stop),
+                KeyCode::Char('x') => self.begin_run_control(runs::RunControlAction::Kill),
+                KeyCode::Char('e') => self.begin_run_control(runs::RunControlAction::Repair),
+                _ => {}
+            },
+            Screen::Logs => match code {
+                KeyCode::Esc if self.run_manager.logs.search_editing => {
+                    self.run_manager.logs.finish_search()
+                }
+                KeyCode::Enter if self.run_manager.logs.search_editing => {
+                    self.run_manager.logs.finish_search()
+                }
+                KeyCode::Backspace if self.run_manager.logs.search_editing => {
+                    self.run_manager.logs.pop_search_char()
+                }
+                KeyCode::Char(ch) if self.run_manager.logs.search_editing => {
+                    self.run_manager.logs.push_search_char(ch)
+                }
+                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Esc | KeyCode::Char('h') => self.screen = Screen::Runs,
+                KeyCode::Char('r') => self.run_manager.refresh_logs(),
+                KeyCode::Up | KeyCode::Char('k') => self.run_manager.logs.scroll_up(),
+                KeyCode::Down | KeyCode::Char('j') => self.run_manager.logs.scroll_down(),
+                KeyCode::Char('t') => self.run_manager.logs.follow_tail(),
+                KeyCode::Char('/') => self.run_manager.logs.begin_search(),
+                _ => {}
+            },
+            Screen::Control => match code {
+                KeyCode::Char('q') | KeyCode::Esc => self.screen = Screen::Runs,
+                KeyCode::Backspace => {
+                    if let Some(dialog) = &mut self.run_manager.control {
+                        dialog.input.pop();
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Err(error) = self.run_manager.execute_control() {
+                        self.run_manager.message = Some(error.to_string());
+                    }
+                    self.screen = Screen::Runs;
+                }
+                KeyCode::Char(ch) if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' => {
+                    if let Some(dialog) = &mut self.run_manager.control {
+                        dialog.input.push(ch);
+                    }
+                }
+                _ => {}
+            },
         }
         None
     }
@@ -238,11 +306,27 @@ impl App {
         }
     }
 
+    fn open_run_dashboard(&mut self) {
+        self.run_manager.refresh_dashboard();
+        self.screen = Screen::Runs;
+    }
+
+    fn begin_run_control(&mut self, action: runs::RunControlAction) {
+        if let Err(error) = self.run_manager.begin_control(action) {
+            self.run_manager.message = Some(error.to_string());
+        } else {
+            self.screen = Screen::Control;
+        }
+    }
+
     fn on_tick(&mut self, tick: Tick) {
         self.ticks = self.ticks.saturating_add(1);
         self.last_tick_elapsed = tick.elapsed;
         if self.settings.pet_enabled && matches!(self.screen, Screen::Home) {
             self.pet_animation_elapsed = self.pet_animation_elapsed.saturating_add(tick.elapsed);
+        }
+        if matches!(self.screen, Screen::Runs | Screen::Logs) && self.ticks.is_multiple_of(8) {
+            self.run_manager.refresh_dashboard();
         }
     }
 
@@ -267,6 +351,15 @@ impl App {
             Screen::Workspace => self.render_workspace(frame),
             Screen::Plan => self.render_plan(frame),
             Screen::Confirm => self.render_confirm(frame),
+            Screen::Runs => {
+                run_views::render_runs(frame, &self.run_manager, self.settings, self.palette)
+            }
+            Screen::Logs => {
+                run_views::render_logs(frame, &self.run_manager, self.settings, self.palette)
+            }
+            Screen::Control => {
+                run_views::render_control(frame, &self.run_manager, self.settings, self.palette)
+            }
         }
     }
 
@@ -382,7 +475,7 @@ impl App {
         render_footer(
             frame,
             footer,
-            "w workspace · enter inspect · r review · p pet · q quit",
+            "w workspace · enter inspect · r review · d dashboard · p pet · q quit",
             tooltips::tip_for_tick(self.ticks),
             self.palette,
         );
@@ -424,7 +517,7 @@ impl App {
         render_footer(
             frame,
             footer,
-            "esc back · q quit",
+            "enter review · d dashboard · esc back · q quit",
             tooltips::tip_for_tick(self.ticks),
             self.palette,
         );

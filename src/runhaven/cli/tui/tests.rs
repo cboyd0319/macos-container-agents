@@ -51,6 +51,59 @@ fn fake_review(requires_typed_confirm: bool) -> launcher::PlanReview {
     }
 }
 
+fn fake_run() -> runs::RunSummary {
+    runs::RunSummary {
+        run_id: "abcdef1234567890".to_string(),
+        profile: "codex".to_string(),
+        workspace: "/Users/example/project".to_string(),
+        network: "provider".to_string(),
+        marker_status: "running".to_string(),
+        container_name: "runhaven-codex-abcdef-run".to_string(),
+        state_volume: "runhaven-codex-shared-home".to_string(),
+        timestamp: "2026-06-27T00:00:00Z".to_string(),
+    }
+}
+
+fn fake_status() -> runs::RunStatus {
+    runs::RunStatus {
+        marker_status: "running".to_string(),
+        container_state: "running".to_string(),
+        started_at: "2026-06-27T00:00:01Z".to_string(),
+        image: "runhaven/codex:0.1.0".to_string(),
+        resources: "4 cpu / 4 GiB".to_string(),
+        networks: vec!["runhaven-codex-provider ipv4=192.0.2.2/24 hostname=runhaven".to_string()],
+    }
+}
+
+fn fake_egress() -> Vec<runs::EgressDecision> {
+    vec![
+        runs::EgressDecision {
+            timestamp: "2026-06-27T00:00:02Z".to_string(),
+            decision: "allowed".to_string(),
+            host: "api.openai.com".to_string(),
+            port: "443".to_string(),
+            reason: "allowed".to_string(),
+            matched_rule: "api.openai.com".to_string(),
+            count: "3".to_string(),
+        },
+        runs::EgressDecision {
+            timestamp: "2026-06-27T00:00:03Z".to_string(),
+            decision: "denied".to_string(),
+            host: "example.invalid".to_string(),
+            port: "443".to_string(),
+            reason: "not-in-allowlist".to_string(),
+            matched_rule: "-".to_string(),
+            count: "1".to_string(),
+        },
+    ]
+}
+
+fn seed_dashboard(app: &mut App) {
+    app.run_manager.runs = vec![fake_run()];
+    app.run_manager.status = Some(fake_status());
+    app.run_manager.egress = fake_egress();
+}
+
 #[test]
 fn app_loads_all_agent_profiles() {
     let app = test_app();
@@ -158,6 +211,54 @@ fn secure_confirm_returns_launch_action() {
 
     assert!(matches!(app.screen, Screen::Confirm));
     assert!(matches!(action, Some(TuiAction::Launch(_))));
+}
+
+#[test]
+fn dashboard_opens_from_home_and_returns() {
+    let mut app = test_app();
+
+    app.handle_key(KeyCode::Char('d'));
+    assert!(matches!(app.screen, Screen::Runs));
+    app.handle_key(KeyCode::Esc);
+    assert!(matches!(app.screen, Screen::Home));
+}
+
+#[test]
+fn run_control_confirm_requires_typed_phrase() {
+    let mut app = test_app();
+    seed_dashboard(&mut app);
+    app.screen = Screen::Runs;
+
+    app.handle_key(KeyCode::Char('s'));
+    assert!(matches!(app.screen, Screen::Control));
+    for ch in "sto".chars() {
+        app.handle_key(KeyCode::Char(ch));
+    }
+    assert!(!app.run_manager.control.as_ref().unwrap().ready());
+    app.handle_key(KeyCode::Char('p'));
+
+    assert!(app.run_manager.control.as_ref().unwrap().ready());
+}
+
+#[test]
+fn log_search_mode_accepts_command_letters() {
+    let mut app = test_app();
+    seed_dashboard(&mut app);
+    app.screen = Screen::Logs;
+
+    app.handle_key(KeyCode::Char('/'));
+    for ch in "query".chars() {
+        assert!(app.handle_key(KeyCode::Char(ch)).is_none());
+    }
+
+    assert_eq!(app.run_manager.logs.search, "query");
+    assert!(matches!(app.screen, Screen::Logs));
+    app.handle_key(KeyCode::Enter);
+    assert!(!app.run_manager.logs.search_editing);
+    assert!(matches!(
+        app.handle_key(KeyCode::Char('q')),
+        Some(TuiAction::Exit(0))
+    ));
 }
 
 #[test]
@@ -290,4 +391,45 @@ fn confirm_snapshot_80x24() {
     app.screen = Screen::Confirm;
     let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
     insta::assert_snapshot!("tui_confirm_80x24", snapshot);
+}
+
+#[test]
+fn dashboard_snapshot_80x24() {
+    let mut app = test_app();
+    seed_dashboard(&mut app);
+    app.screen = Screen::Runs;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_dashboard_80x24", snapshot);
+}
+
+#[test]
+fn logs_snapshot_80x24() {
+    let mut app = test_app();
+    seed_dashboard(&mut app);
+    app.run_manager.logs.set_snapshot(runs::LogSnapshot {
+        text: "\u{1b}[32mallowed api.openai.com\u{1b}[0m\ndenied example.invalid\n".to_string(),
+        returned_lines: 2,
+        requested_lines: 200,
+        truncated: false,
+        warnings: vec![
+            "Raw container output can contain secrets or workspace content.".to_string(),
+        ],
+    });
+    app.run_manager.logs.search = "denied".to_string();
+    app.screen = Screen::Logs;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_logs_80x24", snapshot);
+}
+
+#[test]
+fn control_snapshot_80x24() {
+    let mut app = test_app();
+    seed_dashboard(&mut app);
+    app.run_manager
+        .begin_control(runs::RunControlAction::Kill)
+        .unwrap();
+    app.run_manager.control.as_mut().unwrap().input = "ki".to_string();
+    app.screen = Screen::Control;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_control_80x24", snapshot);
 }

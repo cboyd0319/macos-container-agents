@@ -3,16 +3,16 @@ source: src/runhaven/cli/tui/tests.rs
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                                  antigravity                                 │
+│                                Confirm Control                               │
 └──────────────────────────────────────────────────────────────────────────────┘
-┌ Agent ───────────────────────────────────────────────────────────────────────┐
-│Google Antigravity CLI with project-scoped home state.                        │
+┌ Control ─────────────────────────────────────────────────────────────────────┐
+│Action: Hard stop                                                             │
+│Run: abcdef1234567890                                                         │
+│Container: runhaven-codex-abcdef-run                                          │
+│This forces the container to stop.                                            │
 │                                                                              │
-│image:           runhaven/antigravity:0.1.0                                   │
-│sign-in:         runhaven login                                               │
-│default network: provider                                                     │
-│api-key broker:  no                                                           │
-│                                                                              │
+│Type kill to confirm.                                                         │
+│confirm: ki                                                                   │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -24,5 +24,5 @@ expression: snapshot
 │                                                                              │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-                 enter review · d dashboard · esc back · q quit
-               RunHaven shows the exact CLI command before launch.
+                           enter execute · esc cancel
+   Run controls validate the active marker and RunHaven-owned container first.
