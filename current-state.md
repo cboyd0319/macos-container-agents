@@ -150,6 +150,22 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Vendored codex's pet/image rendering stack under
+  `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
+  three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,
+  `image_protocol.rs` with the iTerm2 3.6+ Kitty `t=f` path, `sixel.rs`), the
+  pet system (`model.rs`, `frames.rs`, `catalog.rs`), and pet animation timing
+  (`animation.rs`, the decoupled `current_animation_frame` extracted from
+  `ambient.rs`). UI/runtime-coupled codex code (the ambient state machine,
+  `FrameRequester`/tokio, picker/preview, asset_pack) was deliberately not
+  vendored; RunHaven supplies its own tick loop and run-state mapping. New
+  pure-Rust deps: `base64` `=0.22.1`, `image` `=0.25.10` (png+webp), no C.
+  Attribution: `licenses/codex-Apache-2.0.txt` + `THIRD_PARTY_NOTICES.md`
+  (carries OpenAI copyright + the Ratatui MIT note). Not yet wired into the app.
+  Text-motion polish (codex `shimmer.rs`/`motion.rs`, needs `color.rs` +
+  `supports_color`) deferred as optional. Verified: cargo build, clippy
+  `-D warnings`, `cargo fmt --check`, `cargo test --locked` (120 lib incl. 40
+  vendored + 6 integration), pin check.
 - 2026-06-26: Reverted the `ratatui-image` high-resolution image tier (it
   rendered blank on iTerm2; see the Key Decision above). The home banner is back
   to the reliable xterm-256 half-block Cubby hero, which renders on every

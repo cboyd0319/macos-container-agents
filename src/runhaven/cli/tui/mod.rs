@@ -19,6 +19,7 @@ use super::app::{agent_broker, agent_sign_in};
 use crate::plans::default_network_mode;
 use crate::profiles::{AgentProfile, profiles};
 
+mod codex;
 mod mascot;
 
 /// Launch the terminal UI. The terminal is restored on exit and on panic.

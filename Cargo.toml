@@ -11,8 +11,10 @@ keywords = ["ai-agents", "apple-container", "macos", "runhaven", "sandbox", "sec
 
 [dependencies]
 anyhow = "=1.0.102"
+base64 = "=0.22.1"
 clap = { version = "=4.6.1", features = ["derive"] }
 idna = "=1.1.0"
+image = { version = "=0.25.10", default-features = false, features = ["png", "webp"] }
 ipnet = "=2.12.0"
 ratatui = "=0.30.2"
 regex = "=1.12.4"
