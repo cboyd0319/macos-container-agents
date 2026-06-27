@@ -238,6 +238,23 @@ Why leaving and adapting is better than removing:
   adapted Codex bottom-pane view once the wider app-shell dependencies are
   ready.
 
+### Codex Renderable Contract
+
+Decision: replace the temporary `Renderable` stand-in with Codex's vendored
+`render/renderable.rs` while still staging the heavier syntax-highlight render
+module.
+
+Why leaving and adapting is better than removing:
+
+- The pet preview, selection views, and future bottom-pane views all share the
+  same renderable trait and layout helpers.
+- `render/renderable.rs` and its tests now compile in RunHaven.
+- The only source adaptation is a Ratatui 0.30 compatibility tweak for rendering
+  `Line` through the borrowed `WidgetRef` implementation.
+- Syntax highlighting remains staged because `render/highlight.rs` pulls in
+  theme globals and terminal palette behavior that should be adapted with the
+  app-shell theme pass.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -276,6 +293,8 @@ The first milestone is a clean vendor baseline:
   frame scheduler now compile and pass their tests.
 - The native pet picker and preview now compile and pass their tests against a
   staged bottom-pane selection contract.
+- Codex's `render/renderable.rs` now compiles and passes its tests through the
+  RunHaven adapter.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

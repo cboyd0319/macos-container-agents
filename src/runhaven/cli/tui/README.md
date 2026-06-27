@@ -46,9 +46,12 @@ Local integration exceptions:
 - `pets/model.rs` formats the SHA-256 cache key bytes explicitly because
   RunHaven is pinned to `sha2` 0.11. The produced cache key string stays the
   same shape as Codex.
-- `app_event`, `app_event_sender`, `bottom_pane`, and `render` in `mod.rs` are
-  staged contracts for compiled vendored surfaces. Replace them with full Codex
+- `app_event`, `app_event_sender`, and `bottom_pane` in `mod.rs` are staged
+  contracts for compiled vendored surfaces. Replace them with full Codex
   adapters as those surfaces come online.
+- `render/renderable.rs` is now compiled through the RunHaven adapter with one
+  Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
+  `WidgetRef` implementation.
 
 Known integration gap:
 

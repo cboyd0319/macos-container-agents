@@ -173,27 +173,52 @@ pub(crate) mod key_hint;
 pub(crate) mod pets;
 #[allow(dead_code)]
 pub(crate) mod render {
-    pub(crate) mod renderable {
-        use crossterm::cursor::SetCursorStyle;
-        use ratatui::buffer::Buffer;
-        use ratatui::layout::Rect;
+    use ratatui::layout::Rect;
 
-        pub(crate) trait Renderable {
-            fn render(&self, area: Rect, buf: &mut Buffer);
-            fn desired_height(&self, width: u16) -> u16;
-            fn cursor_pos(&self, _area: Rect) -> Option<(u16, u16)> {
-                None
-            }
-            fn cursor_style(&self, _area: Rect) -> SetCursorStyle {
-                SetCursorStyle::DefaultUserShape
+    #[path = "renderable.rs"]
+    pub(crate) mod renderable;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct Insets {
+        left: u16,
+        top: u16,
+        right: u16,
+        bottom: u16,
+    }
+
+    impl Insets {
+        pub fn tlbr(top: u16, left: u16, bottom: u16, right: u16) -> Self {
+            Self {
+                top,
+                left,
+                bottom,
+                right,
             }
         }
 
-        impl Renderable for () {
-            fn render(&self, _area: Rect, _buf: &mut Buffer) {}
+        pub fn vh(v: u16, h: u16) -> Self {
+            Self {
+                top: v,
+                left: h,
+                bottom: v,
+                right: h,
+            }
+        }
+    }
 
-            fn desired_height(&self, _width: u16) -> u16 {
-                0
+    pub trait RectExt {
+        fn inset(&self, insets: Insets) -> Rect;
+    }
+
+    impl RectExt for Rect {
+        fn inset(&self, insets: Insets) -> Rect {
+            let horizontal = insets.left.saturating_add(insets.right);
+            let vertical = insets.top.saturating_add(insets.bottom);
+            Rect {
+                x: self.x.saturating_add(insets.left),
+                y: self.y.saturating_add(insets.top),
+                width: self.width.saturating_sub(horizontal),
+                height: self.height.saturating_sub(vertical),
             }
         }
     }
