@@ -146,6 +146,14 @@ an opt-in visual check with `RUNHAVEN_TUI_IMAGE_SMOKE=1`. The smoke path loads
 is only for checking terminal image quality before the full Codex app shell and
 bottom pane are adapted.
 
+TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
+defines the first tagged RunHaven payload enum with `AgentCatalogData` and
+`LaunchPlanData`. Fixtures live under
+`crates/runhaven-core/tests/fixtures/ui/`. The temporary TUI adapter consumes
+`AgentCatalogItemData` for agent display, but the next visual slice should move
+toward a Codex-native shell with RunHaven product cards, matching the
+dbt-wizard lesson: stable domain payloads first, renderer second.
+
 Verified:
 
 - `cargo fmt --check`
@@ -189,4 +197,5 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code.
+custom RunHaven TUI code. Feed RunHaven-specific surfaces from the shared
+`RunHavenComponentPayload` contracts instead of ad hoc screen structs.

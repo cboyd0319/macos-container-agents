@@ -27,14 +27,13 @@ use ratatui::widgets::ListState;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Wrap;
 
-use runhaven_core::provider::auth_profiles::agent_broker;
-use runhaven_core::provider::auth_profiles::agent_sign_in;
 use runhaven_core::runtime::plans::AuthScope;
 use runhaven_core::runtime::plans::RunOptions;
 use runhaven_core::runtime::plans::WorkspaceScope;
 use runhaven_core::runtime::plans::build_run_plan;
 use runhaven_core::runtime::plans::default_network_mode;
 use runhaven_core::runtime::profiles::profiles;
+use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
@@ -103,10 +102,7 @@ struct ShellState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct AgentPreview {
-    name: String,
-    description: String,
-    sign_in: String,
-    broker: String,
+    agent: AgentCatalogItemData,
     plan: Result<LaunchPlanData, String>,
 }
 
@@ -127,10 +123,7 @@ impl ShellState {
             .into_iter()
             .map(|profile| {
                 let network = default_network_mode(&profile);
-                let name = profile.name.to_string();
-                let description = profile.description.to_string();
-                let sign_in = agent_sign_in(profile.name).to_string();
-                let broker = agent_broker(profile.name).to_string();
+                let agent = AgentCatalogItemData::from_profile(&profile);
                 let plan = build_run_plan(RunOptions {
                     profile,
                     workspace: workspace.clone(),
@@ -158,13 +151,7 @@ impl ShellState {
                 .map(|plan| LaunchPlanData::from(&plan))
                 .map_err(|error| error.to_string());
 
-                AgentPreview {
-                    name,
-                    description,
-                    sign_in,
-                    broker,
-                    plan,
-                }
+                AgentPreview { agent, plan }
             })
             .collect();
 
@@ -481,10 +468,10 @@ fn render_agents(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &She
         .map(|agent| {
             ListItem::new(vec![
                 Line::from(vec![Span::styled(
-                    agent.name.clone(),
+                    agent.agent.name.clone(),
                     Style::default().add_modifier(Modifier::BOLD),
                 )]),
-                Line::from(agent.description.clone()),
+                Line::from(agent.agent.description.clone()),
             ])
         })
         .collect::<Vec<_>>();
@@ -513,9 +500,9 @@ fn render_plan(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &Shell
 
     match state.selected_agent() {
         Some(agent) => {
-            lines.push(label_value("agent", agent.name.clone()));
-            lines.push(label_value("sign in", agent.sign_in.clone()));
-            lines.push(label_value("broker", agent.broker.clone()));
+            lines.push(label_value("agent", agent.agent.name.clone()));
+            lines.push(label_value("sign in", agent.agent.sign_in.clone()));
+            lines.push(label_value("broker", agent.agent.broker.clone()));
             lines.push(Line::from(""));
 
             match &agent.plan {
@@ -642,7 +629,7 @@ mod tests {
 
         assert!(!state.agents.is_empty());
         let antigravity = state.selected_agent().expect("selected agent");
-        assert_eq!(antigravity.name, "antigravity");
+        assert_eq!(antigravity.agent.name, "antigravity");
         assert!(antigravity.plan.is_ok(), "{:?}", antigravity.plan);
     }
 

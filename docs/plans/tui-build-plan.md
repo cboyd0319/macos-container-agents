@@ -33,6 +33,11 @@ coherent terminal app substrate, add a narrow product payload seam, and render
 domain-specific cards from that seam. RunHaven should copy that architecture
 move, not the dbt product shape and not Codex chat ontology.
 
+The first active payload seam is in `crates/runhaven-core/src/ui_contracts.rs`:
+`AgentCatalogData`, `LaunchPlanData`, and tagged `RunHavenComponentPayload`
+fixtures. New visual work should feed RunHaven cards from those payloads into
+the Codex-vendored shell instead of inventing another custom Ratatui screen.
+
 Temporary visual check for the native Codex pet renderer:
 
 ```bash

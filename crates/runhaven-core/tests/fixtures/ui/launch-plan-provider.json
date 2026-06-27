@@ -1,0 +1,39 @@
+{
+  "type": "launchPlan",
+  "data": {
+    "profileName": "codex",
+    "workspace": "/Users/c/Documents/GitHub/RunHaven",
+    "workspaceScope": "current",
+    "workspaceScopeNote": null,
+    "session": "default",
+    "stateVolume": "runhaven-codex-shared-home",
+    "containerName": "runhaven-codex-runhaven-run",
+    "image": "runhaven/codex:0.1.0",
+    "worktree": null,
+    "network": {
+      "mode": "provider",
+      "name": "runhaven-provider",
+      "summary": "provider allowlist",
+      "providerAllowedHosts": [
+        "api.openai.com",
+        "auth.openai.com"
+      ],
+      "apiKeyBrokerEnv": null
+    },
+    "boundary": {
+      "mountedWorkspace": "/Users/c/Documents/GitHub/RunHaven -> /workspace",
+      "mountedStateVolume": "runhaven-codex-shared-home -> /home/agent",
+      "notShared": [
+        "host home folder",
+        "raw SSH keys",
+        "browser profiles",
+        "cloud credential folders",
+        "arbitrary host environment variables"
+      ]
+    },
+    "preflightCommands": [],
+    "command": "container run --rm --init --name runhaven-codex-runhaven-run --read-only --tmpfs /tmp --cap-drop ALL runhaven/codex:0.1.0",
+    "safetyNotes": [],
+    "confirmRequired": false
+  }
+}

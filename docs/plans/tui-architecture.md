@@ -40,9 +40,10 @@ parsing. It may expose only data the CLI already treats as safe to show, such
 as the selected agent, workspace path, state volume name, network posture,
 provider hosts, safety notes, and the exact command the TUI will run.
 
-Start with `LaunchPlanData` built from `AgentRunPlan`, then add active-run,
-history, diagnostics, and diff payloads as those screens are reattached to the
-vendored shell.
+The active first payloads are `AgentCatalogData`, `LaunchPlanData`, and the
+tagged `RunHavenComponentPayload` enum. Keep adding active-run, history,
+diagnostics, and diff payloads as those screens are reattached to the vendored
+shell.
 
 ## Codex Source First
 

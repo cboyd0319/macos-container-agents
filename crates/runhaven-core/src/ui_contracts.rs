@@ -1,6 +1,34 @@
 use serde::{Deserialize, Serialize};
 
+use crate::provider::auth_profiles::{agent_broker, agent_sign_in};
 use crate::runtime::plans::AgentRunPlan;
+use crate::runtime::plans::default_network_mode;
+use crate::runtime::profiles::AgentProfile;
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data", rename_all = "camelCase")]
+pub enum RunHavenComponentPayload {
+    AgentCatalog(AgentCatalogData),
+    LaunchPlan(Box<LaunchPlanData>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentCatalogData {
+    pub agents: Vec<AgentCatalogItemData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentCatalogItemData {
+    pub name: String,
+    pub description: String,
+    pub image: String,
+    pub sign_in: String,
+    pub broker: String,
+    pub default_network: String,
+    pub provider_host_count: usize,
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +48,31 @@ pub struct LaunchPlanData {
     pub command: String,
     pub safety_notes: Vec<String>,
     pub confirm_required: bool,
+}
+
+impl AgentCatalogData {
+    pub fn from_profiles(profiles: impl IntoIterator<Item = AgentProfile>) -> Self {
+        Self {
+            agents: profiles
+                .into_iter()
+                .map(|profile| AgentCatalogItemData::from_profile(&profile))
+                .collect(),
+        }
+    }
+}
+
+impl AgentCatalogItemData {
+    pub fn from_profile(profile: &AgentProfile) -> Self {
+        Self {
+            name: profile.name.to_string(),
+            description: profile.description.to_string(),
+            image: profile.image.to_string(),
+            sign_in: agent_sign_in(profile.name).to_string(),
+            broker: agent_broker(profile.name).to_string(),
+            default_network: default_network_mode(profile).as_str().to_string(),
+            provider_host_count: profile.provider_hosts.len(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -124,7 +177,7 @@ mod tests {
     use crate::runtime::plans::{
         AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
     };
-    use crate::runtime::profiles::get_profile;
+    use crate::runtime::profiles::{get_profile, profiles};
 
     fn test_plan(network: NetworkMode) -> AgentRunPlan {
         let workspace = tempfile::tempdir().expect("workspace");
@@ -204,5 +257,57 @@ mod tests {
         let decoded: LaunchPlanData = serde_json::from_str(&encoded).expect("deserialize");
 
         assert_eq!(decoded, data);
+    }
+
+    #[test]
+    fn agent_catalog_contract_maps_profiles() {
+        let data = AgentCatalogData::from_profiles(profiles());
+
+        let shell = data
+            .agents
+            .iter()
+            .find(|agent| agent.name == "shell")
+            .expect("shell agent");
+        assert_eq!(shell.sign_in, "n/a");
+        assert_eq!(shell.broker, "n/a");
+        assert_eq!(shell.default_network, "internet");
+        assert_eq!(shell.provider_host_count, 0);
+
+        let codex = data
+            .agents
+            .iter()
+            .find(|agent| agent.name == "codex")
+            .expect("codex agent");
+        assert_eq!(codex.sign_in, "runhaven login");
+        assert_eq!(codex.default_network, "provider");
+        assert!(codex.provider_host_count > 0);
+    }
+
+    #[test]
+    fn component_payload_round_trips_json() {
+        let payload = RunHavenComponentPayload::LaunchPlan(Box::new(LaunchPlanData::from(
+            &test_plan(NetworkMode::Internal),
+        )));
+
+        let encoded = serde_json::to_string(&payload).expect("serialize");
+        let decoded: RunHavenComponentPayload =
+            serde_json::from_str(&encoded).expect("deserialize");
+
+        assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn component_payload_fixtures_decode() {
+        let catalog = include_str!("../tests/fixtures/ui/agent-catalog.json");
+        let launch_plan = include_str!("../tests/fixtures/ui/launch-plan-provider.json");
+
+        assert!(matches!(
+            serde_json::from_str::<RunHavenComponentPayload>(catalog).expect("agent catalog"),
+            RunHavenComponentPayload::AgentCatalog(_)
+        ));
+        assert!(matches!(
+            serde_json::from_str::<RunHavenComponentPayload>(launch_plan).expect("launch plan"),
+            RunHavenComponentPayload::LaunchPlan(_)
+        ));
     }
 }
