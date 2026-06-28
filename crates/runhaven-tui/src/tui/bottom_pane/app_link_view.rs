@@ -847,7 +847,7 @@ impl crate::render::renderable::Renderable for AppLinkView {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app::app_server_requests::ResolvedAppServerRequest;

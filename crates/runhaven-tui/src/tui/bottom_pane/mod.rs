@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use crate::app::app_server_requests::ResolvedAppServerRequest;
 use crate::app_event::AppEvent;
 use crate::app_event::ConnectorsSnapshot;
-use crate::app_event_sender::AppEventSender;
+pub(crate) use crate::app_event_sender::AppEventSender;
 use crate::bottom_pane::pending_input_preview::PendingInputPreview;
 use crate::bottom_pane::pending_thread_approvals::PendingThreadApprovals;
 use crate::bottom_pane::unified_exec_footer::UnifiedExecFooter;
@@ -105,9 +105,15 @@ mod skill_popup;
 mod skills_toggle_view;
 pub(crate) mod slash_commands;
 pub(crate) use footer::CollaborationModeIndicator;
+pub(crate) use footer::FooterKeyHints;
+pub(crate) use footer::FooterMode;
+pub(crate) use footer::FooterProps;
 pub(crate) use footer::GoalStatusIndicator;
+pub(crate) use footer::footer_height;
 #[cfg(test)]
 pub(crate) use footer::goal_status_indicator_line;
+pub(crate) use footer::render_footer_from_props;
+pub(crate) use footer::render_footer_hint_items;
 pub(crate) use list_selection_view::ColumnWidthMode;
 pub(crate) use list_selection_view::ListSelectionView;
 pub(crate) use list_selection_view::OnSelectionChangedCallback;
@@ -194,7 +200,10 @@ pub(crate) use list_selection_view::SELECTION_TOGGLE_BLOCKED_PREFIX;
 pub(crate) use list_selection_view::SELECTION_TOGGLE_UNAVAILABLE_PREFIX;
 pub(crate) use list_selection_view::SelectionAction;
 pub(crate) use list_selection_view::SelectionItem;
+pub(crate) use selection_popup_common::menu_surface_inset;
 pub(crate) use selection_popup_common::render_menu_surface;
+pub(crate) use textarea::TextArea;
+pub(crate) use textarea::TextAreaState;
 
 struct DelayedApprovalRequest {
     request: ApprovalRequest,
@@ -1844,7 +1853,7 @@ impl Renderable for BottomPane {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app::app_server_requests::ResolvedAppServerRequest;
@@ -2384,6 +2393,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn status_and_composer_fill_height_without_bottom_padding() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
@@ -2415,6 +2428,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn status_only_snapshot() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
@@ -2467,6 +2484,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn status_with_details_and_queued_messages_snapshot() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
@@ -2504,6 +2525,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn queued_messages_visible_when_status_hidden_snapshot() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);
@@ -2536,6 +2561,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn status_and_queued_messages_snapshot() {
         let (tx_raw, _rx) = unbounded_channel::<AppEvent>();
         let tx = AppEventSender::new(tx_raw);

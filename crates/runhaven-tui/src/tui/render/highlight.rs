@@ -1074,6 +1074,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        not(feature = "codex-vendored-tests"),
+        ignore = "upstream snapshot goldens stay external by default"
+    )]
     fn ansi_family_foreground_palette_snapshot() {
         let mut out = String::new();
         for theme_name in ["ansi", "base16", "base16-256"] {

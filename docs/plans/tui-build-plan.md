@@ -226,8 +226,8 @@ terminal image overlay ownership.
 | `render/` (Renderable trait) | foundation | layout composition (Column/Flex/Row/Inset); base for cards |
 | `key_hint.rs` | foundation | consistent keyboard-hint rendering |
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
-| `bottom_pane/list_selection_view.rs` + helpers | staged foundation | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; currently behind a RunHaven facade while the full bottom pane is adapted |
-| `bottom_pane/textarea.rs` + `textarea/vim.rs` | staged foundation | native Codex text editor for the Step 4 confirmation phrase; deterministic upstream tests run by default, snapshot/randomized tests stay opt-in |
+| `bottom_pane/list_selection_view.rs` + helpers | vendored bottom pane | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; active through the temporary RunHaven shell until native `App` owns the flow |
+| `bottom_pane/textarea.rs` + `textarea/vim.rs` | vendored bottom pane | native Codex text editor for the Step 4 confirmation phrase; deterministic upstream tests run by default, snapshot/randomized tests stay opt-in |
 | `bottom_pane/chat_composer.rs` + `public_widgets/composer_input.rs` | evaluate through runtime/app-server seam | `ComposerInput` is the Strategy B standalone wrapper; full `ChatComposer` belongs with the Strategy C Codex-compatible path: `App`, `ChatWidget`, `BottomPane`, event loop, and app-server facade |
 | `terminal_hyperlinks.rs` | foundation | OSC 8 clickable paths and URLs |
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |

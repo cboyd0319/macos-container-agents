@@ -227,7 +227,7 @@ fn skill_popup_hint_line() -> Line<'static> {
     ])
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;

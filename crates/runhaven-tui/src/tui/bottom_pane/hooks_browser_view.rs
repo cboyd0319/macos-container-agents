@@ -853,7 +853,7 @@ fn detail_wrapped_lines(
     lines
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app_event::AppEvent;

@@ -81,7 +81,7 @@ impl Renderable for UnifiedExecFooter {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use insta::assert_snapshot;

@@ -2,14 +2,19 @@ extern crate self as codex_terminal_detection;
 
 mod tui;
 
+pub(crate) use tui::app;
 pub(crate) use tui::app_command;
 pub(crate) use tui::app_event;
 pub(crate) use tui::app_event_sender;
+pub(crate) use tui::app_server_approval_conversions;
 pub(crate) use tui::app_server_session;
 pub(crate) use tui::bottom_pane;
 pub(crate) use tui::chatwidget;
 pub(crate) use tui::clipboard_paste;
+pub(crate) use tui::color;
 pub(crate) use tui::custom_terminal;
+pub(crate) use tui::diff_model;
+pub(crate) use tui::exec_command;
 pub(crate) use tui::goal_files;
 pub(crate) use tui::history_cell;
 pub(crate) use tui::hooks_rpc;
@@ -17,11 +22,18 @@ pub(crate) use tui::insert_history;
 pub(crate) use tui::key_hint;
 pub(crate) use tui::keymap;
 pub(crate) use tui::line_truncation;
+pub(crate) use tui::live_wrap;
+pub(crate) use tui::mention_codec;
+pub(crate) use tui::motion;
 pub(crate) use tui::notifications;
+pub(crate) use tui::onboarding;
 pub(crate) use tui::pets;
 pub(crate) use tui::render;
 pub(crate) use tui::session_log;
+pub(crate) use tui::skills_helpers;
+pub(crate) use tui::slash_command;
 pub(crate) use tui::status;
+pub(crate) use tui::status_indicator_widget;
 pub(crate) use tui::style;
 pub use tui::terminal_detection::Multiplexer;
 pub use tui::terminal_detection::TerminalInfo;
@@ -32,6 +44,10 @@ pub(crate) use tui::terminal_palette;
 pub(crate) use tui::terminal_probe;
 #[cfg(test)]
 pub(crate) use tui::test_backend;
+#[cfg(test)]
+#[allow(unused_imports)]
+pub(crate) use tui::test_support;
+pub(crate) use tui::text_formatting;
 pub(crate) use tui::ui_consts;
 pub(crate) use tui::workspace_messages;
 pub(crate) use tui::wrapping;

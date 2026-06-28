@@ -175,10 +175,9 @@ Local integration exceptions:
 - `terminal_detection.rs` and `terminal_tests.rs` are copied from the Codex
   terminal-detection crate because the native pet image protocol depends on the
   same iTerm2, Kitty, Sixel, tmux, and Zellij decisions as Codex.
-- `pets/picker.rs` and `pets/preview.rs` remain vendored but are not compiled
-  against the full Codex bottom-pane view yet. They compile against the staged
-  `bottom_pane` selection contract in `mod.rs` until the full bottom-pane view
-  is adapted.
+- `pets/picker.rs` and `pets/preview.rs` remain vendored and now compile
+  against the real vendored `bottom_pane` module path. They are still not
+  exposed as active product flows until the native app shell owns those views.
 - `pets/model.rs` formats the SHA-256 cache key bytes explicitly because
   RunHaven is pinned to `sha2` 0.11. The produced cache key string stays the
   same shape as Codex.
@@ -186,9 +185,10 @@ Local integration exceptions:
   vendored Codex files. `app_event_shared.rs` is a temporary inert type bridge
   for shared leaves whose owning modules remain dormant. Remove that bridge as
   the real shared modules are promoted.
-- `bottom_pane` in `mod.rs` is still a staged contract for compiled vendored
-  surfaces. Replace it with the full Codex adapter as that surface comes
-  online.
+- `bottom_pane/mod.rs` is now the real vendored Codex source. RunHaven keeps
+  small re-exports for the temporary shell and gates snapshot-heavy upstream
+  tests behind `codex-vendored-tests` until RunHaven intentionally tracks
+  those goldens.
 - `keymap.rs` is now compiled file-backed from the vendored Codex TUI source
   against the real `codex-config` crate, including
   `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}`.
@@ -216,6 +216,15 @@ Local integration exceptions:
   matching the package-level pattern already used by other vendored Codex
   crates. This preserves upstream source shape under RunHaven's stricter
   workspace `-D warnings` gate.
+- `crates/codex/core-skills`, `crates/codex/feedback`,
+  `crates/codex/models-manager`, and
+  `crates/codex/utils/fuzzy-match` are now original-name crate authorities for
+  the real bottom-pane source. The first three expose only the inert model or
+  diagnostic surfaces needed by the active TUI compile path; upstream
+  host-skill loading, feedback upload/logging, remote model cache, login, and
+  telemetry behavior remain dormant. The feedback diagnostics env collector is
+  shape-compatible but returns no diagnostics until RunHaven has a redaction
+  policy for host environment capture.
 - `lib.rs` no longer aliases `codex_config`; only
   `codex_terminal_detection` remains as a temporary self-alias until the
   terminal-detection crate is promoted into the vendored crate set.
@@ -283,17 +292,17 @@ Known integration gap:
 - The real Codex protocol and config crates compile as workspace members, and
   `runhaven-tui` depends on them. Wider Codex crate activation is still
   incremental and must keep RunHaven runtime authority in `runhaven-core`.
-- The real Codex event and sender files compile. Their temporary
-  `app_event_shared.rs` leaf-type bridge must be removed as the real
-  `chatwidget`, `history_cell`, `goal_files`, `session_log`, and
-  app-server-session surfaces are promoted without activating host-reaching
-  Codex app paths.
+- The real Codex event, sender, and bottom-pane files compile. The temporary
+  `app_event_shared.rs` leaf-type bridge plus the inline `status` and
+  `onboarding` shims must be removed as real `chatwidget`, `history_cell`,
+  `goal_files`, `session_log`, status, onboarding, and app-server-session
+  surfaces are promoted without activating host-reaching Codex app paths.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
-- The launch picker, read-only review, and confirmation screen are staged in
+- The launch picker, read-only review, and confirmation screen still run from
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   Workspace selection, policy changes, and final foreground launch still need
-  to be reattached through the Codex-shaped runtime.
+  to be reattached through the Codex-shaped runtime and native app ownership.
 - `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If
   `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
   editor, clipboard copy, or hooks RPC modules are activated, the test requires

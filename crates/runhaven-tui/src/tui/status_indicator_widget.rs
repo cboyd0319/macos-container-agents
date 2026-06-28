@@ -295,11 +295,12 @@ impl Renderable for StatusIndicatorWidget {
             lines.extend(details.into_iter().take(max_details));
         }
 
-        Paragraph::new(Text::from(lines)).render_ref(area, buf);
+        let paragraph = Paragraph::new(Text::from(lines));
+        WidgetRef::render_ref(&&paragraph, area, buf);
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app_event::AppEvent;

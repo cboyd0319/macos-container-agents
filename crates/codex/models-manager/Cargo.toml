@@ -1,0 +1,18 @@
+[package]
+name = "codex-models-manager"
+version = "0.0.0"
+edition.workspace = true
+license = "Apache-2.0"
+publish = false
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+name = "codex_models_manager"
+path = "src/lib.rs"
+
+[dependencies]
+codex-protocol = { path = "../protocol" }
+serde_json.workspace = true

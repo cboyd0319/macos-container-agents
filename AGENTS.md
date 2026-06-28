@@ -184,6 +184,10 @@ Tauri launch/run-control behavior.
   crate/tooling correctness, Codex source-pattern alignment, then boundary and
   overclaim review. The repo-local `.agents/skills/codex-tui` wrapper exists
   only to make that Persona skill discoverable from this project.
+- For Codex-vendored TUI and `codex-*` dependencies, preserving the original
+  Codex package name, crate name, and module path is the default. Use a local
+  bridge only when compiling or activating the real Codex surface would cross a
+  RunHaven security boundary that has not been designed and tested.
 
 ## Definition Of Done
 

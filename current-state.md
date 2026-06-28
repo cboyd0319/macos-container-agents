@@ -101,6 +101,10 @@ TUI, Tauri, or frontend layers.
 - Antigravity (`agy`) is research-only in this repo. Do not use it for
   end-of-slice code review, adversarial review, verification, or proof of
   correctness.
+- For Codex-vendored TUI and `codex-*` dependencies, preserving the original
+  Codex package name, crate name, and module path is the default. Use a local
+  bridge only when compiling or activating the real Codex surface would cross a
+  RunHaven security boundary that has not been designed and tested.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   README/usage docs, and setup instructions target non-technical users at about
   an 8th grade reading level.
@@ -632,6 +636,47 @@ Latest Codex event-bus activation:
   `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
   `git diff --check`.
 
+Latest Codex bottom-pane activation:
+
+- 2026-06-27: Promoted the real vendored `bottom_pane/mod.rs` source under its
+  original module path and added the original-name crate authorities needed by
+  that surface: `codex-core-skills`, `codex-feedback`,
+  `codex-models-manager`, and `codex-utils-fuzzy-match`.
+- The default remains original Codex package, crate, and module names. Local
+  bridges are exceptions only when activating the real surface would cross an
+  unreviewed RunHaven security boundary or pull host-reaching behavior into the
+  active TUI. Current named bridge exceptions are `app_event_shared.rs`,
+  `status`, `onboarding`, and the narrow exposed surfaces inside
+  `codex-core-skills`, `codex-feedback`, and `codex-models-manager`.
+  `codex-feedback::FeedbackDiagnostics::collect_from_env()` is kept
+  shape-compatible but returns no diagnostics until RunHaven has a redaction
+  policy for host environment capture.
+- Snapshot-heavy upstream bottom-pane tests are gated behind
+  `codex-vendored-tests`; default RunHaven tests do not create `.snap.new`
+  files from external Codex goldens. The opt-in feature still compiles as a
+  vendored-source check.
+- `scripts/compare-codex-tui.sh` now reports 894 upstream files, 370 RunHaven
+  TUI files, 356 shared paths, 538 external upstream `.snap` goldens, 14
+  RunHaven-only files, and 43 copied Codex files with local edits.
+- Native Codex `App` remains inactive because its owning app/session/chat
+  paths still include host environment, filesystem RPC, onboarding auth,
+  external editor, clipboard, and hooks surfaces that need RunHaven-specific
+  fail-closed design before activation.
+- Verified so far:
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`,
+  `cargo fmt --check`, and
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `git diff --check`, and
+  `scripts/compare-codex-tui.sh`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -639,10 +684,10 @@ Latest Codex event-bus activation:
 ## Next Step
 
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
-adapt the native `App` and `BottomPane` path. Foreground launch remains
-read-only until the native Codex app loop owns terminal restore and
-`launch_run_plan` is wired through the UI thread. The next vendor-first slice is
-to promote `bottom_pane/mod.rs` after either replacing `app_event_shared.rs`
-with real shared modules or proving which inert bridge types can remain until
-ChatWidget activation. Do not route host-reaching Codex behavior around the
-RunHaven facade.
+adapt the native `App` path and then `ChatWidget` ownership around the now
+promoted bottom pane. Foreground launch remains read-only until the native
+Codex app loop owns terminal restore and `launch_run_plan` is wired through the
+UI thread. The next vendor-first slice should keep replacing bridge types with
+real Codex modules or document why a bridge must remain until ChatWidget
+activation. Do not route host-reaching Codex behavior around the RunHaven
+facade.

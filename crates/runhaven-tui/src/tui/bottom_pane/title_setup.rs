@@ -369,7 +369,7 @@ impl Renderable for TerminalTitleSetupView {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use insta::assert_snapshot;

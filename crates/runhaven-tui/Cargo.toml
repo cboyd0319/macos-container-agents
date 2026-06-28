@@ -28,17 +28,25 @@ anyhow.workspace = true
 base64.workspace = true
 crossterm.workspace = true
 derive_more.workspace = true
+dirs.workspace = true
 image.workspace = true
 itertools.workspace = true
 codex-app-server-protocol = { path = "../codex/app-server-protocol" }
 codex-config = { path = "../codex/config" }
 codex-connectors = { path = "../codex/connectors" }
+codex-core-skills = { path = "../codex/core-skills" }
+codex-feedback = { path = "../codex/feedback" }
 codex-features = { path = "../codex/features" }
 codex-file-search = { path = "../codex/file-search" }
+codex-models-manager = { path = "../codex/models-manager" }
 codex-plugin = { path = "../codex/plugin" }
 codex-protocol = { path = "../codex/protocol" }
+codex-shell-command = { path = "../codex/shell-command" }
 codex-utils-absolute-path = { path = "../codex/utils/absolute-path" }
 codex-utils-approval-presets = { path = "../codex/utils/approval-presets" }
+codex-utils-fuzzy-match = { path = "../codex/utils/fuzzy-match" }
+codex-utils-plugins = { path = "../codex/utils/plugins" }
+codex-utils-path-uri = { path = "../codex/utils/path-uri" }
 ratatui.workspace = true
 regex.workspace = true
 reqwest.workspace = true
@@ -47,7 +55,12 @@ schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+shlex.workspace = true
+strum.workspace = true
+strum_macros.workspace = true
 supports-color.workspace = true
+syntect.workspace = true
+tempfile.workspace = true
 textwrap.workspace = true
 time.workspace = true
 tokio.workspace = true
@@ -55,6 +68,7 @@ tokio-stream.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 ts-rs.workspace = true
+two-face.workspace = true
 unicode-segmentation.workspace = true
 unicode-width.workspace = true
 url.workspace = true
@@ -63,6 +77,9 @@ vt100.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.186"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+arboard.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.52.0", features = [

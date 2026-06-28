@@ -576,7 +576,7 @@ pub(crate) fn feedback_upload_consent_params(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app_event::AppEvent;

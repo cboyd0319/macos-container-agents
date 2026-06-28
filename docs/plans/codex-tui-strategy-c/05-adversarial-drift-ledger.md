@@ -168,8 +168,10 @@ These are not throwaway compliments; they bound the size of the problem.
   `tui.with_restored(RestoreMode::Full, ...)` then `restore_after_exit()`, runs
   only a harmless exact-argv child (`/usr/bin/printf`), and is env-gated. This
   is the launch-safety mechanism the plan requires, proven before real launch.
-- **F7. Security-relevant edits are documented.** All 26 modified vendored files
-  are listed in `tui/README.md`, and ~23 have explicit per-file rationale.
+- **F7. Security-relevant edits are documented.** The compare script now reports
+  43 modified vendored files. `tui/README.md` records the known source-format,
+  integration, and test-golden exceptions; keep it current as each new
+  vendored file is edited.
 
 ---
 
@@ -474,14 +476,16 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
 
 ## Severity-Ranked Remediation Backlog
 
-1. **(High) Wire Codex `App` + `BottomPane` (Phase 4) before any new screen.**
-   Host the existing picker inside `Tui`. Stop growing `app_shell.rs`. (D1, D10)
+1. **(High) Finish Codex `App` ownership for Phase 4 before any new screen.**
+   `bottom_pane/mod.rs` now compiles from real vendored source; host the
+   existing picker inside native `App`/`Tui` next. Stop growing `app_shell.rs`.
+   (D1, D10)
 2. **(High) Convert `mod.rs` stand-ins into a tracked debt ledger** with a named
    vendored-module upgrade path for each; prefer activating real modules. (D2)
-3. **(Medium) Keep crate authority moving with Phase 4**: the first protocol
-   and config crate closures are vendored; the next native `App`/`BottomPane`
-   slice should vendor required `codex-*` crates before adding new local
-   stand-ins. (D3)
+3. **(Medium) Keep crate authority moving with Phase 4**: protocol, config,
+   event-data, and bottom-pane crate closures are vendored under original
+   names; the next native `App` slice should vendor required `codex-*` crates
+   before adding new local stand-ins. (D3)
 4. **(Medium) Expand the security guard** as dormant host-reaching modules are
    promoted. (D8)
 5. **(Medium) Drive `launch_wizard.rs` boundary/network text from the
@@ -500,14 +504,15 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
 
 ## Method and Evidence
 
-- Structural diff: `comm`/`diff -qr` of all 894 upstream vs 369 RunHaven files
-  under the mapped roots.
-- Content drift: per-file `diff` of all 355 shared Rust files against the
-  commit-exact pinned baseline; 329 identical, 26 modified.
+- Structural diff: `scripts/compare-codex-tui.sh` reports 894 upstream files,
+  370 RunHaven files, 356 shared paths, 538 external upstream `.snap` goldens,
+  and 14 RunHaven-only files under the mapped roots.
+- Content drift: the compare script reports 43 copied Codex files with local
+  edits against the commit-exact pinned baseline.
 - Wiring: direct read of `lib.rs`, `mod.rs`, `app_shell.rs`,
   `runhaven/{protocol,service}.rs`, plus subagent reads of `app_shell.rs`,
   `launch_wizard.rs`, `app_server_client.rs`, `app_server_session.rs`,
-  `terminal_handoff.rs`, and the 26 modified vendored files.
+  `terminal_handoff.rs`, and the modified vendored files.
 - State reconciliation: `feature_list.json`, `current-state.md`,
   `docs/plans/codex-tui-strategy-c/*` vs this Downloads copy.
 - Baseline verification: local Codex `git rev-parse HEAD` == pinned commit.

@@ -1510,7 +1510,7 @@ impl BottomPaneView for RequestUserInputOverlay {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use crate::app_event::AppEvent;

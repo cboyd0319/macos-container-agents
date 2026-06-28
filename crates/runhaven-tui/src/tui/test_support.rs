@@ -1,5 +1,7 @@
 //! Test-only helpers shared across the TUI crate.
 
+#![allow(unused_imports)]
+
 use std::sync::LazyLock;
 
 use codex_models_manager::bundled_models_response;

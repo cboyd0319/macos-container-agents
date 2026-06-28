@@ -6,6 +6,8 @@ pub(crate) mod app_command;
 pub(crate) mod app_event;
 #[allow(dead_code)]
 mod app_event_shared;
+#[allow(dead_code)]
+pub(crate) mod app_server_approval_conversions;
 mod app_shell;
 mod runhaven;
 
@@ -14,6 +16,7 @@ pub(crate) mod color;
 #[allow(dead_code)]
 pub(crate) mod custom_terminal;
 
+pub(crate) use app_event_shared::app;
 pub(crate) use app_event_shared::app_server_session;
 pub(crate) use app_event_shared::chatwidget;
 pub(crate) use app_event_shared::goal_files;
@@ -26,121 +29,17 @@ pub(crate) use app_event_shared::workspace_messages;
 pub(crate) mod app_event_sender;
 
 #[allow(dead_code, unused_imports)]
-pub(crate) mod bottom_pane {
-    use crossterm::event::KeyEvent;
-
-    use super::render::renderable::Renderable;
-
-    #[derive(Clone, Debug)]
-    pub(crate) enum ApprovalRequest {}
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub(crate) enum StatusLineItem {}
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub(crate) enum TerminalTitleItem {}
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub(crate) enum CancellationEvent {
-        Handled,
-        NotHandled,
-    }
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub(crate) enum ViewCompletion {
-        Accepted,
-        Cancelled,
-    }
-
-    pub(crate) trait BottomPaneView: Renderable {
-        fn handle_key_event(&mut self, _key_event: KeyEvent) {}
-
-        fn is_complete(&self) -> bool {
-            false
-        }
-
-        fn completion(&self) -> Option<ViewCompletion> {
-            None
-        }
-
-        fn dismiss_after_child_accept(&self) -> bool {
-            false
-        }
-
-        fn clear_dismiss_after_child_accept(&mut self) {}
-
-        fn view_id(&self) -> Option<&'static str> {
-            None
-        }
-
-        fn selected_index(&self) -> Option<usize> {
-            None
-        }
-
-        fn active_tab_id(&self) -> Option<&str> {
-            None
-        }
-
-        fn on_ctrl_c(&mut self) -> CancellationEvent {
-            CancellationEvent::NotHandled
-        }
-
-        fn prefer_esc_to_handle_key_event(&self) -> bool {
-            false
-        }
-
-        fn handle_paste(&mut self, _pasted: String) -> bool {
-            false
-        }
-    }
-
-    pub(crate) mod bottom_pane_view {
-        pub(crate) use super::BottomPaneView;
-        pub(crate) use super::ViewCompletion;
-    }
-
-    #[path = "footer.rs"]
-    mod footer;
-    #[path = "list_selection_view.rs"]
-    mod list_selection_view;
-    #[path = "popup_consts.rs"]
-    pub(crate) mod popup_consts;
-    #[path = "scroll_state.rs"]
-    mod scroll_state;
-    #[path = "selection_popup_common.rs"]
-    mod selection_popup_common;
-    #[path = "selection_tabs.rs"]
-    mod selection_tabs;
-    #[path = "textarea.rs"]
-    pub(crate) mod textarea;
-
-    pub(crate) use footer::FooterKeyHints;
-    pub(crate) use footer::FooterMode;
-    pub(crate) use footer::FooterProps;
-    pub(crate) use footer::footer_height;
-    pub(crate) use footer::render_footer_from_props;
-    pub(crate) use footer::render_footer_hint_items;
-    pub(crate) use list_selection_view::ColumnWidthMode;
-    pub(crate) use list_selection_view::ListSelectionView;
-    pub(crate) use list_selection_view::OnSelectionChangedCallback;
-    pub(crate) use list_selection_view::SelectionAction;
-    pub(crate) use list_selection_view::SelectionItem;
-    pub(crate) use list_selection_view::SelectionRowDisplay;
-    pub(crate) use list_selection_view::SelectionViewParams;
-    pub(crate) use list_selection_view::SideContentWidth;
-    pub(crate) use selection_popup_common::menu_surface_inset;
-    pub(crate) use selection_popup_common::render_menu_surface;
-    pub(crate) use textarea::TextArea;
-    pub(crate) use textarea::TextAreaState;
-}
+pub(crate) mod bottom_pane;
 
 #[allow(dead_code)]
-pub(crate) mod clipboard_paste {
-    pub(crate) fn normalize_pasted_search_query(pasted: &str) -> Option<String> {
-        let normalized = pasted.split_whitespace().collect::<Vec<_>>().join(" ");
-        (!normalized.is_empty()).then_some(normalized)
-    }
-}
+pub(crate) mod clipboard_paste;
+
+#[allow(dead_code)]
+pub(crate) mod approval_events;
+#[allow(dead_code)]
+pub(crate) mod diff_model;
+#[allow(dead_code)]
+pub(crate) mod exec_command;
 
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
@@ -149,71 +48,42 @@ pub(crate) mod keymap;
 #[allow(dead_code)]
 pub(crate) mod line_truncation;
 #[allow(dead_code)]
+pub(crate) mod live_wrap;
+#[allow(dead_code)]
+pub(crate) mod mention_codec;
+#[allow(dead_code)]
 pub(crate) mod motion;
 #[allow(dead_code)]
 pub(crate) mod notifications;
+#[allow(dead_code)]
+pub(crate) mod onboarding {
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::Rect;
+
+    pub(crate) fn mark_underlined_hyperlink(buf: &mut Buffer, area: Rect, url: &str) {
+        crate::terminal_hyperlinks::mark_underlined_hyperlink(buf, area, url);
+    }
+}
 #[allow(dead_code, unused_imports)]
 pub(crate) mod pets;
 #[allow(dead_code)]
-pub(crate) mod render {
-    use ratatui::layout::Rect;
-
-    #[path = "line_utils.rs"]
-    pub(crate) mod line_utils;
-    #[path = "renderable.rs"]
-    pub(crate) mod renderable;
-
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct Insets {
-        left: u16,
-        top: u16,
-        right: u16,
-        bottom: u16,
-    }
-
-    impl Insets {
-        pub fn tlbr(top: u16, left: u16, bottom: u16, right: u16) -> Self {
-            Self {
-                top,
-                left,
-                bottom,
-                right,
-            }
-        }
-
-        pub fn vh(v: u16, h: u16) -> Self {
-            Self {
-                top: v,
-                left: h,
-                bottom: v,
-                right: h,
-            }
-        }
-    }
-
-    pub trait RectExt {
-        fn inset(&self, insets: Insets) -> Rect;
-    }
-
-    impl RectExt for Rect {
-        fn inset(&self, insets: Insets) -> Rect {
-            let horizontal = insets.left.saturating_add(insets.right);
-            let vertical = insets.top.saturating_add(insets.bottom);
-            Rect {
-                x: self.x.saturating_add(insets.left),
-                y: self.y.saturating_add(insets.top),
-                width: self.width.saturating_sub(horizontal),
-                height: self.height.saturating_sub(vertical),
-            }
-        }
-    }
-}
+pub(crate) mod render;
 #[allow(dead_code)]
 pub(crate) mod shimmer;
+#[allow(dead_code)]
+pub(crate) mod skills_helpers;
+#[allow(dead_code)]
+pub(crate) mod slash_command;
+#[allow(dead_code)]
+pub(crate) mod status_indicator_widget;
 #[allow(dead_code)]
 pub(crate) mod style;
 #[allow(dead_code)]
 pub(crate) mod status {
+    use std::path::Path;
+
+    use unicode_width::UnicodeWidthStr;
+
     pub(crate) fn format_tokens_compact(value: i64) -> String {
         let value = value.max(0);
         if value == 0 {
@@ -254,6 +124,29 @@ pub(crate) mod status {
 
         format!("{formatted}{suffix}")
     }
+
+    pub(crate) fn format_directory_display(directory: &Path, max_width: Option<usize>) -> String {
+        let formatted = if let Some(rel) = crate::exec_command::relativize_to_home(directory) {
+            if rel.as_os_str().is_empty() {
+                "~".to_string()
+            } else {
+                format!("~{}{}", std::path::MAIN_SEPARATOR, rel.display())
+            }
+        } else {
+            directory.display().to_string()
+        };
+
+        if let Some(max_width) = max_width {
+            if max_width == 0 {
+                return String::new();
+            }
+            if UnicodeWidthStr::width(formatted.as_str()) > max_width {
+                return crate::text_formatting::center_truncate_path(&formatted, max_width);
+            }
+        }
+
+        formatted
+    }
 }
 #[allow(dead_code)]
 pub(crate) mod terminal_detection;
@@ -268,6 +161,9 @@ pub(crate) mod terminal_title;
 #[cfg(test)]
 #[allow(dead_code)]
 pub(crate) mod test_backend;
+#[cfg(test)]
+#[allow(dead_code)]
+pub(crate) mod test_support;
 #[allow(dead_code)]
 pub(crate) mod text_formatting;
 #[allow(dead_code)]
@@ -346,14 +242,7 @@ mod drift_tests {
 
         assert_eq!(
             inline_modules,
-            [
-                "bottom_pane",
-                "bottom_pane_view",
-                "clipboard_paste",
-                "render",
-                "status",
-                "drift_tests",
-            ],
+            ["onboarding", "status", "drift_tests",],
             "tui/mod.rs may shrink inline staging modules, but must not grow new stand-ins"
         );
     }

@@ -4385,11 +4385,11 @@ impl ChatComposer {
             }
         }
         let style = user_message_style();
-        Block::default().style(style).render_ref(composer_rect, buf);
+        let composer_block = Block::default().style(style);
+        WidgetRef::render_ref(&&composer_block, composer_rect, buf);
         if !remote_images_rect.is_empty() {
-            Paragraph::new(self.attachments.remote_image_lines())
-                .style(style)
-                .render_ref(remote_images_rect, buf);
+            let remote_images = Paragraph::new(self.attachments.remote_image_lines()).style(style);
+            WidgetRef::render_ref(&&remote_images, remote_images_rect, buf);
         }
         if !textarea_rect.is_empty() {
             let prompt = if self.draft.input_enabled {
@@ -4455,14 +4455,18 @@ impl ChatComposer {
             };
             if !textarea_rect.is_empty() {
                 let placeholder = Span::from(text).dim();
-                Line::from(vec![placeholder])
-                    .render_ref(textarea_rect.inner(Margin::new(0, 0)), buf);
+                let placeholder_line = Line::from(vec![placeholder]);
+                WidgetRef::render_ref(
+                    &&placeholder_line,
+                    textarea_rect.inner(Margin::new(0, 0)),
+                    buf,
+                );
             }
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::attachment_state::AttachedImage;
     use super::*;
