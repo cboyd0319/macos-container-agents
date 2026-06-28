@@ -266,10 +266,13 @@ are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
   and pins `codex-exec-server` to upstream Codex's `axum` 0.8.8 to avoid a
   duplicate registry websocket stack. This is manifest integration drift, not
   source/API drift.
-- Remaining risk: the alias for `codex_terminal_detection` remains, and larger
-  backend crates such as `codex-app-server` and `codex-core` are not active
-  authorities. Activating native `App`, `BottomPane`, or `ChatWidget` may expose
-  the next crate authority gap.
+- Remaining risk: the larger backend crates such as `codex-app-server` and full
+  upstream `codex-core` runtime are not active authorities. A reduced
+  original-name `codex-core` config authority now exists for the next native
+  `App`/`ChatWidget` slice, but it deliberately excludes app-server, login,
+  MCP, filesystem, hooks, tools, rollout, state, and session behavior.
+  Activating native `App`, `BottomPane`, or `ChatWidget` may expose the next
+  crate authority gap.
 - Recommendation: keep advancing crate authority before adding more local
   stand-ins. When a copied TUI module expects a `codex-*` crate, vendor the real
   crate or record the specific security reason for a temporary local boundary.
@@ -483,9 +486,9 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
 2. **(High) Convert `mod.rs` stand-ins into a tracked debt ledger** with a named
    vendored-module upgrade path for each; prefer activating real modules. (D2)
 3. **(Medium) Keep crate authority moving with Phase 4**: protocol, config,
-   event-data, and bottom-pane crate closures are vendored under original
-   names; the next native `App` slice should vendor required `codex-*` crates
-   before adding new local stand-ins. (D3)
+   event-data, bottom-pane, and reduced config-core crate closures are vendored
+   under original names; the next native `App` slice should vendor required
+   `codex-*` crates before adding new local stand-ins. (D3)
 4. **(Medium) Expand the security guard** as dormant host-reaching modules are
    promoted. (D8)
 5. **(Medium) Drive `launch_wizard.rs` boundary/network text from the

@@ -8,6 +8,7 @@ members = [
     "crates/codex/config",
     "crates/codex/connectors",
     "crates/codex/context-fragments",
+    "crates/codex/core",
     "crates/codex/core-skills",
     "crates/codex/exec-server",
     "crates/codex/exec-server-protocol",

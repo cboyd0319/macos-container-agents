@@ -753,6 +753,34 @@ Latest Codex config support crate vendoring:
   `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, metadata
   check, typography scan for changed files, and `git diff --check`.
 
+Latest Codex reduced core config authority:
+
+- 2026-06-28: Added `crates/codex/core` as an original-name reduced
+  `codex-core` workspace crate for the config compatibility path needed by
+  native `App`/`ChatWidget` promotion. It exposes config-facing source-shaped
+  surfaces, including terminal resize reflow, bootstrap keyring resolution,
+  exec-policy warning/loading placeholders, Windows sandbox config helpers, and
+  small path/unified-exec constants.
+- This is not full Codex backend activation. The crate deliberately omits
+  app-server, login, MCP, filesystem RPC, hooks, tools, rollout, state, and
+  session runtime modules until RunHaven designs and verifies those boundaries.
+  Guard tests prevent those backend dependencies/modules and block
+  RunHaven-owned TUI adapters from importing `codex_core` runtime surfaces.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo test -p codex-core --locked --quiet`,
+  `cargo check -p codex-core --locked`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -764,10 +792,8 @@ adapt the native `App` path and then `ChatWidget` ownership around the now
 promoted bottom pane. `workspace_messages.rs` is active from real vendored
 source, and `launch_wizard.rs` now implements `BottomPaneView` for the current
 picker/review/confirm flow. The next slice should show that view through
-`ChatWidget` and the native bottom pane only after the shared
-`legacy_core::config` compatibility path is handled. Foreground launch remains
-read-only until the native Codex app loop owns terminal restore and
-`launch_run_plan` is wired through the UI thread. The next vendor-first slice
-should keep replacing bridge types with real Codex modules or document why a
-bridge must remain until ChatWidget activation. Do not route host-reaching
-Codex behavior around the RunHaven facade.
+`ChatWidget` and the native bottom pane through the reduced `codex-core` config
+authority where safe, then keep replacing bridge types with real Codex modules.
+Foreground launch remains read-only until the native Codex app loop owns
+terminal restore and `launch_run_plan` is wired through the UI thread. Do not
+route host-reaching Codex behavior around the RunHaven facade.

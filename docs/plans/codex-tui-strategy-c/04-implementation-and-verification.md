@@ -199,6 +199,13 @@ Codex utility crate authorities that do not pull the backend stack
 `codex-utils-sleep-inhibitor`) and kept `chatwidget` dormant until the
 `legacy_core` compatibility decision is handled vendor-first.
 
+Progress note, 2026-06-28: RunHaven added an original-name reduced
+`codex-core` crate for the config compatibility path. The crate exposes
+config-facing source shapes needed by native `App`/`ChatWidget` promotion and
+has guard tests that block backend/runtime dependencies and modules. This does
+not activate full Codex core, app-server, login, MCP, filesystem, hooks, tools,
+rollout, state, or session behavior.
+
 Bring active:
 
 - `app.rs`

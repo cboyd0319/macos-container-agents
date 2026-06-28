@@ -230,6 +230,14 @@ mod drift_tests {
             .any(|line| line == private_decl || line == crate_decl || line == public_decl)
     }
 
+    fn workspace_member_declared(root_manifest_source: &str, member: &str) -> bool {
+        let quoted = format!("\"{member}\"");
+        root_manifest_source
+            .lines()
+            .map(str::trim)
+            .any(|line| line.trim_end_matches(',') == quoted)
+    }
+
     fn assert_risky_markers_absent_when_active(
         module_source: &str,
         module: &str,
@@ -320,6 +328,7 @@ mod drift_tests {
     fn legacy_core_boundary_stays_vendor_first() {
         let module_source = include_str!("mod.rs");
         let root_lib_source = include_str!("../lib.rs");
+        let root_manifest_source = include_str!("../../../../Cargo.toml");
         let bridge_source = include_str!("app_event_shared.rs");
         let runhaven_sources = [
             include_str!("runhaven/app_server_client.rs"),
@@ -336,6 +345,10 @@ mod drift_tests {
             "do not add a local legacy_core shim; vendor the real Codex compatibility path"
         );
         assert!(
+            workspace_member_declared(root_manifest_source, "crates/codex/core"),
+            "codex-core config compatibility authority must be a real original-name workspace crate"
+        );
+        assert!(
             !bridge_source.contains("legacy_core"),
             "app_event_shared.rs must not grow legacy_core compatibility behavior"
         );
@@ -344,6 +357,38 @@ mod drift_tests {
                 !source.contains("crate::legacy_core") && !source.contains("legacy_core::"),
                 "RunHaven-owned TUI adapters must not import legacy_core directly"
             );
+        }
+    }
+
+    #[test]
+    fn runhaven_adapters_do_not_import_codex_core_runtime_surfaces() {
+        let runhaven_sources = [
+            include_str!("runhaven/app_server_client.rs"),
+            include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/protocol.rs"),
+            include_str!("runhaven/service.rs"),
+            include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/terminal_handoff.rs"),
+        ];
+
+        for source in runhaven_sources {
+            for forbidden in [
+                "codex_core::session",
+                "codex_core::exec",
+                "codex_core::mcp",
+                "codex_core::shell",
+                "codex_core::spawn",
+                "codex_core::thread_manager",
+                "codex_core::tools",
+                "codex_core::rollout",
+                "codex_core::state",
+                "codex_core::client",
+            ] {
+                assert!(
+                    !source.contains(forbidden),
+                    "RunHaven-owned TUI adapters must not import runtime Codex core surface {forbidden}"
+                );
+            }
         }
     }
 

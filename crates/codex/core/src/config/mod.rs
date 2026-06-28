@@ -1,0 +1,261 @@
+pub mod edit;
+mod network_proxy_spec;
+mod resolved_permission_profile;
+
+use std::path::Path;
+use std::path::PathBuf;
+
+pub use codex_config::ConfigLayerStack;
+pub use codex_config::ConfigLoadOptions;
+pub use codex_config::Constrained;
+pub use codex_config::ConstraintError;
+pub use codex_config::ConstraintResult;
+pub use codex_config::LoaderOverrides;
+pub use codex_config::ProfileV2Name;
+pub use codex_config::config_toml::ConfigToml;
+pub use codex_config::types::AuthKeyringBackendKind;
+pub use network_proxy_spec::NetworkProxySpec;
+pub use resolved_permission_profile::PermissionProfileSnapshot;
+
+use codex_config::CloudConfigBundleLoader;
+use codex_config::config_toml::ConfigToml as UpstreamConfigToml;
+use codex_model_provider_info::ModelProviderInfo;
+use codex_model_provider_info::built_in_model_providers;
+use codex_protocol::config_types::AltScreenMode;
+use codex_protocol::config_types::ServiceTier;
+use codex_protocol::config_types::ShellEnvironmentPolicy;
+use codex_protocol::config_types::WindowsSandboxLevel;
+use serde::Deserialize;
+use serde::Serialize;
+
+#[derive(Debug, Clone, Default)]
+pub struct Permissions {
+    pub network: Option<NetworkProxySpec>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub codex_home: PathBuf,
+    pub sqlite_home: PathBuf,
+    pub cwd: PathBuf,
+    pub log_dir: PathBuf,
+    pub model: String,
+    pub model_provider: ModelProviderInfo,
+    pub preferred_auth_method: Option<codex_protocol::config_types::ForcedLoginMethod>,
+    pub disable_response_storage: bool,
+    pub show_raw_agent_reasoning: bool,
+    pub show_raw_agent_reasoning_ui: bool,
+    pub hide_agent_reasoning: bool,
+    pub model_reasoning_summary: Option<codex_protocol::config_types::ReasoningSummary>,
+    pub model_reasoning_effort: Option<codex_protocol::openai_models::ReasoningEffort>,
+    pub model_verbosity: Option<codex_protocol::config_types::Verbosity>,
+    pub model_supports_reasoning_summaries: bool,
+    pub model_context_window: Option<u64>,
+    pub model_max_output_tokens: Option<u64>,
+    pub approval_policy: codex_protocol::protocol::AskForApproval,
+    pub sandbox_policy: codex_protocol::protocol::SandboxPolicy,
+    pub shell_environment_policy: ShellEnvironmentPolicy,
+    pub sandbox_workspace_write: codex_config::types::SandboxWorkspaceWrite,
+    pub permissions: Permissions,
+    pub tui_theme: Option<String>,
+    pub tui_keymap: Option<codex_config::types::TuiKeymap>,
+    pub tui_pet: Option<String>,
+    pub tui_pet_anchor: codex_config::types::TuiPetAnchor,
+    pub tui_notifications: codex_config::types::TuiNotificationSettings,
+    pub tui_status_line: Option<Vec<String>>,
+    pub tui_status_line_use_colors: bool,
+    pub tui_terminal_title: Option<Vec<String>>,
+    pub terminal_visualization: bool,
+    pub terminal_resize_reflow: TerminalResizeReflowConfig,
+    pub disable_paste_burst: bool,
+    pub alt_screen: AltScreenMode,
+    pub tools_web_search_mode: codex_protocol::config_types::WebSearchMode,
+    pub tools_web_search_max_per_turn: Option<u64>,
+    pub service_tier: Option<ServiceTier>,
+    pub windows_sandbox_level: Option<WindowsSandboxLevel>,
+    pub windows_sandbox_private_desktop: bool,
+    pub config_layer_stack: ConfigLayerStack,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TerminalResizeReflowMaxRows {
+    #[default]
+    Auto,
+    Disabled,
+    Limit(usize),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct TerminalResizeReflowConfig {
+    pub max_rows: TerminalResizeReflowMaxRows,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConfigOverrides {
+    pub cwd: Option<PathBuf>,
+    pub model: Option<String>,
+    pub model_provider: Option<ModelProviderInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigTomlLoadResult {
+    pub config_toml: UpstreamConfigToml,
+    pub config_layer_stack: ConfigLayerStack,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConfigBuilder {
+    codex_home: Option<PathBuf>,
+    cwd: Option<PathBuf>,
+    config_layer_stack: Option<ConfigLayerStack>,
+    overrides: ConfigOverrides,
+}
+
+impl ConfigBuilder {
+    pub fn without_managed_config_for_tests() -> Self {
+        Self::default()
+    }
+
+    pub fn codex_home(mut self, codex_home: PathBuf) -> Self {
+        self.codex_home = Some(codex_home);
+        self
+    }
+
+    pub fn cwd(mut self, cwd: PathBuf) -> Self {
+        self.cwd = Some(cwd);
+        self
+    }
+
+    pub fn config_layer_stack(mut self, stack: ConfigLayerStack) -> Self {
+        self.config_layer_stack = Some(stack);
+        self
+    }
+
+    pub fn harness_overrides(mut self, overrides: ConfigOverrides) -> Self {
+        self.overrides = overrides;
+        self
+    }
+
+    pub async fn build(self) -> anyhow::Result<Config> {
+        let codex_home = self.codex_home.unwrap_or_else(|| PathBuf::from(".codex"));
+        let cwd = self
+            .overrides
+            .cwd
+            .clone()
+            .or(self.cwd)
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+        let config_layer_stack = self.config_layer_stack.unwrap_or_default();
+        let model = self.overrides.model.unwrap_or_else(|| "gpt-5".to_string());
+        let model_provider = self
+            .overrides
+            .model_provider
+            .unwrap_or_else(|| built_in_model_providers(None)["openai"].clone());
+        let log_dir = codex_home.join("log");
+
+        Ok(Config {
+            sqlite_home: codex_home.clone(),
+            codex_home,
+            cwd,
+            log_dir,
+            model,
+            model_provider,
+            preferred_auth_method: None,
+            disable_response_storage: false,
+            show_raw_agent_reasoning: false,
+            show_raw_agent_reasoning_ui: false,
+            hide_agent_reasoning: false,
+            model_reasoning_summary: None,
+            model_reasoning_effort: None,
+            model_verbosity: None,
+            model_supports_reasoning_summaries: true,
+            model_context_window: None,
+            model_max_output_tokens: None,
+            approval_policy: codex_protocol::protocol::AskForApproval::UnlessTrusted,
+            sandbox_policy: codex_protocol::protocol::SandboxPolicy::new_read_only_policy(),
+            shell_environment_policy: ShellEnvironmentPolicy::default(),
+            sandbox_workspace_write: codex_config::types::SandboxWorkspaceWrite::default(),
+            permissions: Permissions::default(),
+            tui_theme: None,
+            tui_keymap: None,
+            tui_pet: Some("cubby".to_string()),
+            tui_pet_anchor: codex_config::types::TuiPetAnchor::default(),
+            tui_notifications: codex_config::types::TuiNotificationSettings::default(),
+            tui_status_line: None,
+            tui_status_line_use_colors: false,
+            tui_terminal_title: None,
+            terminal_visualization: true,
+            terminal_resize_reflow: TerminalResizeReflowConfig::default(),
+            disable_paste_burst: false,
+            alt_screen: AltScreenMode::Never,
+            tools_web_search_mode: codex_protocol::config_types::WebSearchMode::Disabled,
+            tools_web_search_max_per_turn: None,
+            service_tier: None,
+            windows_sandbox_level: Some(WindowsSandboxLevel::Disabled),
+            windows_sandbox_private_desktop: false,
+            config_layer_stack,
+        })
+    }
+}
+
+pub async fn load_config_toml_with_layer_stack(
+    _codex_home: &Path,
+    _cwd: &Path,
+    _options: ConfigLoadOptions,
+) -> anyhow::Result<ConfigTomlLoadResult> {
+    Ok(ConfigTomlLoadResult {
+        config_toml: UpstreamConfigToml::default(),
+        config_layer_stack: ConfigLayerStack::default(),
+    })
+}
+
+pub fn resolve_profile_v2_config_path(codex_home: &Path, profile: &ProfileV2Name) -> PathBuf {
+    codex_home.join("profiles").join(format!("{profile}.toml"))
+}
+
+pub fn resolve_bootstrap_auth_keyring_backend_kind(
+    load_result: &ConfigTomlLoadResult,
+) -> std::io::Result<AuthKeyringBackendKind> {
+    Ok(load_result
+        .config_toml
+        .cli_auth_credentials_store
+        .map(|mode| match mode {
+            codex_config::types::AuthCredentialsStoreMode::Keyring
+            | codex_config::types::AuthCredentialsStoreMode::Auto => AuthKeyringBackendKind::Direct,
+            codex_config::types::AuthCredentialsStoreMode::File
+            | codex_config::types::AuthCredentialsStoreMode::Ephemeral => {
+                AuthKeyringBackendKind::default()
+            }
+        })
+        .unwrap_or_default())
+}
+
+pub fn resolve_bootstrap_auth_route_config(_load_result: &ConfigTomlLoadResult) -> Option<()> {
+    None
+}
+
+pub fn resolve_oss_provider(_load_result: &ConfigTomlLoadResult) -> Option<String> {
+    None
+}
+
+pub fn cloud_config_bundle_loader() -> CloudConfigBundleLoader {
+    CloudConfigBundleLoader::default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn default_config_builder_stays_read_only() {
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(
+            config.sandbox_policy,
+            codex_protocol::protocol::SandboxPolicy::new_read_only_policy()
+        );
+        assert!(config.permissions.network.is_none());
+    }
+}

@@ -33,6 +33,7 @@ codex-client
 codex-config
 codex-connectors
 codex-context-fragments
+codex-core
 codex-exec-server
 codex-exec-server-protocol
 codex-execpolicy
@@ -258,6 +259,15 @@ Local integration exceptions:
   for terminal identification. `runhaven-tui` no longer aliases itself as
   `codex_terminal_detection`, and the duplicate local
   `terminal_detection.rs` plus `terminal_tests.rs` files were deleted.
+- `crates/codex/core` is now an original-name reduced `codex-core`
+  config-compatibility authority. It exposes the config-facing surfaces needed
+  by the next native `App`/`ChatWidget` slices, keeps source-shaped config
+  types such as terminal resize reflow and bootstrap keyring resolution, and
+  deliberately omits host-reaching Codex backend modules such as app-server,
+  login, MCP, filesystem RPC, hooks, tools, rollout, state, and full session
+  runtime behavior. Guard tests prevent RunHaven-owned TUI adapters from
+  importing those `codex_core` runtime surfaces before RunHaven designs and
+  verifies the boundary.
 - `crates/codex/context-fragments`, `crates/codex/install-context`,
   `crates/codex/memories/read`, `crates/codex/response-debug-context`,
   `crates/codex/utils/output-truncation`, and

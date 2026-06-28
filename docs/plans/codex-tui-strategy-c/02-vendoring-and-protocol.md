@@ -132,9 +132,11 @@ slice. With the vendor-first assumption, classify them instead of omitting them:
 Current low-coupling support crates already vendored under original names for
 the next config closure: `codex-context-fragments`, `codex-install-context`,
 `codex-memories-read`, `codex-response-debug-context`,
-`codex-utils-output-truncation`, and `codex-utils-stream-parser`. They are
-compile/reference authorities only until a later slice promotes the reduced
-`codex-core` config compatibility path.
+`codex-utils-output-truncation`, and `codex-utils-stream-parser`. RunHaven also
+has an original-name reduced `codex-core` crate for config compatibility. That
+crate is a config authority only: full `codex-core` runtime, app-server,
+session, login, MCP, filesystem, hooks, tools, rollout, and state behavior
+remain inactive until each boundary is designed and verified.
 
 This table is intentionally permissive about vendoring and strict about active
 authority. The mistake to avoid is not copying Codex source. The mistake is

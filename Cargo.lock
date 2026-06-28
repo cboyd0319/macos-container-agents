@@ -1246,6 +1246,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-core"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "codex-config",
+ "codex-execpolicy",
+ "codex-model-provider-info",
+ "codex-protocol",
+ "codex-utils-absolute-path",
+ "codex-utils-path",
+ "serde",
+ "tokio",
+ "toml 1.1.2+spec-1.1.0",
+ "toml_edit 0.24.0+spec-1.1.0",
+]
+
+[[package]]
 name = "codex-core-skills"
 version = "0.0.0"
 dependencies = [
