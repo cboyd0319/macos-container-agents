@@ -191,6 +191,14 @@ real shared modules, showing the launch wizard through `ChatWidget` and the
 native bottom pane, and a fail-closed design for host-reaching Codex
 app/session/chat surfaces before they become active.
 
+Progress note, 2026-06-27: the next attempted direct `chatwidget` promotion
+showed that `ChatWidget`, `history_cell`, and `status` share the same missing
+Codex `legacy_core::config::Config` authority. RunHaven added the low-level
+Codex utility crate authorities that do not pull the backend stack
+(`codex-utils-cli`, `codex-utils-elapsed`, and
+`codex-utils-sleep-inhibitor`) and kept `chatwidget` dormant until the
+`legacy_core` compatibility decision is handled vendor-first.
+
 Bring active:
 
 - `app.rs`

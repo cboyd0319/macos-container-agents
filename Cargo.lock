@@ -1641,6 +1641,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-utils-cli"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "codex-protocol",
+ "codex-shell-command",
+ "pretty_assertions",
+ "serde",
+ "toml 1.1.2+spec-1.1.0",
+]
+
+[[package]]
+name = "codex-utils-elapsed"
+version = "0.0.0"
+
+[[package]]
 name = "codex-utils-fuzzy-match"
 version = "0.0.0"
 
@@ -1727,6 +1743,16 @@ name = "codex-utils-rustls-provider"
 version = "0.0.0"
 dependencies = [
  "rustls",
+]
+
+[[package]]
+name = "codex-utils-sleep-inhibitor"
+version = "0.0.0"
+dependencies = [
+ "core-foundation 0.9.4",
+ "libc",
+ "tracing",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8635,9 +8661,12 @@ dependencies = [
  "codex-shell-command",
  "codex-utils-absolute-path",
  "codex-utils-approval-presets",
+ "codex-utils-cli",
+ "codex-utils-elapsed",
  "codex-utils-fuzzy-match",
  "codex-utils-path-uri",
  "codex-utils-plugins",
+ "codex-utils-sleep-inhibitor",
  "crossterm",
  "derive_more 2.1.1",
  "dirs",

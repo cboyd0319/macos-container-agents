@@ -104,6 +104,12 @@ If preserving the unchanged crate is cheaper than copying its shape, vendor its
 transitive dependencies too, but keep them disconnected from active RunHaven
 actions until each behavior is reviewed.
 
+Progress note, 2026-06-27: `codex-utils-cli`, `codex-utils-elapsed`, and
+`codex-utils-sleep-inhibitor` are vendored under original package names and
+compile as local workspace members. `codex-utils-sandbox-summary` and
+`codex-utils-oss` remain tied to the larger `codex-core` compatibility closure;
+do not add local stand-ins for their APIs just to force `chatwidget` forward.
+
 ### Codex TUI Manifest Coverage
 
 The Codex TUI manifest references more internal crates than the first protocol

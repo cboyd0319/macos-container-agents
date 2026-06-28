@@ -677,6 +677,29 @@ Latest Codex bottom-pane activation:
   `git diff --check`, and
   `scripts/compare-codex-tui.sh`.
 
+Latest Codex utility crate vendoring:
+
+- 2026-06-27: Added original-name vendored workspace crates for
+  `codex-utils-cli`, `codex-utils-elapsed`, and
+  `codex-utils-sleep-inhibitor`, copied from the pinned local Codex source.
+  `runhaven-tui` now depends on those authorities for dormant Codex TUI CLI,
+  history, exec-cell, and chat turn-lifecycle imports.
+- `codex-utils-sleep-inhibitor` has a scoped `unsafe_code = "allow"` lint
+  exception because the upstream macOS implementation uses native IOKit power
+  assertion FFI. The exception is local to that vendored utility crate and does
+  not change RunHaven runtime safety boundaries.
+- A direct `chatwidget` module declaration was tested and reverted before this
+  commit because it exposed the pending shared closure rather than a clean
+  activation point: real `ChatWidget`, `history_cell`, and `status` all require
+  Codex's `legacy_core::config::Config` shape. The next vendor-first slice must
+  decide that compatibility path before promoting those modules. Do not replace
+  that with another custom RunHaven TUI stand-in.
+- Verified so far:
+  `cargo check -p codex-utils-cli --locked`,
+  `cargo check -p codex-utils-elapsed --locked`,
+  `cargo check -p codex-utils-sleep-inhibitor --locked`, and
+  `cargo check -p runhaven-tui --locked`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -688,10 +711,10 @@ adapt the native `App` path and then `ChatWidget` ownership around the now
 promoted bottom pane. `workspace_messages.rs` is active from real vendored
 source, and `launch_wizard.rs` now implements `BottomPaneView` for the current
 picker/review/confirm flow. The next slice should show that view through
-`ChatWidget` and the native bottom pane so the flow can move out of
-`app_shell.rs`. Foreground launch remains read-only until the native Codex app
-loop owns terminal restore and `launch_run_plan` is wired through the UI
-thread. The next vendor-first slice should keep replacing bridge types with
-real Codex modules or document why a bridge must remain until ChatWidget
-activation. Do not route host-reaching Codex behavior around the RunHaven
-facade.
+`ChatWidget` and the native bottom pane only after the shared
+`legacy_core::config` compatibility path is handled. Foreground launch remains
+read-only until the native Codex app loop owns terminal restore and
+`launch_run_plan` is wired through the UI thread. The next vendor-first slice
+should keep replacing bridge types with real Codex modules or document why a
+bridge must remain until ChatWidget activation. Do not route host-reaching
+Codex behavior around the RunHaven facade.

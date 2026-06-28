@@ -44,9 +44,12 @@ codex-protocol = { path = "../codex/protocol" }
 codex-shell-command = { path = "../codex/shell-command" }
 codex-utils-absolute-path = { path = "../codex/utils/absolute-path" }
 codex-utils-approval-presets = { path = "../codex/utils/approval-presets" }
+codex-utils-cli = { path = "../codex/utils/cli" }
+codex-utils-elapsed = { path = "../codex/utils/elapsed" }
 codex-utils-fuzzy-match = { path = "../codex/utils/fuzzy-match" }
 codex-utils-plugins = { path = "../codex/utils/plugins" }
 codex-utils-path-uri = { path = "../codex/utils/path-uri" }
+codex-utils-sleep-inhibitor = { path = "../codex/utils/sleep-inhibitor" }
 ratatui.workspace = true
 regex.workspace = true
 reqwest.workspace = true

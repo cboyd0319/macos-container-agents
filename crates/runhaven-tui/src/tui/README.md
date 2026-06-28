@@ -50,6 +50,9 @@ codex-utils-absolute-path
 codex-utils-approval-presets
 codex-utils-cache
 codex-utils-cargo-bin
+codex-utils-cli
+codex-utils-elapsed
+codex-utils-fuzzy-match
 codex-utils-home-dir
 codex-utils-image
 codex-utils-path
@@ -57,6 +60,7 @@ codex-utils-path-uri
 codex-utils-plugins
 codex-utils-pty
 codex-utils-rustls-provider
+codex-utils-sleep-inhibitor
 codex-utils-string
 codex-windows-sandbox
 ```
@@ -225,6 +229,11 @@ Local integration exceptions:
   telemetry behavior remain dormant. The feedback diagnostics env collector is
   shape-compatible but returns no diagnostics until RunHaven has a redaction
   policy for host environment capture.
+- `crates/codex/utils/cli`, `crates/codex/utils/elapsed`, and
+  `crates/codex/utils/sleep-inhibitor` are now original-name crate authorities
+  for dormant Codex TUI CLI, history, exec-cell, and chat turn-lifecycle
+  imports. The sleep inhibitor keeps its native FFI unsafe allowance scoped to
+  that vendored utility crate; it is not active RunHaven backend authority.
 - `lib.rs` no longer aliases `codex_config`; only
   `codex_terminal_detection` remains as a temporary self-alias until the
   terminal-detection crate is promoted into the vendored crate set.
@@ -297,6 +306,11 @@ Known integration gap:
   `onboarding` shims must be removed as real `chatwidget`, `history_cell`,
   `goal_files`, `session_log`, status, onboarding, and app-server-session
   surfaces are promoted without activating host-reaching Codex app paths.
+- Direct `chatwidget` activation is blocked on replacing the temporary
+  `legacy_core::config` gap with a vendor-first compatibility path. The real
+  `history_cell`, `status`, and `chatwidget` modules all depend on Codex's
+  core config shape, so promoting only `chatwidget.rs` produces root-module and
+  config-surface errors instead of a useful intermediate state.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen still run from
