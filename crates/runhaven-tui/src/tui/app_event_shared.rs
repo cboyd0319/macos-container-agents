@@ -286,11 +286,6 @@ pub(crate) mod hooks_rpc {
     }
 }
 
-pub(crate) mod workspace_messages {
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    pub(crate) struct WorkspaceHeadlineFetchResult;
-}
-
 pub(crate) mod session_log {
     use crate::app_command::AppCommand;
     use crate::app_event::AppEvent;

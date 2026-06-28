@@ -23,7 +23,6 @@ pub(crate) use app_event_shared::goal_files;
 pub(crate) use app_event_shared::history_cell;
 pub(crate) use app_event_shared::hooks_rpc;
 pub(crate) use app_event_shared::session_log;
-pub(crate) use app_event_shared::workspace_messages;
 
 #[allow(dead_code)]
 pub(crate) mod app_event_sender;
@@ -78,6 +77,8 @@ pub(crate) mod slash_command;
 pub(crate) mod status_indicator_widget;
 #[allow(dead_code)]
 pub(crate) mod style;
+#[allow(dead_code)]
+pub(crate) mod workspace_messages;
 #[allow(dead_code)]
 pub(crate) mod status {
     use std::path::Path;
