@@ -828,20 +828,47 @@ Latest TUI native bottom-pane ownership:
   `scripts/compare-codex-tui.sh`, and
   `git diff --check`.
 
+Latest TUI Codex runtime ownership:
+
+- 2026-06-29: The live staging `app_shell.rs` now initializes and restores the
+  real vendored Codex `Tui` runtime instead of using `ratatui::try_init()` and
+  raw `crossterm::event::poll/read`. Its active loop consumes
+  `TuiEventStream`, draws through `Tui::draw`, and shares the Codex
+  `FrameRequester` with the hosted `BottomPane` and the temporary Cubby image
+  smoke path.
+- This preserves the same read-only launch picker, review, and confirmation
+  behavior. Native `App`, `ChatWidget`, real `app_server_session`, and
+  app-server transport remain dormant until host-reaching surfaces are
+  removed, fail-closed, or routed through reviewed RunHaven boundaries.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`, and
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4,
-bottom-pane-first. `workspace_messages.rs` is active from real vendored source,
-and `launch_wizard.rs` implements `BottomPaneView` for the current
-picker/review/confirm flow, and the staging shell now hosts that view inside
-native `BottomPane`. The next slice should continue Phase 4 toward native
-`App`/`ChatWidget` ownership without adding new product screens to
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4.
+`workspace_messages.rs` is active from real vendored source,
+`launch_wizard.rs` implements `BottomPaneView`, the staging shell hosts that
+view inside native `BottomPane`, and the active terminal runtime now uses
+Codex `Tui` plus `TuiEventStream`. The next slice should continue toward
+native `App`/`ChatWidget` ownership without adding new product screens to
 `app_shell.rs`. Do not activate native `App`, `ChatWidget`, real
 `app_server_session`, or app-server transport until host-reaching markers are
 removed, fail-closed, or routed through a reviewed RunHaven boundary.
-Foreground launch remains read-only until the native Codex app loop owns
-terminal restore and `launch_run_plan` is wired through the UI thread.
+Foreground launch remains read-only until native Codex app ownership and
+terminal restore are wired through the UI thread.

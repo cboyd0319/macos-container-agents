@@ -303,7 +303,9 @@ Local integration exceptions:
 - `app_shell.rs` is temporary RunHaven-owned shell glue. It restores bare
   interactive `runhaven` to a read-only launch preview while the full Codex app
   shell is still being adapted. It now hosts a Codex `ListSelectionView`
-  launch picker through `runhaven/launch_wizard.rs`.
+  launch picker through `runhaven/launch_wizard.rs`, initializes the real Codex
+  `Tui` runtime, consumes `TuiEventStream`, draws through `Tui::draw`, and
+  uses the shared Codex `FrameRequester` for bottom-pane and pet redraws.
 - `runhaven/service.rs` is the temporary RunHaven TUI service seam. It turns
   `runhaven-core` profiles and planner output into launch preview payloads, so
   `app_shell.rs` does not call core planner APIs directly and
@@ -363,14 +365,14 @@ Known integration gap:
   still brings login, MCP, filesystem, hooks, tools, rollout, model-provider,
   and app-server-adjacent behavior. Keep those host-reaching surfaces inert or
   fail-closed until reviewed.
-- The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
-  it is not the active bare-interactive app loop yet.
+- The Codex `Tui` runtime spine is now the active terminal runtime for bare
+  interactive `runhaven`, but native Codex `App` ownership is not active yet.
 - The launch picker, read-only review, and confirmation screen still run from
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
-  The next Phase 4 slice is bottom-pane-first: move the launch wizard under
-  native `BottomPane` ownership before activating native `App` or `ChatWidget`.
-  Workspace selection, policy changes, and final foreground launch still need
-  to be reattached through the Codex-shaped runtime and native app ownership.
+  The next Phase 4 slice should continue toward native `App` and `ChatWidget`
+  ownership without adding new product screens to `app_shell.rs`. Workspace
+  selection, policy changes, and final foreground launch still need to be
+  reattached through the Codex-shaped runtime and native app ownership.
 - `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If
   `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
   editor, clipboard copy, or hooks RPC modules are activated, the test requires

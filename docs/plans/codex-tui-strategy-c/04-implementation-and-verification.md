@@ -225,6 +225,16 @@ preserved because confirmation only sets a notice; the view completes only on
 cancel. Native `App` and `ChatWidget` remain dormant until their host-reaching
 surfaces are fail-closed or routed through reviewed RunHaven boundaries.
 
+Progress note, 2026-06-29: The live staging shell now initializes and restores
+the real vendored Codex `Tui` runtime. Its loop consumes `TuiEventStream`,
+draws through `Tui::draw`, and shares the Codex `FrameRequester` with
+`BottomPane` and the temporary Cubby image smoke path. This removes the
+previous `ratatui::try_init()` plus raw `crossterm::event::poll/read` loop from
+the active bare-interactive path. Native `App`, `ChatWidget`, real
+`app_server_session`, and app-server transport remain dormant until
+host-reaching surfaces are removed, fail-closed, or routed through reviewed
+RunHaven boundaries.
+
 Bring active:
 
 - `app.rs`

@@ -1,16 +1,12 @@
 use std::path::Path;
 use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
-use crossterm::event;
-use crossterm::event::Event;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
-use ratatui::DefaultTerminal;
-use ratatui::Frame;
+use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Style;
@@ -31,78 +27,108 @@ use crate::tui::bottom_pane::BottomPaneParams;
 use crate::tui::bottom_pane::FooterKeyHints;
 use crate::tui::bottom_pane::FooterMode;
 use crate::tui::bottom_pane::FooterProps;
+use crate::tui::codex_runtime;
+use crate::tui::codex_runtime::TuiEvent;
+use crate::tui::codex_runtime::restore_after_exit;
 use crate::tui::terminal_title::SetTerminalTitleResult;
 use crate::tui::terminal_title::clear_terminal_title;
 use crate::tui::terminal_title::set_terminal_title;
-use tokio::runtime::Runtime;
-use tokio::sync::broadcast;
+#[cfg(test)]
+use ratatui::Frame;
 use tokio::sync::mpsc;
+use tokio_stream::StreamExt;
 
-const TICK_RATE: Duration = Duration::from_millis(250);
-const IMAGE_SMOKE_TICK_RATE: Duration = Duration::from_millis(100);
 const IMAGE_SMOKE_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE";
 const IMAGE_SMOKE_PET_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE_PET";
 const DEFAULT_IMAGE_SMOKE_PET: &str = crate::tui::pets::RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
 
 pub(crate) fn run() -> Result<i32> {
-    let mut state = ShellState::for_current_dir()?;
-    let mut terminal = ratatui::try_init()?;
-    let _restore = TerminalRestoreGuard;
-    run_loop(&mut terminal, &mut state)?;
+    let initialized = codex_runtime::init().context("initialize Codex terminal runtime")?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .context("start Codex TUI runtime")?;
+    let mut tui = {
+        let _guard = runtime.enter();
+        codex_runtime::Tui::new(
+            initialized.terminal,
+            initialized.enhanced_keys_supported,
+            initialized.stderr_guard,
+        )
+    };
+    let mut restore_guard = CodexTerminalRestoreGuard::new();
+    let mut state = ShellState::for_current_dir(tui.frame_requester())?;
+
+    let run_result = runtime.block_on(run_loop(&mut tui, &mut state));
+    let clear_image_result = state.clear_image_smoke(&mut tui);
+    let clear_terminal_result = tui.terminal.clear().context("clear terminal UI");
+    drop(tui);
+    restore_guard.restore()?;
+    run_result?;
+    clear_image_result?;
+    clear_terminal_result?;
     Ok(0)
 }
 
-struct TerminalRestoreGuard;
+struct CodexTerminalRestoreGuard {
+    active: bool,
+}
 
-impl Drop for TerminalRestoreGuard {
-    fn drop(&mut self) {
-        let _ = clear_terminal_title();
-        let _ = ratatui::try_restore();
+impl CodexTerminalRestoreGuard {
+    fn new() -> Self {
+        Self { active: true }
+    }
+
+    fn restore(&mut self) -> Result<()> {
+        if self.active {
+            let _ = clear_terminal_title();
+            restore_after_exit().context("restore Codex terminal runtime")?;
+            self.active = false;
+        }
+        Ok(())
     }
 }
 
-fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()> {
-    let mut redraw = true;
-    loop {
-        if state.drain_scheduled_draws() {
-            redraw = true;
-        }
-
-        if redraw {
-            state.refresh_terminal_title();
-            terminal.draw(|frame| render(frame, state))?;
-            state.draw_image_smoke(terminal)?;
-            redraw = false;
-        }
-
-        if !event::poll(state.tick_rate())? {
-            if state.image_smoke_animates() {
-                redraw = true;
+impl Drop for CodexTerminalRestoreGuard {
+    fn drop(&mut self) {
+        if self.active {
+            let _ = clear_terminal_title();
+            if let Err(err) = restore_after_exit() {
+                tracing::warn!(error = %err, "failed to restore Codex terminal runtime");
             }
-            continue;
-        }
-
-        match event::read()? {
-            Event::Key(key) => match state.handle_key(key) {
-                ShellAction::Continue => redraw = true,
-                ShellAction::Quit => break,
-            },
-            Event::Paste(pasted) => {
-                state.handle_paste(&pasted);
-                redraw = true;
-            }
-            Event::Resize(_, _) => redraw = true,
-            _ => {}
+            self.active = false;
         }
     }
-    state.clear_image_smoke(terminal)?;
+}
+
+async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Result<()> {
+    let tui_events = tui.event_stream();
+    tokio::pin!(tui_events);
+    tui.frame_requester().schedule_frame();
+
+    while let Some(event) = tui_events.next().await {
+        match event {
+            TuiEvent::Key(key) => match state.handle_key(key) {
+                ShellAction::Continue => tui.frame_requester().schedule_frame(),
+                ShellAction::Quit => break,
+            },
+            TuiEvent::Paste(pasted) => {
+                state.handle_paste(&pasted);
+                tui.frame_requester().schedule_frame();
+            }
+            TuiEvent::Resize | TuiEvent::Draw => {
+                state.refresh_terminal_title();
+                let height = tui.terminal.size()?.height;
+                tui.draw(height, |frame| render_custom(frame, state))?;
+                state.draw_image_smoke(tui)?;
+            }
+        }
+    }
     Ok(())
 }
 
 struct ShellState {
     bottom_pane: BottomPane,
-    frame_runtime: Runtime,
-    frame_draw_rx: broadcast::Receiver<()>,
     _app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
     image_smoke: ImageSmoke,
     show_footer_help: bool,
@@ -116,12 +142,23 @@ enum ShellAction {
 }
 
 impl ShellState {
-    fn for_current_dir() -> Result<Self> {
-        Self::for_workspace(std::env::current_dir()?)
+    fn for_current_dir(frame_requester: crate::tui::FrameRequester) -> Result<Self> {
+        Self::for_workspace_with_frame_requester(std::env::current_dir()?, frame_requester)
     }
 
+    #[cfg(test)]
     fn for_workspace(workspace: impl AsRef<Path>) -> Result<Self> {
-        let image_smoke = ImageSmoke::from_env();
+        Self::for_workspace_with_frame_requester(
+            workspace,
+            crate::tui::FrameRequester::test_dummy(),
+        )
+    }
+
+    fn for_workspace_with_frame_requester(
+        workspace: impl AsRef<Path>,
+        frame_requester: crate::tui::FrameRequester,
+    ) -> Result<Self> {
+        let image_smoke = ImageSmoke::from_env(frame_requester.clone());
         let image_smoke_status = image_smoke.status_line();
         let launch_payload = RunHavenTuiService::new().launch_preview_payload(workspace);
         let launch_wizard = LaunchWizardView::new(
@@ -129,22 +166,26 @@ impl ShellState {
             launch_payload.previews,
             image_smoke_status,
         );
-        Self::from_launch_wizard(launch_wizard, image_smoke)
+        Self::from_launch_wizard_with_frame_requester(launch_wizard, image_smoke, frame_requester)
     }
 
+    #[cfg(test)]
     fn from_launch_wizard(
         launch_wizard: LaunchWizardView,
         image_smoke: ImageSmoke,
     ) -> Result<Self> {
-        let frame_runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_time()
-            .build()
-            .context("start bottom pane frame scheduler")?;
-        let (draw_tx, frame_draw_rx) = broadcast::channel(16);
-        let frame_requester = {
-            let _guard = frame_runtime.enter();
-            crate::tui::FrameRequester::new(draw_tx)
-        };
+        Self::from_launch_wizard_with_frame_requester(
+            launch_wizard,
+            image_smoke,
+            crate::tui::FrameRequester::test_dummy(),
+        )
+    }
+
+    fn from_launch_wizard_with_frame_requester(
+        launch_wizard: LaunchWizardView,
+        image_smoke: ImageSmoke,
+        frame_requester: crate::tui::FrameRequester,
+    ) -> Result<Self> {
         let (app_event_tx, app_event_rx) = mpsc::unbounded_channel();
         let mut bottom_pane = BottomPane::new(BottomPaneParams {
             app_event_tx: AppEventSender::new(app_event_tx),
@@ -160,8 +201,6 @@ impl ShellState {
 
         Ok(Self {
             bottom_pane,
-            frame_runtime,
-            frame_draw_rx,
             _app_event_rx: app_event_rx,
             image_smoke,
             show_footer_help: false,
@@ -210,50 +249,16 @@ impl ShellState {
         self.bottom_pane.handle_paste(pasted.to_string());
     }
 
-    fn tick_rate(&self) -> Duration {
-        if self.image_smoke_animates() {
-            IMAGE_SMOKE_TICK_RATE
-        } else {
-            TICK_RATE
-        }
-    }
-
-    fn image_smoke_animates(&self) -> bool {
-        self.image_smoke.animates()
-    }
-
     fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
         self.image_smoke.prepare_draw(area, composer_bottom_y);
     }
 
-    fn draw_image_smoke(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        self.image_smoke.draw(terminal)
+    fn draw_image_smoke(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
+        self.image_smoke.draw(tui)
     }
 
-    fn clear_image_smoke(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        self.image_smoke.clear(terminal)
-    }
-
-    fn drain_scheduled_draws(&mut self) -> bool {
-        self.drain_bottom_pane_draws() || self.image_smoke.drain_draws()
-    }
-
-    fn drain_bottom_pane_draws(&mut self) -> bool {
-        self.frame_runtime.block_on(async {
-            tokio::task::yield_now().await;
-        });
-
-        let mut requested = false;
-        loop {
-            match self.frame_draw_rx.try_recv() {
-                Ok(()) => requested = true,
-                Err(broadcast::error::TryRecvError::Lagged(_)) => requested = true,
-                Err(
-                    broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed,
-                ) => break,
-            }
-        }
-        requested
+    fn clear_image_smoke(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
+        self.image_smoke.clear(tui)
     }
 
     fn refresh_terminal_title(&mut self) {
@@ -374,19 +379,15 @@ enum ImageSmoke {
 }
 
 impl ImageSmoke {
-    fn from_env() -> Self {
+    fn from_env(frame_requester: crate::tui::FrameRequester) -> Self {
         if !env_flag_enabled(std::env::var_os(IMAGE_SMOKE_ENV).as_deref()) {
             return Self::Disabled;
         }
 
-        match ImageSmokeState::load() {
+        match ImageSmokeState::load(frame_requester) {
             Ok(state) => Self::Ready(Box::new(state)),
             Err(error) => Self::Error(format!("pet image smoke unavailable: {error}")),
         }
-    }
-
-    fn animates(&self) -> bool {
-        matches!(self, Self::Ready(state) if state.image_enabled)
     }
 
     fn status_line(&self) -> Option<Line<'static>> {
@@ -406,54 +407,34 @@ impl ImageSmoke {
         }
     }
 
-    fn draw(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+    fn draw(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
         if let Self::Ready(state) = self {
-            state.draw(terminal)?;
+            state.draw(tui)?;
         }
         Ok(())
     }
 
-    fn clear(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+    fn clear(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
         if let Self::Ready(state) = self {
-            state.clear(terminal)?;
+            state.clear(tui)?;
         }
         Ok(())
-    }
-
-    fn drain_draws(&mut self) -> bool {
-        match self {
-            Self::Ready(state) => state.drain_draws(),
-            Self::Disabled | Self::Error(_) => false,
-        }
     }
 }
 
 struct ImageSmokeState {
-    runtime: Runtime,
-    draw_rx: broadcast::Receiver<()>,
     pet: crate::tui::pets::AmbientPet,
-    render_state: crate::tui::pets::PetImageRenderState,
     pending_draw: Option<crate::tui::pets::AmbientPetDraw>,
     status: String,
-    image_enabled: bool,
 }
 
 impl ImageSmokeState {
-    fn load() -> Result<Self> {
+    fn load(frame_requester: crate::tui::FrameRequester) -> Result<Self> {
         let codex_home = codex_home().context("CODEX_HOME or HOME is not available")?;
         let pet_id = std::env::var(IMAGE_SMOKE_PET_ENV)
             .ok()
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| DEFAULT_IMAGE_SMOKE_PET.to_string());
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_time()
-            .build()
-            .context("start pet frame scheduler")?;
-        let (draw_tx, draw_rx) = broadcast::channel(16);
-        let frame_requester = {
-            let _guard = runtime.enter();
-            crate::tui::FrameRequester::new(draw_tx)
-        };
         crate::tui::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
             .with_context(|| format!("prepare {pet_id} in {}", codex_home.display()))?;
         let mut pet =
@@ -471,13 +452,9 @@ impl ImageSmokeState {
         };
 
         Ok(Self {
-            runtime,
-            draw_rx,
             pet,
-            render_state: crate::tui::pets::PetImageRenderState::default(),
             pending_draw: None,
             status,
-            image_enabled,
         })
     }
 
@@ -486,42 +463,14 @@ impl ImageSmokeState {
         self.pet.schedule_next_frame();
     }
 
-    fn draw(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        crate::tui::pets::render_ambient_pet_image(
-            terminal.backend_mut(),
-            &mut self.render_state,
-            self.pending_draw.take(),
-        )?;
+    fn draw(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
+        tui.draw_ambient_pet_image(self.pending_draw.take())?;
         Ok(())
     }
 
-    fn clear(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        crate::tui::pets::render_ambient_pet_image(
-            terminal.backend_mut(),
-            &mut self.render_state,
-            None,
-        )?;
+    fn clear(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
+        tui.clear_ambient_pet_image()?;
         Ok(())
-    }
-
-    fn drain_draws(&mut self) -> bool {
-        self.runtime.block_on(async {
-            tokio::task::yield_now().await;
-        });
-
-        let mut requested = false;
-        loop {
-            match self.draw_rx.try_recv() {
-                Ok(()) => requested = true,
-                Err(broadcast::error::TryRecvError::Lagged(_)) => requested = true,
-                Err(
-                    broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed,
-                ) => {
-                    break;
-                }
-            }
-        }
-        requested
     }
 }
 
@@ -546,9 +495,25 @@ fn codex_home() -> Option<PathBuf> {
         })
 }
 
+#[cfg(test)]
 fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     let area = frame.area();
-    Clear.render(area, frame.buffer_mut());
+    let cursor = render_buffer(area, frame.buffer_mut(), state);
+    if let Some(cursor) = cursor {
+        frame.set_cursor_position(cursor);
+    }
+}
+
+fn render_custom(frame: &mut crate::custom_terminal::Frame<'_>, state: &mut ShellState) {
+    let area = frame.area();
+    let cursor = render_buffer(area, frame.buffer, state);
+    if let Some(cursor) = cursor {
+        frame.set_cursor_position(cursor);
+    }
+}
+
+fn render_buffer(area: Rect, buf: &mut Buffer, state: &mut ShellState) -> Option<(u16, u16)> {
+    Clear.render(area, buf);
     let footer_height = state.footer_height().min(area.height);
     let content_height = area.height.saturating_sub(footer_height);
     let content_area = Rect {
@@ -560,12 +525,10 @@ fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
         height: footer_height,
         ..area
     };
-    Renderable::render(&state.bottom_pane, content_area, frame.buffer_mut());
-    state.render_footer(footer_area, frame.buffer_mut());
+    Renderable::render(&state.bottom_pane, content_area, buf);
+    state.render_footer(footer_area, buf);
     state.prepare_image_smoke_draw(content_area, footer_area.y);
-    if let Some(cursor) = state.bottom_pane.cursor_pos(content_area) {
-        frame.set_cursor_position(cursor);
-    }
+    state.bottom_pane.cursor_pos(content_area)
 }
 
 #[cfg(test)]
