@@ -191,17 +191,20 @@ model under `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs`, rendered
 through Codex `SelectionViewParams` and `ListSelectionView`. The generic picker
 logic, side-content layout, cancellation, and list key handling remain
 Codex-vendored. RunHaven-owned code maps `AgentCatalogData` and
-`LaunchPlanData` into decision rows, a safety header, and a plan preview that
-keeps boundary, host home, credentials, auth scope, network mode, and exact
-command visibility near the top. Enter still does not launch.
+`LaunchPlanData` into decision rows and a short safety header. The first agent
+chooser intentionally does not show a side plan preview, exact command, broker
+detail, image detail, or provider-host list. That dense safety information
+belongs in the review and confirmation steps, where the user checks it before
+launch.
 
 TUI launch-review follow-up: Enter on a ready agent now opens a read-only review
 step rendered through the Codex menu-surface style. The review shows the
 selected agent, auth scope, network posture, workspace mount, state volume,
 non-shared host data, provider hosts, safety notes, and exact `container run`
 command. `b`, backspace, or Esc returns to the picker; `q` exits from either
-screen. Blocked plans cannot open review. Launch and preflight execution remain
-disabled in the TUI.
+screen. Blocked plans cannot open review. At that review slice, launch and
+preflight execution were still disabled; later confirmation and foreground
+handoff follow-ups supersede that state.
 
 TUI shell-chrome follow-up: the temporary app shell now reserves a real Codex
 footer area around the launch picker and review screen. The footer is rendered
@@ -1133,6 +1136,13 @@ Latest RunHaven-only TUI MVP surface:
   foreground launch handoff, post-run recovery back into the TUI, active-run
   list, confirmation-gated raw log snapshot display, and secret-free diagnostics
   for auth broker status/log plus provider egress decisions.
+- 2026-06-29: Simplified the initial agent chooser for non-technical users.
+  The chooser now shows plain guidance, agent descriptions, workspace, current
+  network mode, and the short `/workspace only` safety summary. It no longer
+  renders the side `Plan Preview`, exact `container run` command, provider-host
+  list, or broker/image/auth detail on the first screen. Review and confirm
+  still show auth scope, network posture, not-shared host data, provider hosts,
+  safety notes, and the exact command before launch.
 - Shared UI contracts now include `ActiveRunListData` and
   `RunHavenDiagnosticsData`. Active-run summaries intentionally omit workspace
   paths, diagnostics map only metadata fields, auth broker request paths are
@@ -1158,11 +1168,13 @@ Latest RunHaven-only TUI MVP surface:
   --nocapture`; `cargo test -p runhaven-tui --locked app_shell --
   --nocapture`; `cargo check -p runhaven-tui --locked`;
   `cargo test -p runhaven-tui --locked drift_tests -- --show-output`;
-  `cargo test -p runhaven-tui --locked --quiet` (781 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --quiet` (782 passed, 5 ignored);
   `cargo test -p runhaven-tui --locked --features codex-vendored-tests
   --no-run`; `cargo clippy -p runhaven-core --all-targets --locked --
   -D warnings`; `cargo clippy -p runhaven-tui --all-targets --locked --
   -D warnings`; `cargo run --locked --bin runhaven-check-pins --quiet`;
+  `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::mvp -- --nocapture`;
   `scripts/compare-codex-tui.sh` (371 RunHaven files, 15 RunHaven-only files,
   53 copied Codex files with local edits); `cargo fmt --check`;
   `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and

@@ -648,14 +648,8 @@ impl AgentDecisionVm {
         let plan_error = self.plan.as_ref().err().cloned();
         SelectionItem {
             name: self.agent.name.clone(),
-            description: Some(format!(
-                "{} | {} | {} | {}",
-                self.status_label, self.auth_label, self.network_label, self.boundary_label
-            )),
-            selected_description: Some(format!(
-                "{} | broker: {} | image: {}",
-                self.agent.description, self.agent.broker, self.agent.image
-            )),
+            description: Some(self.agent.description.clone()),
+            selected_description: Some(self.agent.description.clone()),
             is_disabled: plan_error.is_some(),
             disabled_reason: plan_error.map(|error| error.to_string()),
             dismiss_on_select: false,
@@ -760,10 +754,6 @@ fn agent_selection_params(
         image_smoke_status,
         step_label,
     };
-    let preview = PlanPreview {
-        decisions: Arc::clone(&decisions),
-        selected_idx: Arc::clone(&selected_idx),
-    };
     let on_selection_changed = {
         let selected_idx = Arc::clone(&selected_idx);
         Some(Box::new(move |idx, _sender: &AppEventSender| {
@@ -787,11 +777,6 @@ fn agent_selection_params(
         name_column_width: Some(13),
         header: Box::new(header),
         initial_selected_idx: Some(0),
-        side_content: Box::new(preview.clone()),
-        side_content_width: SideContentWidth::Half,
-        side_content_min_width: 44,
-        stacked_side_content: Some(Box::new(preview)),
-        preserve_side_content_bg: false,
         on_selection_changed,
         allow_cancel: true,
         ..Default::default()
@@ -974,28 +959,16 @@ impl SafetyHeader {
                 Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
                 Span::styled(self.step_label, boundary_style()),
             ]),
-            Line::from(vec![
-                Span::styled("Boundary  ", muted_but_readable_style()),
-                Span::styled("/workspace only", boundary_style()),
-                Span::raw("  "),
-                Span::styled("Host home  ", muted_but_readable_style()),
-                Span::styled("not mounted", safe_style()),
-                Span::raw("  "),
-                Span::styled("Credentials  ", muted_but_readable_style()),
-                Span::styled("not mounted by default", safe_style()),
-            ]),
+            Line::from("Choose an agent. RunHaven will show the full plan before launch."),
         ];
 
         if let Some(selected) = self.selected() {
             lines.push(Line::from(vec![
+                Span::styled("Agent  ", muted_but_readable_style()),
+                Span::styled(selected.agent.name.clone(), selected.status_style()),
+                Span::raw("  "),
                 Span::styled("Network  ", muted_but_readable_style()),
                 Span::styled(selected.network_label.clone(), selected.network_style()),
-                Span::raw("  "),
-                Span::styled("Auth scope  ", muted_but_readable_style()),
-                Span::styled(selected.auth_scope_label.clone(), safe_style()),
-                Span::raw("  "),
-                Span::styled("Selected  ", muted_but_readable_style()),
-                Span::styled(selected.agent.name.clone(), selected.status_style()),
             ]));
         }
         lines.push(label_value(
@@ -1003,6 +976,11 @@ impl SafetyHeader {
             self.workspace.clone(),
             boundary_style(),
         ));
+        lines.push(Line::from(vec![
+            Span::styled("Safety  ", muted_but_readable_style()),
+            Span::styled("/workspace only", boundary_style()),
+            Span::raw(". Host home and credentials are not mounted."),
+        ]));
         if let Some(status) = &self.image_smoke_status {
             lines.push(status.clone());
         }
@@ -1280,75 +1258,6 @@ impl Renderable for ConfirmLaunch<'_> {
     }
 }
 
-#[derive(Clone)]
-struct PlanPreview {
-    decisions: Arc<Vec<AgentDecisionVm>>,
-    selected_idx: Arc<AtomicUsize>,
-}
-
-impl PlanPreview {
-    fn selected(&self) -> Option<&AgentDecisionVm> {
-        selected_decision(&self.decisions, &self.selected_idx)
-    }
-
-    fn lines(&self) -> Vec<Line<'static>> {
-        let Some(decision) = self.selected() else {
-            return vec![Line::from("No agents are configured.")];
-        };
-        let mut lines = vec![
-            Line::from(vec![Span::styled("Plan Preview", selected_row_style())]),
-            label_value("Agent", decision.agent.name.clone(), accent_style()),
-            label_value(
-                "Status",
-                decision.status_label.clone(),
-                decision.status_style(),
-            ),
-            label_value("Sign in", decision.agent.sign_in.clone(), safe_style()),
-            label_value(
-                "Auth scope",
-                decision.auth_scope_label.clone(),
-                safe_style(),
-            ),
-            label_value(
-                "Network",
-                decision.network_label.clone(),
-                decision.network_style(),
-            ),
-            label_value(
-                "Boundary",
-                decision.boundary_label.clone(),
-                boundary_style(),
-            ),
-            label_value("Host home", "not mounted", safe_style()),
-            label_value("Credentials", "not mounted by default", safe_style()),
-        ];
-
-        match &decision.plan {
-            Ok(launch) => append_plan_lines(&mut lines, &launch.data),
-            Err(error) => {
-                lines.push(Line::from(""));
-                lines.push(Line::from(vec![Span::styled(
-                    error.reason(),
-                    danger_style(),
-                )]));
-                lines.push(Line::from(error.detail().to_string()));
-            }
-        }
-
-        lines
-    }
-}
-
-impl Renderable for PlanPreview {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
-        paragraph(self.lines()).render(area, buf);
-    }
-
-    fn desired_height(&self, width: u16) -> u16 {
-        paragraph(self.lines()).line_count(width) as u16
-    }
-}
-
 fn append_review_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
     lines.push(label_value(
         "Workspace",
@@ -1435,41 +1344,6 @@ fn append_confirm_plan_lines(
     )]));
     lines.push(Line::from(plan.command.clone()));
     append_safety_note_lines(lines, plan, 3);
-}
-
-fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
-    append_not_shared_lines(lines, plan);
-    lines.push(Line::from(""));
-    lines.push(label_value(
-        "Mount",
-        plan.boundary.mounted_workspace.clone(),
-        boundary_style(),
-    ));
-    lines.push(label_value(
-        "State",
-        plan.state_volume.clone(),
-        safe_style(),
-    ));
-    lines.push(label_value(
-        "Image",
-        plan.image.clone(),
-        muted_but_readable_style(),
-    ));
-    lines.push(label_value(
-        "Worktree",
-        worktree_label(plan),
-        muted_but_readable_style(),
-    ));
-
-    append_provider_host_lines(lines, plan, 4);
-    append_safety_note_lines(lines, plan, 3);
-
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![Span::styled(
-        "Exact command before launch",
-        selected_row_style(),
-    )]));
-    lines.push(Line::from(plan.command.clone()));
 }
 
 fn append_not_shared_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {

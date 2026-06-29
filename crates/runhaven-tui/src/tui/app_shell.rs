@@ -871,17 +871,16 @@ mod tests {
 
         assert!(output.contains("RunHaven"));
         assert!(output.contains("Step 1/4: Choose agent"));
-        assert!(output.contains("Plan Preview"));
-        assert!(output.contains("Boundary"));
+        assert!(output.contains("Choose an agent"));
+        assert!(output.contains("RunHaven will show the full plan before launch"));
+        assert!(output.contains("Safety"));
         assert!(output.contains("/workspace only"));
-        assert!(output.contains("Host home"));
-        assert!(output.contains("not mounted"));
-        assert!(output.contains("Credentials"));
+        assert!(output.contains("Host home and credentials are not mounted"));
         assert!(output.contains("provider allowlist"));
-        assert!(output.contains("Not shared"));
-        assert!(output.contains("host home folder"));
-        assert!(output.contains("Exact command before launch"));
-        assert!(output.contains("container run"));
+        assert!(output.contains("Google Antigravity CLI"));
+        assert!(!output.contains("Plan Preview"));
+        assert!(!output.contains("Exact command"));
+        assert!(!output.contains("container run"));
     }
 
     #[test]
@@ -936,8 +935,8 @@ mod tests {
             .draw(|frame| render(frame, &mut state))
             .expect("draw");
         assert!(
-            buffer_text(&terminal).contains("Plan Preview"),
-            "test setup should render the picker first"
+            buffer_text(&terminal).contains("Choose an agent"),
+            "test setup should render the simplified picker first"
         );
 
         assert_eq!(
@@ -951,7 +950,7 @@ mod tests {
 
         assert!(output.contains("Step 3/4: Review plan"));
         assert!(output.contains("Exact command"));
-        assert!(!output.contains("Plan Preview"));
+        assert!(!output.contains("Choose an agent. RunHaven will show the full plan"));
     }
 
     #[test]
@@ -992,10 +991,9 @@ mod tests {
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
         let output = render_to_text(&mut state, 80, 24);
 
-        assert!(output.contains("Boundary"));
+        assert!(output.contains("Safety"));
         assert!(output.contains("/workspace only"));
-        assert!(output.contains("Host home"));
-        assert!(output.contains("Credentials"));
+        assert!(output.contains("Host home and credentials"));
         assert!(output.contains("provider allowlist"));
     }
 

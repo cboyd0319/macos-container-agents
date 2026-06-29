@@ -27,8 +27,9 @@ drives the architecture below.
 The earlier custom TUI phases below are historical design evidence. The active
 source has now been reset to a Codex TUI source baseline in
 `crates/runhaven-tui/src/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
-crate buildable. A bare interactive `runhaven` now opens a temporary read-only
-launch preview while the full Codex app shell and bottom pane are adapted.
+crate buildable. A bare interactive `runhaven` now opens an unreleased
+RunHaven-only MVP inside the staged Codex runtime while native Codex `App` and
+`ChatWidget` remain deferred.
 
 The dbt-wizard comparison note shows the right production pattern: keep a
 coherent terminal app substrate, add a narrow product payload seam, and render
@@ -98,8 +99,10 @@ and terminal-title mechanics stay Codex-owned.
 The current launch wizard now includes the Step 4 confirmation screen. Enter on
 the review step opens confirmation, the exact planner command stays visible,
 and plans marked `confirm_required` require typing `launch` before confirmation.
-This slice is still read-only: confirmation shows an acknowledgement and does
-not start a container, run preflight commands, or write launch state.
+Confirmation now emits a prepared RunHaven launch intent, and `app_shell.rs`
+hands the terminal to the foreground launch path only after Codex terminal
+restore. The first chooser stays plain; review and confirm show the dense
+safety facts and exact command before launch.
 
 Temporary visual check for the native Codex pet renderer:
 
@@ -325,15 +328,19 @@ a shared-library gap to close. Do not parse CLI prose in the TUI.
 
 ## Current Status
 
-- The source copy is broad enough for Strategy C, but the live TUI is still a
-  staged shell.
+- The source copy is broad enough for Strategy C, and the live TUI is now a
+  RunHaven-only MVP hosted in the staged shell. Native Codex `App` and
+  `ChatWidget` remain deferred.
 - Active staged pieces: native Cubby pet package from
   `docs/assets/installed-pet/cubby/`, Codex pet/image renderer, terminal title,
-  footer, `ListSelectionView`, `TextArea`, launch picker, read-only review, and
-  read-only confirmation.
-- Not yet active: Codex `Tui` runtime ownership, `App` loop, `BottomPane`,
-  `ChatWidget`, typed app-server facade, workspace picker, policy mutation,
-  foreground launch, dashboard, history, diagnostics, and Zork.
-- Foreground launch remains disabled in the TUI until terminal handoff is
-  proven and `launch_run_plan` runs from the UI thread after Codex terminal
-  restore.
+  footer, `BottomPane`, `ListSelectionView`, `TextArea`, workspace picker,
+  plain agent chooser, policy mutation, review, typed confirmation, foreground
+  launch handoff, post-run recovery, active-run list, confirmation-gated log
+  snapshots, and secret-free diagnostics.
+- The first agent chooser is intentionally plain. Dense launch details such as
+  auth scope, provider hosts, not-shared host data, safety notes, and the exact
+  `container run` command belong in review and confirm.
+- Not yet active: native Codex `App` loop, `ChatWidget`, full app-server
+  transport, filesystem RPC, MCP, login, workspace command execution, Codex
+  session recording, unrelated Codex product surfaces, full history/diff
+  dashboard, and Zork.

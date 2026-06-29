@@ -1059,22 +1059,32 @@ mod tests {
             .join("")
     }
 
+    fn line_text(line: Line<'_>) -> String {
+        line.spans
+            .iter()
+            .map(|span| span.content.as_ref())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
     #[test]
     fn policy_keys_rebuild_launch_plan_without_custom_shell_code() {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
 
         let output = render_to_text(&mut view, 120, 32);
-        assert!(output.contains("Auth scope"));
-        assert!(output.contains("agent"));
+        assert!(output.contains("Choose an agent"));
+        assert!(output.contains("RunHaven will show the full plan before launch"));
+        assert!(line_text(view.footer_status()).contains("auth agent"));
 
         view.handle_key_event(key(KeyCode::Char('a')));
-        let output = render_to_text(&mut view, 120, 32);
-        assert!(output.contains("project"));
+        render_to_text(&mut view, 120, 32);
+        assert!(line_text(view.footer_status()).contains("auth project"));
 
         view.handle_key_event(key(KeyCode::Char('n')));
         let output = render_to_text(&mut view, 120, 32);
         assert!(output.contains("local only"));
+        assert!(line_text(view.footer_status()).contains("network internal"));
     }
 
     #[test]

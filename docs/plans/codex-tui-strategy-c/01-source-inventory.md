@@ -27,9 +27,9 @@ Observed current state:
 - The active TUI entrypoint is still temporary:
   - `crates/runhaven-tui/src/lib.rs` exposes `tui::run`.
   - `crates/runhaven-tui/src/tui/mod.rs` defines a staged module facade.
-  - `crates/runhaven-tui/src/tui/app_shell.rs` hosts a read-only launch picker,
-    review step, confirmation step, footer, terminal title, and opt-in pet image
-    smoke path.
+  - `crates/runhaven-tui/src/tui/app_shell.rs` hosts the current RunHaven-only
+    MVP launch flow, footer, terminal title, foreground handoff/recovery, and
+    opt-in pet image smoke path.
   - `crates/runhaven-tui/src/tui/runhaven/service.rs` owns the temporary core
     service seam for launch preview payloads.
   - `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs` maps
@@ -40,9 +40,11 @@ Observed current state:
   - `bottom_pane/footer.rs`
   - `terminal_title.rs`
   - `pets/*` for the opt-in image smoke path
+  - `tui.rs` and its event stream for the staged runtime loop
   - rendering/style/wrapping helpers needed by those pieces
-- Full Codex `App`, `ChatWidget`, `BottomPane`, `app_server_session.rs`,
-  terminal `Tui`, and async event stream are copied but not the live app shell.
+- Full Codex `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, and Codex session recording are copied but
+  dormant or fail-closed in the live app shell.
 
 Important implication:
 
@@ -121,7 +123,7 @@ These files are intentionally not upstream Codex files:
 | --- | --- | --- |
 | `tui/README.md` | Vendor ledger and local exceptions. | Keep and update every time source-copy rules change. |
 | `tui/mod.rs` | Temporary staged facade for compiling selected Codex modules. | Shrink and eventually replace with a Codex-shaped module tree. |
-| `tui/app_shell.rs` | Temporary read-only launch preview shell. | Delete or reduce once Codex `App` is adapted. |
+| `tui/app_shell.rs` | Temporary RunHaven-only MVP shell over Codex runtime primitives. | Delete or reduce once Codex `App` is adapted. |
 | `tui/runhaven/mod.rs` | RunHaven TUI adapter namespace. | Keep. |
 | `tui/runhaven/service.rs` | Temporary RunHaven service seam over core planner/profile payloads. | Keep until the Codex-shaped app-server facade absorbs it. |
 | `tui/runhaven/launch_wizard.rs` | RunHaven-owned mapping from planner payloads to Codex picker/review UI. | Keep, but make it a normal view launched by Codex `App`, not the app itself. |

@@ -319,7 +319,7 @@
         "Non-source metadata and upstream snapshot goldens are removed with recorded culling rationale",
         "Attribution and reset docs identify source, local exclusions, and known integration gaps",
         "RunHaven product integration decisions are made from the vendored baseline, not the discarded custom TUI",
-        "Bare interactive runhaven opens a launch preview backed by LaunchPlanData",
+        "Bare interactive runhaven opens a plain launch chooser backed by LaunchPlanData, with dense safety detail deferred to review and confirm",
         "The current TUI confirmation step shows the exact planner command, uses LaunchPlanData.confirm_required for typed confirmation, and starts through a PreparedLaunch AgentRunPlan only after Codex terminal restore",
         "Active-run logs require typed raw-output confirmation before backend lookup",
         "Diagnostics omit workspace paths and unknown fields, scrub auth broker query strings/fragments, and use bounded tail reads in the TUI path"

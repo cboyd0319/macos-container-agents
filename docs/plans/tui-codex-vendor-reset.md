@@ -398,8 +398,8 @@ The first milestone is a clean vendor baseline:
 
 - The first compile gap after the reset was RunHaven's missing module entrypoint.
   `crates/runhaven-tui/src/tui/mod.rs` now keeps the crate buildable and dispatches to
-  a temporary RunHaven-owned read-only launch preview while the vendored Codex
-  entrypoint is adapted.
+  a temporary RunHaven-owned MVP launch flow while the vendored Codex entrypoint
+  is adapted.
 - The lower native pet runtime, terminal protocol detection, frame extraction,
   Sixel encoder, Kitty image writers, ambient draw request model, and Tokio
   frame scheduler now compile and pass their tests.
@@ -413,8 +413,10 @@ The first milestone is a clean vendor baseline:
 - Codex's shared style and text helpers now compile and pass their focused
   tests.
 - `app_shell.rs` now restores a real bare interactive TUI path. It consumes
-  `LaunchPlanData` and shows a read-only agent and launch-plan preview. It is
-  temporary glue until the Codex app shell and bottom pane are adapted.
+  `LaunchPlanData`, keeps the first chooser plain, shows dense launch detail in
+  review and confirm, and hands confirmed plans to the foreground launch path
+  after terminal restore. It is temporary glue until the Codex app shell is
+  adapted.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

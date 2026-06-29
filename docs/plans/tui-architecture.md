@@ -105,7 +105,7 @@ Target ownership for the rebuilt source remains:
 | --- | --- |
 | `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
 | `app_shell.rs` | Temporary shell host for the Codex `ListSelectionView` launch picker, image-smoke bridge, and terminal restore loop; remove or shrink when the full Codex app shell is adapted. |
-| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into Codex picker rows, safety header, launch-plan preview, and read-only review step. |
+| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into a plain Codex picker, review step, typed confirmation, and prepared launch intent. |
 | `bottom_pane/list_selection_view.rs` and helpers | Codex-vendored selection surface now compiled through a temporary RunHaven facade; use it before adding custom list, picker, tab, search, side-panel, or footer behavior. |
 | `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
@@ -226,8 +226,8 @@ They share design direction but not data plumbing; keep them in separate modules
 
 The current vendor-reset shell is intentionally staged. It keeps the
 Codex-vendored TUI source in `crates/runhaven-tui/src/tui/` and opens a
-temporary read-only RunHaven launch preview while the full Codex app shell,
-bottom pane, status line, native pet, resume, and command surfaces are adapted.
+RunHaven-only MVP launch flow while native Codex `App`, `ChatWidget`, richer
+history, native pet, resume, and command surfaces are adapted.
 When the header logo or Cubby pet returns, prefer Codex-native modules and
 terminal-image behavior over custom RunHaven rendering code.
 

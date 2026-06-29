@@ -20,16 +20,16 @@ agents and run planner as the CLI:
 runhaven
 ```
 
-Current rebuild state: the TUI opens a read-only launch preview. Use up/down
-or `j`/`k` to choose an agent. The preview shows the selected workspace, sign-in
-mode, broker support, network posture, saved agent state, what is shared with
-the agent, what is not shared, safety notes, and the matching `container run`
-command. Press `q` or esc to quit.
+Current rebuild state: the TUI opens an unreleased RunHaven-only MVP. Use
+up/down or `j`/`k` to choose an agent, then press enter to review the launch
+plan. The first screen stays simple. Review and confirm show auth scope, network
+posture, what is shared, what is not shared, safety notes, and the matching
+`container run` command before launch. Press `q` or esc to quit.
 
-RunHaven is reattaching the full review, launch, dashboard, history,
-diagnostics, pet, and hidden easter egg surfaces from the Codex-vendored TUI
-baseline. Until those screens are back, use the CLI for real runs and run
-management:
+RunHaven is reattaching the remaining history, richer dashboard, pet, and
+hidden easter egg surfaces from the Codex-vendored TUI
+baseline. Until those screens are back, use the CLI for advanced run
+management, history, and maintenance:
 
 ```bash
 runhaven plan claude
