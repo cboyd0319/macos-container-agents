@@ -68,7 +68,15 @@ current Phase 4 path.
 - Do not mount host home, cloud credential folders, raw SSH keys, browser
   profiles, or arbitrary host environment variables by default.
 - Do not expand `crates/runhaven-tui/src/tui/app_shell.rs` as a product
-  screen. Shrink it toward native Codex `App`/`ChatWidget` ownership.
+  screen. For the scoped MVP it is only the terminal/runtime host for
+  RunHaven-owned views under `tui/runhaven/`; shrink or replace it only when a
+  reviewed native owner is actually promoted.
+- Native Codex `App` and `ChatWidget` are separate future promotion decisions,
+  not the default MVP destination. Promote native `App` only if RunHaven needs
+  Codex app-loop ownership beyond the current shell. Promote `ChatWidget` only
+  if RunHaven needs source-shaped conversation transcript ownership. Either
+  promotion needs a reviewed redaction, session-recording, and app-server
+  boundary first.
 - Keep the active foreground launch path owned by
   `tui/runhaven/launch_handoff.rs` and the prepared RunHaven plan. Do not route
   RunHaven launches through Codex workspace-command, app-server transport, or
@@ -85,19 +93,23 @@ current Phase 4 path.
 
 ## Current Promotion Path
 
-For Phase 4, prefer this order unless live plan files say otherwise:
+For the current MVP-first Phase 4 direction, prefer this order unless live plan
+files say otherwise:
 
 1. Keep Codex `Tui`, `TuiEventStream`, `FrameRequester`, and `BottomPane`
    ownership active.
-2. Treat real vendored `branch_summary.rs` and the `workspace_command.rs`
-   contract as active for the next `ChatWidget` status-line path.
-3. Remove or shrink temporary bridge types as their real owners become active.
+2. Complete scoped RunHaven MVP behavior in `tui/runhaven/` surfaces:
+   workspace, agent, plan review, confirm launch, foreground handoff, active-run
+   logs, recovery, and diagnostics.
+3. Remove or shrink temporary bridge types only when their real owners are
+   actively needed by RunHaven.
 4. Add drift and security guards for each promoted surface.
-5. Keep native `App`, real `app_server_session`, app-server transport,
-   filesystem RPC, MCP, login, and host-reaching paths dormant or fail-closed
-   until their markers are removed or guarded.
-6. Continue toward native `App`/`ChatWidget` ownership without adding product
-   screens to `app_shell.rs`.
+5. Keep native `App`, `ChatWidget`, real app-server transport, filesystem RPC,
+   MCP, login, and host-reaching paths dormant or fail-closed until their
+   markers are removed, fail-closed, or routed through reviewed RunHaven
+   boundaries.
+6. Do not port non-RunHaven Codex product features for parity. Leave them
+   dormant, fail-closed, stubbed, or deleted with documentation.
 
 ## Guard Expectations
 

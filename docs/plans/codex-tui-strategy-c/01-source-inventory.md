@@ -122,11 +122,11 @@ These files are intentionally not upstream Codex files:
 | RunHaven file | Role | Long-term state |
 | --- | --- | --- |
 | `tui/README.md` | Vendor ledger and local exceptions. | Keep and update every time source-copy rules change. |
-| `tui/mod.rs` | Temporary staged facade for compiling selected Codex modules. | Shrink and eventually replace with a Codex-shaped module tree. |
-| `tui/app_shell.rs` | Temporary RunHaven-only MVP shell over Codex runtime primitives. | Delete or reduce once Codex `App` is adapted. |
+| `tui/mod.rs` | Temporary staged facade for compiling selected Codex modules. | Shrink as real modules or RunHaven-owned surfaces stabilize. |
+| `tui/app_shell.rs` | Scoped RunHaven-only MVP shell over Codex runtime primitives. | Keep as terminal/runtime host for the MVP; delete or reduce only when a reviewed native owner is promoted. |
 | `tui/runhaven/mod.rs` | RunHaven TUI adapter namespace. | Keep. |
 | `tui/runhaven/service.rs` | Temporary RunHaven service seam over core planner/profile payloads. | Keep until the Codex-shaped app-server facade absorbs it. |
-| `tui/runhaven/launch_wizard.rs` | RunHaven-owned mapping from planner payloads to Codex picker/review UI. | Keep, but make it a normal view launched by Codex `App`, not the app itself. |
+| `tui/runhaven/launch_wizard.rs` | RunHaven-owned mapping from planner payloads to Codex picker/review UI. | Keep as a RunHaven view; move under native `App` only if that owner is promoted. |
 | `tui/pets/bundled_custom.rs` | Materializes the bundled Cubby pet package into Codex custom-pet shape. | Keep. |
 | `tui/terminal_detection.rs`, `tui/terminal_tests.rs` | Copied from Codex `terminal-detection` crate. | Prefer moving to a local `codex-terminal-detection` vendor crate when the workspace can absorb it cleanly. |
 

@@ -2,7 +2,7 @@
 
 ## Target Runtime Wiring
 
-The final control flow should look like this:
+The scoped MVP control flow should look like this:
 
 ```text
 crates/runhaven/src/main.rs
@@ -12,17 +12,16 @@ crates/runhaven/src/main.rs
 crates/runhaven-tui/src/lib.rs
   -> tui::run()
 
-crates/runhaven-tui/src/tui/lib.rs or adapted entrypoint
-  -> load RunHaven TUI config
-  -> create RunHaven AppServerSession
+crates/runhaven-tui/src/tui/mod.rs
   -> initialize Codex Tui terminal runtime
-  -> App::run(...)
+  -> app_shell.rs terminal/runtime host
+  -> RunHavenMvpView inside BottomPane
 
-Codex-shaped App
-  -> owns async event loop
-  -> consumes AppEvent, active thread events, TuiEventStream, and AppServerEvent
-  -> owns ChatWidget, BottomPane, overlays, transcript, status, pet
-  -> calls AppServerSession for typed requests
+Scoped RunHaven shell
+  -> consumes TuiEventStream
+  -> draws through Codex Tui
+  -> owns BottomPane view stack
+  -> routes AppEvent values from RunHaven-owned views
 
 AppServerSession
   -> RunHavenAppServerClient::request_typed(...)
@@ -34,30 +33,38 @@ RunHavenTuiService
   -> never reaches around runhaven-core safety checks
 ```
 
-The current temporary flow:
+Native Codex `App` and `ChatWidget` are not the default MVP destination. Promote
+native `App` only if RunHaven needs Codex app-loop ownership beyond the current
+shell. Promote `ChatWidget` only if RunHaven needs source-shaped conversation
+transcript ownership. Either promotion first needs reviewed redaction,
+session-recording, and app-server boundaries.
+
+The older staging flow:
 
 ```text
 runhaven_tui::run()
   -> tui::mod.rs run()
   -> app_shell.rs ShellState
   -> launch_wizard.rs
-  -> direct runhaven-core plan build
+  -> obsolete planner call path
 ```
 
-should be treated as a staging path only.
+has been superseded. The live shell now uses Codex `Tui`, `BottomPane`, and the
+RunHaven service/session facade instead of a direct planner call.
 
-The Codex `App::run` loop is a four-way router. Preserve that shape:
+The current MVP shell preserves the relevant Codex-shaped loop inputs and keeps
+the rest available only for future native-owner promotion:
 
 | Loop input | Codex source | RunHaven meaning |
 | --- | --- | --- |
 | `app_event_rx.recv()` | `AppEventSender` and widgets | Internal UI commands such as open picker, submit action, resolve approval, launch external editor, exit. |
-| active thread channel | `thread_event_channels`, `active_thread_rx` | Events for the currently selected RunHaven run/session lane. |
+| active thread channel | `thread_event_channels`, `active_thread_rx` | Future native-owner lane only. |
 | `tui_events.next()` | `TuiEventStream` | Key, paste, resize, draw, focus, suspend/resume handling. |
 | `app_server.next_event()` | `AppServerSession` | Backend notifications and server requests from the RunHaven service. |
 
-Do not collapse these into one custom RunHaven event enum unless the original
-Codex event loop can still be diffed. Add RunHaven variants to the existing
-lanes where needed.
+Do not route RunHaven product behavior around the typed facade. Add RunHaven
+variants to the existing lanes where needed, and keep unused Codex product lanes
+dormant or fail-closed.
 
 ## RunHaven Backend Interface
 
@@ -173,8 +180,9 @@ Do not call `runhaven-core` directly from widgets.
 
 `AppServerSession` already exposes many Codex methods. Preserve the public
 shape where possible even if a method returns a typed unsupported error. The
-important source-close boundary is that `App` and `ChatWidget` keep talking to
-`AppServerSession`, not directly to the RunHaven service.
+important source-close boundary is that active RunHaven views, and any future
+native `App` or `ChatWidget`, keep talking to `AppServerSession`, not directly
+to the RunHaven service.
 
 ### Leave Disabled Or Fail-Closed
 

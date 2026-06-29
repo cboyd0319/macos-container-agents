@@ -16,10 +16,13 @@ repo tracks its progress honestly (see Reconciliation, below); this ledger
 exists to name what that tracking understates or leaves implicit, with specific
 evidence.
 
-Correction applied after audit: the repo copy now restores the canonical
-Strategy C phase order. Runtime-spine compile and terminal-handoff proof are
-completed Phase 3 gates. Native `App` and `BottomPane` adaptation is Phase 4,
-not Phase 5. Findings below still describe the same drift.
+Correction applied after audit: the repo copy restored the canonical Strategy C
+phase order at the time. Direction update, 2026-06-29: the scoped RunHaven MVP
+now keeps Codex `Tui` and real `BottomPane` active while native `App` and
+`ChatWidget` remain separate optional promotions. Read the findings below as
+historical drift pressure: do not grow `app_shell.rs` as a product screen, and
+do not promote native `App` or `ChatWidget` until a RunHaven need and reviewed
+boundary exist.
 
 ---
 
@@ -33,10 +36,9 @@ security boundary is intact in everything actually compiled.
 
 The drift is real but **early-phase and structural**, not a betrayal of intent:
 
-1. The Codex runtime the whole plan is built around (`App` -> `ChatWidget` ->
-   `BottomPane`) is **not wired**. The live app is still `app_shell.rs`, a
-   1050-line hand-rolled shell running its own `ratatui::try_init()` loop, which
-   is the plan's single most-named anti-goal.
+1. Native Codex `App` and `ChatWidget` are **not wired**. The live app is still
+   `app_shell.rs`, but it now uses Codex `Tui` plus real `BottomPane` as the
+   terminal/runtime host for RunHaven-owned MVP views.
 2. `mod.rs` is still a hand-authored compatibility layer, now reduced to 474
    lines after the keymap shim was deleted. It still shadows full-size vendored
    modules with tiny local reimplementations (`app_event`, `app_event_sender`,
@@ -54,12 +56,11 @@ The drift is real but **early-phase and structural**, not a betrayal of intent:
 4. 0 of 538 upstream snapshots were copied. Documented and defensible, but it
    means the vendored test goldens provide no regression signal inside the repo.
 
-Net: the project is at the end of the Phase 3 runtime/handoff gate. The
-foundation is faithful; the divergence is that the **temporary scaffolding has
-grown product weight** (`app_shell.rs` 1050 lines, `launch_wizard.rs` 1542
-lines, `mod.rs` 474 lines) while the Codex app loop it is supposed to be
-replaced by does not yet exist. The longer that scaffolding carries real UX, the
-harder the Phase 4 swap to the Codex `App` becomes.
+Net: the project moved past the Phase 3 runtime/handoff gate. The foundation is
+faithful for the scoped MVP: Codex `Tui`, event stream, frame requester, and
+real `BottomPane` are active. The remaining drift pressure is module-path debt
+and product behavior that must stay under `tui/runhaven/`, not mandatory native
+Codex chat parity.
 
 Drift rating against the plan's **end state**: substantial (early). Drift
 against the plan's **method**: moderate, concentrated in `mod.rs` and the live
@@ -114,10 +115,10 @@ and added explicit `Status:` blocks marking Phases 0-4 complete.
 > Finding R1 (severity: low, process): Decide which copy is canonical and
 > redirect the other, or the next reviewer audits against the wrong target.
 
-Applied fix: `docs/plans/codex-tui-strategy-c/` is the repo-canonical copy and
-has been realigned to the original phase order. Runtime compile and handoff are
-recorded as completed Phase 3 gates. Everything from "Phase 4: Adapt App and
-BottomPane" onward is unstarted.
+Applied fix: `docs/plans/codex-tui-strategy-c/` is the repo-canonical copy.
+Runtime compile and handoff are recorded as completed gates. The 2026-06-29
+MVP-first update supersedes native `App` and `ChatWidget` as default next
+phases.
 
 ---
 
@@ -129,9 +130,9 @@ BottomPane" onward is unstarted.
 | 1 Stop growing temp shell | move core calls into a service seam | **Done** | `app_shell.rs` has zero `runhaven_core::` refs; goes through `runhaven/service.rs` |
 | 2 Codex-shaped backend facade | client/protocol/service, typed errors, bounded channel | **Done (minimal)** | `runhaven/{protocol,service,app_server_client,app_server_session}.rs`; 3 active methods only |
 | 3 Switch to Codex terminal runtime | `tui.rs` compiles, handoff is proven | **Done as supporting gate** | `tui.rs` as `codex_runtime`; `runhaven/terminal_handoff.rs`, env-gated |
-| 4 Adapt `App` + `BottomPane` | real Codex event loop active | **Not started** | `app.rs`/`bottom_pane/mod.rs` dormant; `app_shell.rs` is live shell |
-| 5 Adapt `ChatWidget` | transcript/status/history cells | **Not started** | `chatwidget.rs` dormant |
-| 6 Reattach product screens | dashboard, logs, history, diff, doctor | **Not started** | none wired; only launch preview exists |
+| 4 MVP runtime + `BottomPane` | Codex runtime hosts RunHaven MVP views | **Done for scoped MVP** | `codex_runtime`, `BottomPane`, `runhaven/mvp.rs`, `app_shell.rs` host |
+| 5 Optional `ChatWidget` | source-shaped transcript/status/history ownership | **Deferred** | `chatwidget.rs` dormant |
+| 6 MVP product screens | launch, logs, diagnostics, recovery | **Done for scoped MVP** | `runhaven/mvp.rs`, `runhaven/service.rs`, `runhaven/app_server_session.rs` |
 | 7 Cull/stub unsupported surfaces | decide each dormant surface | **Not started** | dormant surfaces sit marker-guarded on disk (see D8) |
 
 ---
@@ -179,23 +180,20 @@ These are not throwaway compliments; they bound the size of the problem.
 
 Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
 
-### D1 - The live app is `app_shell.rs`, not Codex `App`. (Severity: High)
+### D1 - The live app is `app_shell.rs`, not native Codex `App`. (Severity: Medium)
 
-- Plan rule: README "Do not let `app_shell.rs` and the staged `mod.rs` facade
-  become the permanent architecture." Doc 03 target flow is `Tui -> App ->
-  ChatWidget -> BottomPane`. Phase 3/4 say host the picker "inside the Codex
-  runtime."
-- Evidence: `app_shell.rs:44` `let mut terminal = ratatui::try_init()?;`;
-  hand-rolled poll/read loop at `app_shell.rs:58-94` (`event::poll`,
-  `event::read`, `terminal.draw`). The vendored Codex `Tui`/`custom_terminal`/
-  `event_stream` spine **compiles** (`mod.rs:292-294` `codex_runtime`) but
-  drives nothing. `mod.rs:298-304` `run()` ends in `app_shell::run()`.
-- Risk: the runtime the entire plan is organized around is bypassed by a
-  parallel loop. Every screen added to `app_shell.rs` now has to be rebuilt
-  against `App` later. The plan explicitly predicted this trap.
-- Recommendation: do not add further screens to `app_shell.rs`. Make Phase 4
-  (wire `App` + `BottomPane`, host the existing picker inside it) the next
-  slice, before any dashboard/history/logs work.
+- Plan rule: do not let `app_shell.rs` become a product screen. Product behavior
+  belongs under `tui/runhaven/`, with Codex runtime primitives reused where they
+  fit the scoped MVP.
+- Evidence: the live entrypoint still ends in `app_shell::run()`, but the shell
+  now initializes Codex `Tui`, consumes `TuiEventStream`, draws through
+  `Tui::draw`, and hosts `RunHavenMvpView` inside the real `BottomPane`.
+- Risk: if `app_shell.rs` starts accumulating product behavior again, a future
+  native owner promotion becomes harder and the source-first boundary gets
+  blurry.
+- Recommendation: keep `app_shell.rs` as terminal/runtime host only. Reduce
+  module-path debt and promote native `App` only if RunHaven needs Codex
+  app-loop ownership beyond the scoped shell.
 
 ### D2 - `mod.rs` shadows full-size vendored modules with hand-rolled stand-ins. (Severity: High)
 
@@ -387,15 +385,14 @@ are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
 
 ### D10 - Scaffolding mass vs. the thing it scaffolds. (Severity: Medium, trend)
 
-- Evidence: `app_shell.rs` 1050 + `launch_wizard.rs` 1542 + `mod.rs` 474 +
-  `runhaven/app_server_client.rs` 925 = 3991 lines of RunHaven-owned
-  transitional code, versus a Codex `App` loop that is not yet wired at all.
-- Risk: this is not a single bug; it is a trajectory. The plan's whole thesis is
-  that the temporary layer shrinks toward the Codex shape. Right now it is
-  growing. The `app_server_client.rs` at 925 lines in particular is large for a
-  3-method in-process client.
+- Evidence: RunHaven-owned staging code remains substantial in `app_shell.rs`,
+  `mod.rs`, and `tui/runhaven/`.
+- Risk: this is not a single bug; it is a trajectory. The scoped MVP can keep
+  the shell, but it should not become a second product framework beside Codex
+  runtime primitives.
 - Recommendation: set an explicit ceiling. Before adding any product screen,
-  Phase 4 must reduce `app_shell.rs`/`mod.rs`, not just add beside them.
+  reduce `app_shell.rs`/`mod.rs` or put the behavior under `tui/runhaven/` with
+  focused drift and security guards.
 
 ---
 
@@ -479,16 +476,18 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
 
 ## Severity-Ranked Remediation Backlog
 
-1. **(High) Finish Codex `App` ownership for Phase 4 before any new screen.**
-   `bottom_pane/mod.rs` now compiles from real vendored source; host the
-   existing picker inside native `App`/`Tui` next. Stop growing `app_shell.rs`.
+1. **(High) Finish the scoped RunHaven MVP before any final polish.**
+   `bottom_pane/mod.rs` now compiles from real vendored source and the active
+   shell uses Codex `Tui` plus `BottomPane`. Stop growing `app_shell.rs` as a
+   product screen; keep product behavior under `tui/runhaven/`. Promote native
+   `App` only if RunHaven needs Codex app-loop ownership beyond that shell.
    (D1, D10)
 2. **(High) Convert `mod.rs` stand-ins into a tracked debt ledger** with a named
    vendored-module upgrade path for each; prefer activating real modules. (D2)
 3. **(Medium) Keep crate authority moving with Phase 4**: protocol, config,
    event-data, bottom-pane, and reduced config-core crate closures are vendored
-   under original names; the next native `App` slice should vendor required
-   `codex-*` crates before adding new local stand-ins. (D3)
+   under original names; any future native `App` or `ChatWidget` slice should
+   vendor required `codex-*` crates before adding new local stand-ins. (D3)
 4. **(Medium) Expand the security guard** as dormant host-reaching modules are
    promoted. (D8)
 5. **(Medium) Drive `launch_wizard.rs` boundary/network text from the

@@ -72,6 +72,90 @@ fn module_declared(module_source: &str, module: &str) -> bool {
         .any(|line| line == private_decl || line == crate_decl || line == public_decl)
 }
 
+fn source_file_declared_by_path(module_source: &str, source_path: &str) -> bool {
+    let expected_path_attr = format!("#[path = \"{source_path}\"]");
+    let mut pending_path_attr = false;
+    let mut pending_block_comment = false;
+
+    'next_line: for line in module_source.lines().map(str::trim) {
+        if line == expected_path_attr {
+            pending_path_attr = true;
+            continue;
+        }
+
+        if pending_path_attr {
+            let mut remaining = line;
+            loop {
+                let trimmed = remaining.trim_start();
+                if trimmed.is_empty() || trimmed.starts_with("//") {
+                    continue 'next_line;
+                }
+
+                if pending_block_comment {
+                    if let Some(end) = trimmed.find("*/") {
+                        pending_block_comment = false;
+                        remaining = &trimmed[end + 2..];
+                        continue;
+                    }
+                    continue 'next_line;
+                }
+
+                if let Some(after_start) = trimmed.strip_prefix("/*") {
+                    if let Some(end) = after_start.find("*/") {
+                        remaining = &after_start[end + 2..];
+                        continue;
+                    }
+                    pending_block_comment = true;
+                    continue 'next_line;
+                }
+
+                if trimmed.starts_with("#[") {
+                    continue 'next_line;
+                }
+
+                remaining = trimmed;
+                break;
+            }
+
+            let declaration = remaining.split("//").next().unwrap_or(remaining).trim();
+            return ["mod ", "pub(crate) mod ", "pub mod "]
+                .iter()
+                .any(|prefix| declaration.starts_with(prefix) && declaration.ends_with(';'));
+        }
+    }
+
+    false
+}
+
+#[test]
+fn source_file_path_guard_skips_comments_before_module_item() {
+    let module_source = r#"
+#[path = "app.rs"]
+
+// allowed between a path attribute and the item
+/* also allowed */
+pub(crate) mod native_app;
+"#;
+    let multiline_block = r#"
+#[path = "chatwidget.rs"]
+/*
+also allowed
+*/
+mod native_chatwidget;
+"#;
+    let inline_block = r#"
+#[path = "app.rs"]
+/* allowed */ mod native_app;
+"#;
+
+    assert!(source_file_declared_by_path(module_source, "app.rs"));
+    assert!(source_file_declared_by_path(
+        multiline_block,
+        "chatwidget.rs"
+    ));
+    assert!(source_file_declared_by_path(inline_block, "app.rs"));
+}
+
 fn inline_module_block<'a>(module_source: &'a str, module: &str) -> &'a str {
     let declaration = format!("pub(crate) mod {module} {{");
     let start = module_source
@@ -113,7 +197,9 @@ fn assert_risky_markers_absent_when_active(
     source: &str,
     markers: &[&str],
 ) {
-    if !module_declared(module_source, module) {
+    if !module_declared(module_source, module)
+        && !source_file_declared_by_path(module_source, source_path)
+    {
         return;
     }
 
@@ -592,6 +678,53 @@ fn app_event_shared_shrinks_only() {
 }
 
 #[test]
+fn native_app_and_chatwidget_stay_dormant_under_mvp_shell() {
+    let module_source = include_str!("mod.rs");
+    let app_shell_source = include_str!("app_shell.rs");
+    let readme_source = include_str!("README.md");
+
+    assert!(
+        module_source.contains("pub(crate) use app_event_shared::app;")
+            && module_source.contains("pub(crate) use app_event_shared::chatwidget;"),
+        "the active MVP shell may keep only inert app/chatwidget bridge exports"
+    );
+    assert!(
+        !module_declared(module_source, "app")
+            && !module_declared(module_source, "chatwidget")
+            && !source_file_declared_by_path(module_source, "app.rs")
+            && !source_file_declared_by_path(module_source, "chatwidget.rs"),
+        "native Codex App and ChatWidget must stay dormant while app_shell.rs hosts the RunHaven MVP view, including path-aliased source activation"
+    );
+    assert!(
+        app_shell_source.contains("let mvp_view = RunHavenMvpView::new(workspace.clone());")
+            && app_shell_source.contains("BottomPane::new(BottomPaneParams"),
+        "the active shell should construct the RunHaven MVP view and the real BottomPane"
+    );
+    assert!(
+        app_shell_source.contains("bottom_pane.show_view(Box::new(mvp_view));"),
+        "the active shell must install the RunHaven MVP view into BottomPane"
+    );
+    for marker in [
+        "crate::tui::app::App",
+        "crate::tui::chatwidget::ChatWidget",
+        "App::run(",
+        "ChatWidget::",
+    ] {
+        assert!(
+            !app_shell_source.contains(marker),
+            "app_shell.rs must not activate native App/ChatWidget marker {marker:?}"
+        );
+    }
+    assert!(
+        readme_source.contains("Current MVP ownership decision")
+            && readme_source.contains("native Codex `App` and `ChatWidget`")
+            && readme_source.contains("stay dormant for the scoped RunHaven MVP")
+            && readme_source.contains("redaction, session-recording, and app-server boundary"),
+        "README.md must record the current MVP ownership decision before native App or ChatWidget is promoted"
+    );
+}
+
+#[test]
 fn native_app_entrypoint_cannot_share_temporary_shell() {
     let module_source = include_str!("mod.rs");
 
@@ -612,7 +745,12 @@ fn host_reaching_codex_surfaces_stay_dormant_until_sanitized() {
         "app",
         "app.rs",
         include_str!("app.rs"),
-        &["std::env::vars().collect"],
+        &[
+            "std::env::vars().collect",
+            "AppServerSession",
+            "workspace_command",
+            "session_log",
+        ],
     );
     assert_risky_markers_absent_when_active(
         module_source,
@@ -627,8 +765,11 @@ fn host_reaching_codex_surfaces_stay_dormant_until_sanitized() {
         "chatwidget.rs",
         include_str!("chatwidget.rs"),
         &[
+            "AppServerSession",
             "crate::clipboard_copy::ClipboardLease",
             "ExternalEditorState",
+            "Mcp",
+            "mcp",
         ],
     );
     assert_risky_markers_absent_when_active(

@@ -172,24 +172,28 @@ has a pause/drop/resume regression. The env-gated
 `RUNHAVEN_TUI_HANDOFF_SMOKE=success|error` path initializes the Codex runtime,
 clears managed title and pet image state before handoff, runs only a harmless
 foreground child or an intentional missing child, restores terminal ownership,
-and exits without wiring real agent launch. This completed gate does not
-renumber the canonical plan. The next phase remains Phase 4: adapt `App` and
-`BottomPane`.
+and exits without wiring real agent launch.
 
-### Phase 4: Adapt `App` And `BottomPane`
+### Phase 4: MVP Runtime And `BottomPane`
 
-Make the real app loop active and move from the staging shell to Codex terminal
-runtime ownership in the same migration. Avoid a separate permanent
-`app_shell.rs`-plus-`Tui` architecture.
+Direction update, 2026-06-29: user scope now prioritizes the smallest fully
+working RunHaven MVP over Codex chat product parity. Phase 4 keeps Codex `Tui`
+runtime ownership and real `BottomPane` active, keeps product behavior under
+`tui/runhaven/`, and keeps native Codex `App` and `ChatWidget` dormant unless a
+later RunHaven scope needs their specific ownership. Do not expand
+`app_shell.rs` as a product screen; it is the current terminal/runtime host for
+RunHaven MVP views until a reviewed native owner replaces it.
 
 Progress note, 2026-06-27: `app_event.rs`, `app_event_sender.rs`,
 `bottom_pane/mod.rs`, and `workspace_messages.rs` now compile from the real
 vendored source under their original module paths. `launch_wizard.rs` now
 implements `BottomPaneView` for the current picker/review/confirm flow. The
-remaining Phase 4 work is native `App` ownership, replacing bridge types with
-real shared modules, showing the launch wizard through `ChatWidget` and the
-native bottom pane, and a fail-closed design for host-reaching Codex
-app/session/chat surfaces before they become active.
+remaining Phase 4 work was native `App` ownership under the earlier plan. The
+2026-06-29 MVP direction supersedes that as a default destination: replace
+bridge types with real shared modules only where the RunHaven MVP needs them,
+keep the launch/recovery/log/diagnostics flow under RunHaven-owned views, and
+require a fail-closed design for host-reaching Codex app/session/chat surfaces
+before native `App` or `ChatWidget` becomes active.
 
 Progress note, 2026-06-27: the next attempted direct `chatwidget` promotion
 showed that `ChatWidget`, `history_cell`, and `status` share the same missing
@@ -237,38 +241,40 @@ the active bare-interactive path. Native `App`, `ChatWidget`, real
 host-reaching surfaces are removed, fail-closed, or routed through reviewed
 RunHaven boundaries.
 
-Bring active:
+Keep active or promote only for scoped MVP need:
 
-- `app.rs`
-- `app/*`
-- `app_event.rs`
-- `app_event_sender.rs`
-- `bottom_pane/mod.rs`
-- `bottom_pane/chat_composer.rs`
-- `public_widgets/composer_input.rs`
-- `bottom_pane/footer.rs`
-- `bottom_pane/list_selection_view.rs`
-- `bottom_pane/textarea.rs`
-- approval and request-user-input overlays as needed
+- Codex `Tui`, `TuiEventStream`, `FrameRequester`, and terminal restore.
+- `AppEvent` and `AppEventSender` source-shaped event plumbing.
+- `BottomPane`, `BottomPaneView`, composer, footer, list selection, textarea,
+  and approval/request-input overlays where the RunHaven MVP uses them.
+- `tui/runhaven/` views, service, session bridge, launch handoff, active-run
+  log snapshot, diagnostics, and recovery.
 
-Replace Codex product initialization with RunHaven bootstrap data.
+Keep native `app.rs`, `app/*`, `chatwidget.rs`, and full app-server transport
+dormant unless a future RunHaven scope needs that owner and the reviewed
+boundary exists first.
 
-Preserve the Codex loop inputs:
+Replace Codex product initialization with RunHaven bootstrap data if native
+`App` is promoted later. For the current MVP, keep RunHaven bootstrap and
+product state under `tui/runhaven/` and the scoped shell.
+
+Preserve Codex-shaped loop inputs where the MVP uses them or a future native
+owner would need them:
 
 - `AppEvent` from widgets and background UI work
-- active thread events
+- active thread events, only if a future native owner needs them
 - `TuiEventStream`
 - `AppServerSession::next_event`
 
 Before this phase finishes, define the authoritative RunHaven TUI snapshot
 matrix. Include at least `80x24` and `120x48` coverage for picker, review,
-confirm, transition-clearing cases, transcript, history, diff, log, diagnostics,
-and any visible fail-closed unsupported surface.
+confirm, transition-clearing cases, active-run log, diagnostics, recovery, and
+any visible fail-closed unsupported surface.
 
-### Phase 5: Adapt `ChatWidget` Transcript And Status
+### Phase 5: Optional `ChatWidget` Transcript And Status
 
-Bring active only where needed for RunHaven's MVP transcript, status, and log
-surfaces:
+Bring active only if RunHaven needs source-shaped conversation transcript
+ownership beyond the scoped MVP log and diagnostics views:
 
 - `chatwidget.rs`
 - `chatwidget/input_*`
@@ -285,9 +291,10 @@ hidden or clearly unavailable. Do not port non-RunHaven Codex product features
 for parity; leave them dormant, fail-closed, stubbed, or deleted with a
 documented reason.
 
-### Phase 6: Reattach RunHaven MVP Product Screens
+### Phase 6: Reattach Or Keep RunHaven MVP Product Screens
 
-Move only the RunHaven MVP screens into Codex-shaped surfaces:
+Move only the RunHaven MVP screens into Codex-shaped surfaces if doing so
+reduces risk or duplication versus the current RunHaven-owned views:
 
 - Agent picker: `ListSelectionView` or command palette.
 - Workspace picker: Codex popup/view pattern, backed by `RunOptions`.
@@ -341,8 +348,7 @@ dormant or fail-closed.
 
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
-After the Codex-shaped app shell is active, decide each dormant Codex product
-surface:
+As the scoped MVP stabilizes, decide each dormant Codex product surface:
 
 - Keep active.
 - Keep dormant with a fail-closed message.
@@ -354,8 +360,9 @@ Record decisions in:
 - `docs/plans/tui-build-plan.md`
 - `docs/plans/tui-architecture.md`
 
-Do not delete large copied modules before the active app shell exists, because
-their dependencies may become useful once `App` and `ChatWidget` are wired.
+Do not delete large copied modules before the MVP and its guards are stable,
+because their dependencies may become useful if native `App` or `ChatWidget` is
+later promoted.
 
 ## File-Level Ownership Rules
 
@@ -378,9 +385,10 @@ Use these rules while editing:
    material where practical.
 9. Regenerate RunHaven snapshots. Do not import upstream Codex `.snap` files as
    authoritative RunHaven behavior.
-10. New RunHaven views should implement or reuse `BottomPaneView`,
-   `ChatWidget`, history cells, or status surfaces before adding a custom
-   rendering loop.
+10. New RunHaven views should implement or reuse `BottomPaneView` and existing
+   Codex render/status helpers before adding a custom rendering loop. Promote
+   `ChatWidget` or history cells only when RunHaven needs source-shaped
+   transcript ownership.
 11. New RunHaven UI commands should go through `AppEventSender` or
    `AppServerSession`, not direct widget-to-service calls.
 12. For `bottom_pane/chat_composer.rs` and `bottom_pane/paste_burst.rs`, keep

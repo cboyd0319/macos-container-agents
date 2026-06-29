@@ -417,6 +417,16 @@ Known integration gap:
   only. Product state for workspace selection, agent selection, policy changes,
   active runs, raw-log confirmation, diagnostics, and recovery lives under
   `runhaven/`.
+- Current MVP ownership decision: the active RunHaven product shell stays
+  `runhaven/mvp.rs` hosted by the temporary `app_shell.rs` inside Codex `Tui`
+  and the real vendored `BottomPane`. The native Codex `App` and `ChatWidget`
+  stay dormant for the scoped RunHaven MVP because the current product flow is
+  launch, recovery, active-run logs, and diagnostics, not Codex chat product
+  parity. This is a scoped MVP decision, not a permanent rejection of either
+  upstream owner. Promote native `App` only if RunHaven needs Codex app-loop
+  ownership beyond the current shell. Promote `ChatWidget` only if RunHaven
+  needs source-shaped conversation transcript ownership. Either promotion first
+  needs a reviewed redaction, session-recording, and app-server boundary.
 - Confirmation emits a typed `RunHavenLaunchPrepared` app event carrying a
   RunHaven `PreparedLaunch`: display-only `LaunchPlanData`, the original
   executable `AgentRunPlan`, and the selected policy. The staging shell exits
@@ -435,9 +445,10 @@ Known integration gap:
   broker request paths are scrubbed of query strings and fragments before
   display, and the TUI diagnostics path uses bounded tail reads for log files.
 - The scoped RunHaven-only MVP TUI surface is present. Remaining TUI work is
-  cleanup and hardening: reduce module-path debt, decide whether native
-  `App`/`ChatWidget` ownership is still needed for RunHaven, and keep unrelated
-  Codex product features dormant, fail-closed, stubbed, or deleted.
+  cleanup and hardening: reduce module-path debt, keep native `App` and
+  `ChatWidget` dormant unless a future RunHaven scope needs that specific
+  owner, and keep unrelated Codex product features dormant, fail-closed,
+  stubbed, or deleted.
 - The current product direction is MVP-first, not Codex parity. Promote only
   Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
   review, confirm launch, foreground launch handoff, active run

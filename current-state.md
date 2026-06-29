@@ -255,12 +255,13 @@ TUI architecture correction: the deeper read of
 `public_widgets::ComposerInput` wrapper. Native Codex TUI behavior is built as
 `Tui` runtime plus `App` event loop plus `ChatWidget` plus `BottomPane`, with
 `app_server_session.rs` owning typed client calls so transport plumbing stays out
-of `App` and `ChatWidget`. For RunHaven, the next source-first target is the
-terminal runtime/event stream and typed app-server facade pattern, then the full
-ChatWidget/BottomPane path, followed by streaming/history cells, approval
-surfaces, status, sessions, and terminal UI regression tests. Host-reaching
-Codex RPCs such as remote filesystem, MCP, and IDE actions stay fail-closed
-unless a RunHaven security design explicitly promotes them.
+of `App` and `ChatWidget`. The current 2026-06-29 RunHaven direction uses the
+source-first pieces needed for the scoped MVP: Codex `Tui`, event stream,
+`BottomPane`, typed facade, RunHaven-owned views, active-run logs, diagnostics,
+and recovery. Native `App` and `ChatWidget` are separate optional future
+promotions, not default MVP parity work. Host-reaching Codex RPCs such as remote
+filesystem, MCP, and IDE actions stay fail-closed unless a RunHaven security
+design explicitly promotes them.
 
 Strategy decision: RunHaven is following the capability guide's Strategy C path,
 a Codex-compatible client, because its domain is close to Codex's
@@ -279,8 +280,9 @@ local RunHaven facade and keeps unsupported Codex method families typed and
 fail-closed. Required dependency changes are exact-pinned: crossterm now enables
 the upstream event-stream and bracketed-paste features, Ratatui enables
 scrolling regions, and `tokio-stream` plus `derive_more` are direct workspace
-dependencies for the compiled Codex runtime surface. The Codex runtime is still
-dormant; Phase 4 is terminal handoff proof before native `App` loop activation.
+dependencies for the compiled Codex runtime surface. Later slices activated the
+Codex runtime for the scoped MVP; native `App` remains dormant unless RunHaven
+needs Codex app-loop ownership behind reviewed boundaries.
 
 Verified:
 
@@ -472,12 +474,12 @@ Latest TUI Strategy C drift correction:
 
 - 2026-06-27: Imported
   `docs/plans/codex-tui-strategy-c/05-adversarial-drift-ledger.md` and restored
-  the plan's vendor-first wording. The canonical Strategy C phase order is back
-  to Phase 4 = adapt native `App` and `BottomPane`; the runtime-spine compile
-  and terminal-handoff proof are recorded as completed Phase 3 gates, not a
-  separate phase that shifts the target later. `tui/mod.rs` now has a guard
-  test that fails if dormant host-reaching Codex surfaces are declared before
-  their risky upstream markers are removed or fail-closed.
+  the plan's vendor-first wording at that time. The 2026-06-29 MVP-first
+  direction now supersedes native `App` and `ChatWidget` as default next
+  targets; they remain optional promotions behind reviewed boundaries.
+  `tui/mod.rs` now has guard tests that fail if dormant host-reaching Codex
+  surfaces are declared before their risky upstream markers are removed or
+  fail-closed.
 
 Latest TUI staging-facade shrink:
 
@@ -842,10 +844,11 @@ Latest Codex reduced app-server client compatibility authority:
 - A direct real `status`/`history_cell` activation was tested and reverted in
   the working tree because it cascaded into `ChatWidget` and richer config
   methods before the bottom pane ownership slice was ready. `history_cell` has
-  since been promoted through the reduced config boundary. The next Phase 4
-  slice should continue toward native `ChatWidget` ownership without activating
-  native `App`, real app-server session, or app-server transport host-reaching
-  behavior.
+  since been promoted through the reduced config boundary. Under the current
+  MVP-first direction, future `ChatWidget` work should stay dormant unless
+  RunHaven needs source-shaped transcript ownership and can keep native `App`,
+  real app-server session, and app-server transport host-reaching behavior
+  fail-closed or behind reviewed boundaries.
 - Verified so far:
   `cargo check -p codex-app-server-client --offline`,
   `cargo test -p codex-app-server-client --locked --quiet`,
@@ -1225,6 +1228,48 @@ Latest TUI onboarding shim hardening:
   guard patch, and
   `git diff --check`.
 
+Latest TUI MVP shell ownership guard:
+
+- 2026-06-29: Recorded the current MVP ownership decision in
+  `crates/runhaven-tui/src/tui/README.md`: `runhaven/mvp.rs` remains the active
+  RunHaven product shell hosted by temporary `app_shell.rs` inside Codex `Tui`
+  and the real vendored `BottomPane`. Native Codex `App` and `ChatWidget` stay
+  dormant for the scoped RunHaven MVP because the current product flow is
+  launch, recovery, active-run logs, and diagnostics, not Codex chat product
+  parity.
+- Added a drift guard that blocks declaring native `app` or `chatwidget` in
+  `tui/mod.rs`, including `#[path = "app.rs"]` or
+  `#[path = "chatwidget.rs"]` aliases, while `app_shell.rs` hosts the MVP shell.
+  The guard requires only inert `app_event_shared` bridge exports for those
+  names, verifies the shell installs `RunHavenMvpView` into the real
+  `BottomPane`, and checks that `app_shell.rs` does not activate native `App` or
+  `ChatWidget` markers. A focused regression keeps the path-alias detector from
+  missing legal Rust blank/comment lines between `#[path = "..."]` and the next
+  module item. Native `App` and `ChatWidget` are separate future promotion
+  decisions: native `App` requires a RunHaven app-loop need, and `ChatWidget`
+  requires a RunHaven conversation-transcript need. Either promotion must first
+  replace the temporary shell path it supersedes and add a reviewed redaction,
+  session-recording, and app-server boundary.
+- Updated the repo-local `codex-tui` skill and Strategy C plan docs so they no
+  longer conflict with the MVP-first direction. The current path is Codex `Tui`
+  plus real `BottomPane` hosting RunHaven-owned views; native `App` and
+  `ChatWidget` are dormant optional promotions, not default MVP parity work.
+- Security boundary is unchanged: app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, Codex session recording, full onboarding,
+  native `App`, `ChatWidget`, and host-reaching Codex execution remain dormant
+  or fail-closed.
+- Verified: baseline `cargo test -p runhaven-tui --locked`, expected red
+  failure for the native App/ChatWidget ownership guard before the README
+  decision was recorded, focused green ownership guard test, focused
+  `drift_tests` (17 tests), helper bypass regression, `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`, final
+  `cargo test -p runhaven-tui --locked` (784 passed, 5 ignored),
+  codex-vendored-tests no-run build, clippy with warnings denied, pin policy,
+  `scripts/compare-codex-tui.sh`, JSON validation, stale-direction scan,
+  snap-new scan, em dash scan for changed docs/state, Rust/Codex/security/
+  adversarial re-review after patching reviewer findings, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -1234,8 +1279,11 @@ Latest TUI onboarding shim hardening:
 The RunHaven-only TUI MVP surface is now present in the staging Codex runtime.
 Next TUI work should be core completion, cleanup, and hardening, not final
 polish or new product scope. Defer Cubby/pet polish, mascot work, terminal image
-polish, and Zork until the end. Reduce module-path debt, decide whether native
-`App`/`ChatWidget` ownership is still needed for RunHaven after the MVP root
-view, and keep unrelated Codex product features dormant, fail-closed, or
-deleted. If native `App` startup is promoted later, first replace raw Codex
-env/path session-recording behavior with a reviewed RunHaven redaction boundary.
+polish, and Zork until the end. Reduce remaining module-path debt and keep
+native `App` and `ChatWidget` dormant unless a future RunHaven scope genuinely
+needs that specific owner. If native `App` startup is promoted later, first
+replace raw Codex env/path session-recording behavior and app-server assumptions
+with reviewed RunHaven redaction and app-server boundaries. If `ChatWidget` is
+promoted later, first define the RunHaven transcript, raw-log redaction, and
+session-recording policy. Keep unrelated Codex product features dormant,
+fail-closed, or deleted.

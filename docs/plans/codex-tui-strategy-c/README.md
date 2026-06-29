@@ -14,17 +14,29 @@ RunHaven should continue with Strategy C, but define it very narrowly:
 RunHaven should become Codex-TUI-client-compatible, not a fork that rewrites the
 Codex TUI into a custom launcher.
 
+Direction update, 2026-06-29: the scoped MVP no longer treats native Codex
+`App` and `ChatWidget` promotion as the default destination. The near-term
+target is the smallest fully working RunHaven TUI on the Codex terminal runtime:
+agent and workspace selection, plan review, confirmation, foreground launch,
+active-run logs, recovery, and diagnostics. Native `App` and `ChatWidget` remain
+dormant unless a later RunHaven scope needs their specific ownership model and a
+reviewed redaction, session-recording, and app-server boundary exists.
+
 That means:
 
 - Keep the Codex TUI source layout and module names as close to
   upstream `openai/codex:codex-rs/tui/src/` as possible.
-- Keep the Codex runtime ownership model:
-  `Tui` terminal runtime -> `App` event loop -> `ChatWidget` and `BottomPane`
-  -> `AppServerSession` typed facade -> backend client.
+- Keep Codex terminal/runtime ownership active where RunHaven uses it now:
+  `Tui` terminal runtime -> scoped RunHaven shell -> `BottomPane` views ->
+  RunHaven typed facade -> backend client.
+- Treat native Codex `App` and `ChatWidget` as separate future promotions.
+  Promote native `App` only if RunHaven needs Codex app-loop ownership beyond
+  the current shell. Promote `ChatWidget` only if RunHaven needs source-shaped
+  conversation transcript ownership.
 - Put RunHaven-specific behavior behind adapters and payloads, mainly under
   `crates/runhaven-tui/src/tui/runhaven/` and `crates/runhaven-core`.
-- Do not let `app_shell.rs` and the staged `mod.rs` facade become the permanent
-  architecture. They are compile bridges.
+- Do not let `app_shell.rs` become a product screen. For the scoped MVP it is a
+  terminal/runtime host while product behavior stays under `tui/runhaven/`.
 - Do not expose Codex host-reaching product surfaces by default. Remote
   filesystem, IDE, MCP, plugin, connector, marketplace, cloud feedback, and
   broad account/auth behavior stay disabled or fail-closed unless RunHaven's
@@ -51,8 +63,9 @@ The finished integration is successful when:
 - RunHaven launch, active run, history, diff, diagnostics, doctor, image, and
   auth status data come from `runhaven-core`, not CLI prose and not duplicated
   widget logic.
-- `app_server_session.rs` remains the only typed backend facade used by `App`
-  and `ChatWidget`.
+- RunHaven TUI actions use the RunHaven typed facade. If native `App` or
+  `ChatWidget` is promoted later, they must use that facade rather than Codex
+  host-reaching backend paths.
 - User-visible RunHaven actions map to typed backend calls. Widgets do not call
   `container`, inspect files directly, parse logs directly, or rebuild plans.
 - Foreground launch is prepared through the typed backend facade but executed by
@@ -74,17 +87,17 @@ The finished integration is successful when:
 ## Bottom Line
 
 RunHaven has already brought over the right Codex TUI source baseline. The
-important next move is to stop treating individual widgets as the architecture.
-
-Wire the copied source back into the Codex shape:
+important next move is to finish the RunHaven MVP on the Codex runtime without
+porting unrelated Codex product features.
 
 ```text
-Tui -> App -> ChatWidget/BottomPane -> AppServerSession -> RunHaven service -> runhaven-core
+Tui -> scoped RunHaven shell -> BottomPane -> RunHaven facade -> RunHaven service -> runhaven-core
 ```
 
-Keep RunHaven product logic behind that facade. Keep unsupported Codex product
-features disabled. Keep source paths close enough that upstream Codex TUI can be
-diffed and merged later.
+Keep RunHaven product logic behind that facade. Keep native `App`,
+`ChatWidget`, and unsupported Codex product features dormant until a RunHaven
+need and reviewed boundary justify promotion. Keep source paths close enough
+that upstream Codex TUI can be diffed and merged later.
 
 ## Source Evidence
 
