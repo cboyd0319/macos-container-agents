@@ -404,6 +404,11 @@ Known integration gap:
   ownership without adding new product screens to `app_shell.rs`. Workspace
   selection, policy changes, and final foreground launch still need to be
   reattached through the Codex-shaped runtime and native app ownership.
+- The current product direction is MVP-first, not Codex parity. Promote only
+  Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
+  review, confirm launch, foreground launch handoff, active run
+  transcript/logs, diagnostics, and RunHaven assets. Leave unrelated Codex
+  product features dormant, fail-closed, stubbed, or deleted with documentation.
 - `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If
   `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
   editor, clipboard copy, or hooks RPC modules are activated, the test requires

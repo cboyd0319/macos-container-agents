@@ -1011,6 +1011,14 @@ Latest TUI session-log source promotion:
 
 ## Next Step
 
+New direction: hard-push the smallest fully working RunHaven MVP TUI and avoid
+non-RunHaven Codex product features. Source-first still means using Codex TUI
+architecture and modules where they serve RunHaven, not porting Codex product
+parity. The MVP surface is agent picker, workspace picker, plan review, confirm
+launch, foreground launch handoff, active run transcript/logs, diagnostics, and
+RunHaven assets. Leave unrelated Codex features dormant, fail-closed, stubbed,
+or deleted with documentation.
+
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4.
 `workspace_messages.rs` is active from real vendored source,
 `launch_wizard.rs` implements `BottomPaneView`, the staging shell hosts that

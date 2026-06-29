@@ -265,7 +265,8 @@ and any visible fail-closed unsupported surface.
 
 ### Phase 5: Adapt `ChatWidget` Transcript And Status
 
-Bring active:
+Bring active only where needed for RunHaven's MVP transcript, status, and log
+surfaces:
 
 - `chatwidget.rs`
 - `chatwidget/input_*`
@@ -278,25 +279,27 @@ Bring active:
 - `diff_render.rs`
 
 Map RunHaven service events into history cells. Keep unsupported Codex commands
-hidden or clearly unavailable.
+hidden or clearly unavailable. Do not port non-RunHaven Codex product features
+for parity; leave them dormant, fail-closed, stubbed, or deleted with a
+documented reason.
 
-### Phase 6: Reattach RunHaven Product Screens
+### Phase 6: Reattach RunHaven MVP Product Screens
 
-Move existing RunHaven screens into Codex-shaped surfaces:
+Move only the RunHaven MVP screens into Codex-shaped surfaces:
 
 - Agent picker: `ListSelectionView` or command palette.
 - Workspace picker: Codex popup/view pattern, backed by `RunOptions`.
 - Plan review: history/status card plus confirmation request.
 - Confirm launch: approval/request input path, not one-off shell state.
-- Dashboard: status card and active run transcript items.
-- Logs: bounded log snapshot item or overlay.
-- History/diff: resume picker/history cell/diff renderer patterns.
+- Foreground launch: validated plan from the facade, terminal restore on the UI
+  thread, and active run tracking after handoff.
+- Active run transcript/logs: bounded transcript items, log snapshot item, or
+  overlay.
 - Diagnostics/doctor: status card and markdown renderer.
 - Pet and logo: Codex pet/image primitives, RunHaven assets.
-- Zork easter egg: a RunHaven-owned `BottomPaneView` or equivalent Codex-shaped
-  local view, opened through a custom `AppEvent` from the intended hidden `~`
-  trigger. It must stay offline, attributed, TUI-local, and constrained to the
-  private RunHaven save slot.
+
+Defer dashboard breadth, rich history/diff, easter eggs, and Codex-native
+product affordances until the MVP TUI is fully working.
 
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
