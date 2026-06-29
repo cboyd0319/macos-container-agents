@@ -351,15 +351,19 @@ Known integration gap:
   core config shape, so promoting only `chatwidget.rs` produces root-module and
   config-surface errors instead of a useful intermediate state.
 - Full upstream `codex-app-server-client` and full upstream `codex-core` are
-  not active yet. `codex-app-server-client` brings the app-server transport
-  closure, and full `codex-core` brings login, MCP, filesystem, hooks, tools,
-  rollout, model-provider, and app-server-adjacent behavior. The next useful
-  step is the reduced original-name `codex-core` config compatibility closure,
-  with host-reaching behavior kept inert or fail-closed.
+  not active yet. RunHaven has a reduced original-name
+  `codex-app-server-client` crate for the upstream `legacy_core` re-export and
+  a reduced original-name `codex-core` crate for config compatibility. The full
+  upstream client still brings app-server transport, and full `codex-core`
+  still brings login, MCP, filesystem, hooks, tools, rollout, model-provider,
+  and app-server-adjacent behavior. Keep those host-reaching surfaces inert or
+  fail-closed until reviewed.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen still run from
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
+  The next Phase 4 slice is bottom-pane-first: move the launch wizard under
+  native `BottomPane` ownership before activating native `App` or `ChatWidget`.
   Workspace selection, policy changes, and final foreground launch still need
   to be reattached through the Codex-shaped runtime and native app ownership.
 - `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If

@@ -781,19 +781,40 @@ Latest Codex reduced core config authority:
   `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
   `git diff --check`.
 
+Latest Codex reduced app-server client compatibility authority:
+
+- 2026-06-28: Added `crates/codex/app-server-client` as an original-name
+  reduced `codex-app-server-client` workspace crate. It exposes only the
+  upstream-shaped `codex_app_server_client::legacy_core` re-export backed by
+  reduced `codex-core`. It deliberately omits app-server transport, remote
+  clients, in-process client startup, login, MCP, filesystem RPC, exec-server,
+  rollout, state, and thread-store behavior.
+- A direct real `status`/`history_cell` activation was tested and reverted in
+  the working tree because it cascades into `ChatWidget` and richer config
+  methods before the bottom pane ownership slice is ready. The next Phase 4
+  slice should stay bottom-pane-first: move the launch wizard into native
+  `BottomPane` ownership, or add the smallest source-shaped host API needed for
+  that, without activating native `App`, `ChatWidget`, or app-server session
+  host-reaching behavior.
+- Verified so far:
+  `cargo check -p codex-app-server-client --offline`,
+  `cargo test -p codex-app-server-client --locked --quiet`,
+  `cargo check -p runhaven-tui --offline`, and
+  `cargo test -p runhaven-tui --locked drift_tests --quiet`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
-adapt the native `App` path and then `ChatWidget` ownership around the now
-promoted bottom pane. `workspace_messages.rs` is active from real vendored
-source, and `launch_wizard.rs` now implements `BottomPaneView` for the current
-picker/review/confirm flow. The next slice should show that view through
-`ChatWidget` and the native bottom pane through the reduced `codex-core` config
-authority where safe, then keep replacing bridge types with real Codex modules.
-Foreground launch remains read-only until the native Codex app loop owns
-terminal restore and `launch_run_plan` is wired through the UI thread. Do not
-route host-reaching Codex behavior around the RunHaven facade.
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4,
+bottom-pane-first. `workspace_messages.rs` is active from real vendored source,
+and `launch_wizard.rs` implements `BottomPaneView` for the current
+picker/review/confirm flow. The next slice should move that view under native
+`BottomPane` ownership or add the smallest source-shaped host hook needed to do
+so. Do not activate native `App`, `ChatWidget`, real `app_server_session`, or
+app-server transport until host-reaching markers are removed, fail-closed, or
+routed through a reviewed RunHaven boundary. Foreground launch remains read-only
+until the native Codex app loop owns terminal restore and `launch_run_plan` is
+wired through the UI thread.

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/codex/app-server-client",
     "crates/codex/app-server-protocol",
     "crates/codex/async-utils",
     "crates/codex/codex-api",

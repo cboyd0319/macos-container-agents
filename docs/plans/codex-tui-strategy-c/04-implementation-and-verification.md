@@ -206,6 +206,15 @@ has guard tests that block backend/runtime dependencies and modules. This does
 not activate full Codex core, app-server, login, MCP, filesystem, hooks, tools,
 rollout, state, or session behavior.
 
+Progress note, 2026-06-28: RunHaven added an original-name reduced
+`codex-app-server-client` crate exposing only the upstream-shaped
+`legacy_core` compatibility re-export. A direct real `status`/`history_cell`
+activation was tested and reverted because it cascades into `ChatWidget` before
+the bottom pane ownership slice is ready. Continue Phase 4 bottom-pane-first:
+move `LaunchWizardView` under native `BottomPane` ownership, or add the
+smallest source-shaped host hook needed for that, before activating native
+`App`, `ChatWidget`, or app-server transport.
+
 Bring active:
 
 - `app.rs`

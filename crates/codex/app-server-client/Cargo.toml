@@ -1,0 +1,21 @@
+[package]
+name = "codex-app-server-client"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+name = "codex_app_server_client"
+path = "src/lib.rs"
+
+[dependencies]
+codex-core = { path = "../core" }
+
+[lints.rust]
+warnings = { level = "deny", priority = -1 }
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
