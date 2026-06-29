@@ -182,6 +182,35 @@ mod drift_tests {
             .collect()
     }
 
+    fn tui_source_dir() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tui")
+    }
+
+    fn tui_rust_sources() -> Vec<std::path::PathBuf> {
+        let mut files = Vec::new();
+        let mut pending = vec![tui_source_dir()];
+        while let Some(path) = pending.pop() {
+            let metadata = std::fs::metadata(&path).expect("metadata should be readable");
+            if metadata.is_dir() {
+                for entry in std::fs::read_dir(&path).expect("directory should be readable") {
+                    pending.push(entry.expect("directory entry should be readable").path());
+                }
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+                files.push(path);
+            }
+        }
+        files.sort();
+        files
+    }
+
+    fn relative_tui_source(path: &std::path::Path) -> std::path::PathBuf {
+        path.strip_prefix(tui_source_dir())
+            .expect("path should be under tui source")
+            .to_path_buf()
+    }
+
     fn module_declared(module_source: &str, module: &str) -> bool {
         let private_decl = format!("mod {module};");
         let crate_decl = format!("pub(crate) mod {module};");
@@ -454,22 +483,8 @@ mod drift_tests {
 
         let maybe_init_marker = ["session_log::", "maybe_init"].concat();
         let recording_env_marker = ["CODEX_TUI_", "RECORD_SESSION"].concat();
-        let tui_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tui");
-        let mut pending = vec![tui_dir];
-        while let Some(path) = pending.pop() {
-            let metadata = std::fs::metadata(&path).expect("metadata should be readable");
-            if metadata.is_dir() {
-                for entry in std::fs::read_dir(&path).expect("directory should be readable") {
-                    pending.push(entry.expect("directory entry should be readable").path());
-                }
-                continue;
-            }
-            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-                continue;
-            }
-            let relative = path
-                .strip_prefix(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tui"))
-                .expect("path should be under tui source");
+        for path in tui_rust_sources() {
+            let relative = relative_tui_source(&path);
             if matches!(relative.to_str(), Some("session_log.rs") | Some("lib.rs")) {
                 continue;
             }
@@ -483,33 +498,31 @@ mod drift_tests {
     }
 
     #[test]
-    fn launch_prepared_intent_stays_fail_closed_until_terminal_handoff() {
-        let app_shell_source = include_str!("app_shell.rs");
+    fn foreground_runtime_launch_call_stays_in_ui_thread_handoff_owner() {
         let app_event_sender_source = include_str!("app_event_sender.rs");
-        let launch_wizard_source = include_str!("runhaven/launch_wizard.rs");
-        let runhaven_sources = [
-            include_str!("runhaven/app_server_client.rs"),
-            include_str!("runhaven/app_server_session.rs"),
-            include_str!("runhaven/protocol.rs"),
-            include_str!("runhaven/service.rs"),
-            include_str!("runhaven/terminal_handoff.rs"),
-        ];
+        let launch_handoff_source = include_str!("runhaven/launch_handoff.rs");
+        let runtime_launch_marker = ["launch", "_run", "_plan"].concat();
+        let owners = tui_rust_sources()
+            .into_iter()
+            .filter_map(|path| {
+                let relative = relative_tui_source(&path);
+                let source = std::fs::read_to_string(&path).expect("source should be readable");
+                source
+                    .contains(&runtime_launch_marker)
+                    .then(|| relative.display().to_string())
+            })
+            .collect::<Vec<_>>();
 
-        for (label, source) in [
-            ("temporary app shell", app_shell_source),
-            ("launch wizard", launch_wizard_source),
-        ] {
-            assert!(
-                !source.contains("launch_run_plan"),
-                "{label} must not start foreground launch before UI-thread terminal handoff owns it"
-            );
-        }
-        for source in runhaven_sources {
-            assert!(
-                !source.contains("launch_run_plan"),
-                "RunHaven TUI facade code must not start foreground launch inside backend/service tasks"
-            );
-        }
+        assert_eq!(
+            owners,
+            ["runhaven/launch_handoff.rs"],
+            "only the UI-thread handoff owner may call the foreground runtime launch function"
+        );
+        assert!(
+            launch_handoff_source.contains(&runtime_launch_marker)
+                && launch_handoff_source.contains("with_restored("),
+            "RunHaven foreground launch must have one UI-thread handoff owner that restores the Codex terminal before launch"
+        );
         assert!(
             app_event_sender_source.contains("AppEvent::RunHavenLaunchPrepared { .. }")
                 && app_event_sender_source.contains("session_log::log_inbound_app_event(&event)"),

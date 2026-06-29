@@ -36,10 +36,7 @@ impl AppEventSender {
         // Avoid double-logging Ops; those are logged at the point of submission.
         // RunHaven launch plans include workspace and command details, so keep
         // them out of Codex session recording until RunHaven owns redaction.
-        if !matches!(
-            event,
-            AppEvent::CodexOp(_) | AppEvent::RunHavenLaunchPrepared { .. }
-        ) {
+        if should_log_inbound_app_event(&event) {
             session_log::log_inbound_app_event(&event);
         }
         if let Err(e) = self.app_event_tx.send(event) {
@@ -131,5 +128,37 @@ impl AppEventSender {
             thread_id,
             op: AppCommand::resolve_elicitation(server_name, request_id, decision, content, meta),
         });
+    }
+}
+
+fn should_log_inbound_app_event(event: &AppEvent) -> bool {
+    !matches!(
+        event,
+        AppEvent::CodexOp(_) | AppEvent::RunHavenLaunchPrepared { .. }
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::runhaven::service::confirm_required_preview_for_tests;
+
+    #[test]
+    fn launch_prepared_event_is_sent_without_session_log_recording() {
+        let (app_event_tx, mut app_event_rx) = tokio::sync::mpsc::unbounded_channel();
+        let launch = confirm_required_preview_for_tests()
+            .plan
+            .expect("prepared launch");
+        let event = AppEvent::RunHavenLaunchPrepared {
+            launch: Box::new(launch),
+        };
+
+        assert!(!should_log_inbound_app_event(&event));
+
+        AppEventSender::new(app_event_tx).send(event);
+        assert!(matches!(
+            app_event_rx.try_recv().expect("sent event"),
+            AppEvent::RunHavenLaunchPrepared { .. }
+        ));
     }
 }

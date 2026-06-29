@@ -723,9 +723,10 @@ mod tests {
     async fn lossless_notifications_are_delivered_in_order() {
         let mut client = test_client(8);
         let handle = client.request_handle();
-        let plan = confirm_required_preview_for_tests()
+        let launch = confirm_required_preview_for_tests()
             .plan
-            .expect("test plan");
+            .expect("test launch");
+        let plan = launch.data;
 
         for notification in [
             ServerNotification::TranscriptDelta {

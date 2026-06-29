@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::runtime::plans::AuthScope;
 use runhaven_core::runtime::plans::RunOptions;
 use runhaven_core::runtime::plans::WorkspaceScope;
@@ -20,8 +21,34 @@ use super::protocol::ValidateWorkspaceResponse;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct AgentLaunchPreview {
     pub(crate) agent: AgentCatalogItemData,
-    pub(crate) plan: Result<LaunchPlanData, LaunchPreviewError>,
+    pub(crate) plan: Result<PreparedLaunch, LaunchPreviewError>,
 }
+
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedLaunch {
+    pub(crate) data: LaunchPlanData,
+    pub(crate) executable: AgentRunPlan,
+}
+
+impl PreparedLaunch {
+    fn from_agent_run_plan(executable: AgentRunPlan) -> Self {
+        let data = LaunchPlanData::from(&executable);
+        Self { data, executable }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn from_parts_for_tests(data: LaunchPlanData, executable: AgentRunPlan) -> Self {
+        Self { data, executable }
+    }
+}
+
+impl PartialEq for PreparedLaunch {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl Eq for PreparedLaunch {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) enum LaunchPreviewError {
@@ -182,7 +209,7 @@ impl RunHavenTuiService {
                     worktree: None,
                     run_id: None,
                 })
-                .map(|plan| LaunchPlanData::from(&plan))
+                .map(PreparedLaunch::from_agent_run_plan)
                 .map_err(LaunchPreviewError::plan_build_failed);
 
                 AgentLaunchPreview { agent, plan }
@@ -243,6 +270,10 @@ impl RunHavenTuiService {
 
 #[cfg(test)]
 pub(crate) fn confirm_required_preview_for_tests() -> AgentLaunchPreview {
+    use runhaven_core::runtime::plans::AgentRunPlan;
+    use runhaven_core::runtime::plans::AuthScope;
+    use runhaven_core::runtime::plans::NetworkMode;
+    use runhaven_core::runtime::plans::WorkspaceScope;
     use runhaven_core::ui_contracts::LaunchBoundaryData;
     use runhaven_core::ui_contracts::LaunchNetworkData;
 
@@ -255,7 +286,7 @@ pub(crate) fn confirm_required_preview_for_tests() -> AgentLaunchPreview {
         default_network: "provider".to_string(),
         provider_host_count: 1,
     };
-    let plan = LaunchPlanData {
+    let data = LaunchPlanData {
         profile_name: "codex".to_string(),
         workspace: "/tmp/project".to_string(),
         workspace_scope: "current".to_string(),
@@ -287,10 +318,37 @@ pub(crate) fn confirm_required_preview_for_tests() -> AgentLaunchPreview {
         safety_notes: vec!["This plan uses a less safe launch option.".to_string()],
         confirm_required: true,
     };
+    let executable = AgentRunPlan {
+        command: vec![
+            "container".to_string(),
+            "run".to_string(),
+            "--name".to_string(),
+            "runhaven-codex".to_string(),
+            "runhaven/codex:0.1.0".to_string(),
+        ],
+        preflight: Vec::new(),
+        workspace: PathBuf::from("/tmp/project"),
+        state_volume: "runhaven-codex-shared-home".to_string(),
+        session: "none".to_string(),
+        container_name: "runhaven-codex".to_string(),
+        profile_name: "codex".to_string(),
+        workspace_scope: WorkspaceScope::Current,
+        workspace_scope_note: None,
+        auth_scope: AuthScope::Agent,
+        worktree: None,
+        run_id: None,
+        network_name: Some("runhaven-provider".to_string()),
+        network_mode: NetworkMode::Provider,
+        egress_summary: "provider allowlist".to_string(),
+        image: "runhaven/codex:0.1.0".to_string(),
+        provider_allowed_hosts: vec!["api.openai.com".to_string()],
+        api_key_broker_env: None,
+        security_notices: vec!["This plan uses a less safe launch option.".to_string()],
+    };
 
     AgentLaunchPreview {
         agent,
-        plan: Ok(plan),
+        plan: Ok(PreparedLaunch::from_parts_for_tests(data, executable)),
     }
 }
 
@@ -306,11 +364,15 @@ mod tests {
             .unwrap_or_else(|| panic!("missing {name} preview"))
     }
 
-    fn plan<'a>(preview: &'a AgentLaunchPreview, name: &str) -> &'a LaunchPlanData {
+    fn launch<'a>(preview: &'a AgentLaunchPreview, name: &str) -> &'a PreparedLaunch {
         preview
             .plan
             .as_ref()
             .unwrap_or_else(|error| panic!("{name} plan failed: {error}"))
+    }
+
+    fn plan<'a>(preview: &'a AgentLaunchPreview, name: &str) -> &'a LaunchPlanData {
+        &launch(preview, name).data
     }
 
     fn run_git(args: &[&str], cwd: &Path) {
@@ -345,9 +407,29 @@ mod tests {
             let plan = plan(preview, name);
             assert_eq!(preview.agent.name, name);
             assert_eq!(plan.profile_name, name);
+            assert_eq!(
+                plan.command,
+                launch(preview, name).executable.shell_command()
+            );
             assert!(!preview.agent.description.trim().is_empty());
             assert!(!preview.agent.image.trim().is_empty());
             assert!(!plan.command.trim().is_empty());
+        }
+    }
+
+    #[test]
+    fn prepared_launch_display_data_is_derived_from_executable_plan() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let payload = RunHavenTuiService::new().launch_preview_payload(workspace.path());
+
+        for preview in payload.previews {
+            let launch = preview.plan.expect("launch should be prepared");
+            assert_eq!(
+                launch.data,
+                LaunchPlanData::from(&launch.executable),
+                "{} display data must stay derived from the executable plan",
+                preview.agent.name
+            );
         }
     }
 
@@ -479,6 +561,29 @@ mod tests {
             choices[1]
                 .description
                 .contains("Mount the full repository instead of only the nested folder")
+        );
+
+        let current_codex = launch(preview(&choices[0].payload, "codex"), "codex");
+        let root_codex = launch(preview(&choices[1].payload, "codex"), "codex");
+        assert_eq!(
+            current_codex.executable.workspace,
+            choices[0]
+                .payload
+                .workspace
+                .canonicalize()
+                .expect("canonical current workspace")
+        );
+        assert_eq!(
+            root_codex.executable.workspace,
+            choices[1]
+                .payload
+                .workspace
+                .canonicalize()
+                .expect("canonical root workspace")
+        );
+        assert_ne!(
+            current_codex.executable.workspace,
+            root_codex.executable.workspace
         );
     }
 

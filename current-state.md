@@ -222,10 +222,9 @@ editor primitive for the confirmation phrase. While that text field is focused,
 plain `q` and `?` are text input instead of shell shortcuts; Esc returns to
 review. Paste is ignored for the lower-security confirmation phrase so the
 extra intent still means typing. Secure/default plans still confirm with Enter
-and keep `q` as the shell quit shortcut. This remains a read-only preview:
-confirmation shows an
-acknowledgement, but the TUI does not start containers, run preflight commands,
-or write launch state yet.
+and keep `q` as the shell quit shortcut. At that point this was still a
+read-only preview; the later foreground launch handoff supersedes the
+no-launch behavior.
 
 TUI confirm-composer follow-up: `crates/runhaven-tui` now compiles the vendored
 Codex `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs` through the
@@ -320,7 +319,7 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --nocapture`
 - `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`
 - `cargo test -p runhaven-tui --locked runhaven::launch_wizard -- --nocapture`
-- `cargo test -p runhaven-tui --locked app_shell::tests::shell_confirm_enter_shows_disabled_launch_notice_without_launching -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
 - `cargo test -p runhaven-tui --locked codex_runtime::tests::with_restored -- --nocapture`
 - `cargo test -p runhaven-tui --locked codex_runtime::event_stream::tests::paused_broker_drops_source_until_resume -- --nocapture`
 - `cargo test -p runhaven-tui --locked runhaven::terminal_handoff -- --nocapture`
@@ -515,9 +514,9 @@ Latest TUI Phase 3 runtime and handoff gate:
   runs only a harmless foreground child or an intentional missing child, restores
   terminal ownership, and exits. Ambient and picker-preview pet image state now
   share a combined cleanup helper, including native `App` shutdown. Current
-  vendor audit: 894 upstream files, 369 RunHaven files, 356 common paths, 538
-  upstream `.snap` files external by default, 13 RunHaven-only files, and 26
-  copied Codex files with local edits.
+  latest vendor audit: 894 upstream files, 370 RunHaven files, 356 common
+  paths, 538 upstream `.snap` files external by default, 14 RunHaven-only files,
+  and 53 copied Codex files with local edits.
 
 Latest Codex config/keymap crate vendoring:
 
@@ -543,7 +542,7 @@ Latest Codex config/keymap crate vendoring:
   instead of looping over `cmp` calls. Each manifest records relative path, byte
   size, and SHA-256, and `--write-manifests <dir>` writes the upstream/local
   manifests plus missing, local-only, common, and changed lists for audit.
-- Verified so far:
+- Verified:
   `cargo metadata --locked --no-deps --format-version 1`,
   `cargo check -p codex-config --locked`,
   `cargo check -p runhaven-tui --locked`,
@@ -588,7 +587,7 @@ Latest Codex event-data crate vendoring:
   after dependency graph changes, then rerun `cargo check -p runhaven-tui
   --locked`. Avoid parallel Cargo checks; they serialize behind package-cache
   and build-directory locks and are slower than one incremental umbrella check.
-- Verified so far:
+- Verified:
   `cargo metadata --locked --no-deps --format-version 1`,
   `cargo check -p runhaven-tui`,
   `cargo check -p runhaven-tui --locked`,
@@ -847,11 +846,11 @@ Latest TUI native bottom-pane ownership:
   status, text-input routing, and footer help now flow through `BottomPane` or
   defaulted `BottomPaneView` contracts instead of direct launch-wizard
   ownership.
-- This preserves read-only confirmation behavior: confirming a plan sets the
-  existing disabled-launch notice and keeps the view active; the view completes
-  only on cancel. Native `App`, `ChatWidget`, real `app_server_session`, and
-  app-server transport remain dormant until host-reaching surfaces are
-  removed, fail-closed, or routed through reviewed RunHaven boundaries.
+- At that point, confirmation was still read-only and the view completed only
+  on cancel. The later foreground launch handoff supersedes that behavior.
+  Native `App`, `ChatWidget`, real `app_server_session`, and app-server
+  transport remain dormant until host-reaching surfaces are removed,
+  fail-closed, or routed through reviewed RunHaven boundaries.
 - Verified so far:
   `cargo fmt --check`,
   `cargo test -p runhaven-tui --locked app_shell --quiet`,
@@ -873,10 +872,11 @@ Latest TUI Codex runtime ownership:
   `TuiEventStream`, draws through `Tui::draw`, and shares the Codex
   `FrameRequester` with the hosted `BottomPane` and the temporary Cubby image
   smoke path.
-- This preserves the same read-only launch picker, review, and confirmation
-  behavior. Native `App`, `ChatWidget`, real `app_server_session`, and
-  app-server transport remain dormant until host-reaching surfaces are
-  removed, fail-closed, or routed through reviewed RunHaven boundaries.
+- This preserved the launch picker, review, and confirmation behavior from
+  that earlier disabled-launch phase. Native `App`, `ChatWidget`, real
+  `app_server_session`, and app-server transport remain dormant until
+  host-reaching surfaces are removed, fail-closed, or routed through reviewed
+  RunHaven boundaries.
 - Verified so far:
   `cargo fmt --check`,
   `cargo check -p runhaven-tui --locked`,
@@ -1035,36 +1035,45 @@ Latest TUI MVP workspace picker:
   `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, and
   `git diff --check`.
 
-Latest TUI launch intent preparation:
+Latest TUI foreground launch handoff:
 
-- 2026-06-29: The confirmation step now prepares a typed RunHaven launch intent
-  instead of only showing the disabled-launch notice. `LaunchWizardView` emits
-  `AppEvent::RunHavenLaunchPrepared` with the selected `LaunchPlanData`; the
-  temporary staging shell drains that event into owner state and shows
-  `Launch prepared. Terminal handoff is still disabled.` without starting a
-  container. `ServerNotification::LaunchPrepared` now carries the plan payload
-  for the later App/ChatWidget event path.
-- Security boundary is unchanged: no foreground child starts from the widget,
-  backend facade, or staging shell; no terminal handoff runs; and the full
-  launch plan is excluded from Codex session logging until RunHaven owns a
-  redaction policy. A drift guard blocks `launch_run_plan` from the active TUI
-  preparation path.
+- 2026-06-29: Confirmation now carries a typed RunHaven `PreparedLaunch`:
+  display-only `LaunchPlanData` plus the original executable `AgentRunPlan`.
+  `LaunchWizardView` emits `AppEvent::RunHavenLaunchPrepared` with that value,
+  and the staging shell exits the draw loop with `ShellExit::Launch` instead of
+  starting work from the widget.
+- `runhaven/launch_handoff.rs` is the only active TUI file allowed to call
+  `runhaven_core::runtime::launch::launch_run_plan`. It clears TUI-owned title
+  and terminal image state, clears the TUI screen before handoff, calls Codex
+  `Tui::with_restored(RestoreMode::Full, ...)`, and then launches from the
+  stored `AgentRunPlan`. It does not reconstruct execution from
+  `LaunchPlanData.command`.
+- Security boundary is unchanged for Codex host-reaching surfaces:
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and Codex session recording remain dormant or fail-closed. The
+  full RunHaven launch intent remains excluded from Codex session logging until
+  RunHaven owns a redaction policy.
 - Verified so far:
   baseline `cargo test -p runhaven-tui --locked`,
-  red compile failures for the missing launch-prepared event, missing
-  `LaunchPrepared.plan`, missing wizard sender hook, and missing shell
-  prepared-launch state,
-  `cargo test -p runhaven-tui --locked secure_plan_confirm_enter_prepares_launch_event_without_launching -- --show-output`,
-  `cargo test -p runhaven-tui --locked shell_confirm_enter_prepares_launch_intent_without_launching -- --show-output`,
-  `cargo test -p runhaven-tui --locked lossless_notifications_are_delivered_in_order -- --show-output`,
-  `cargo test -p runhaven-tui --locked launch_prepared_intent_stays_fail_closed_until_terminal_handoff -- --show-output`,
+  red compile failures for the missing handoff owner, missing
+  `ShellAction::Launch`, and display-only `LaunchPlanData` still being
+  stored in shell state,
+  `cargo test -p runhaven-tui --locked shell_confirm_enter_requests_foreground_launch_handoff -- --show-output`,
+  `cargo test -p runhaven-tui --locked secure_plan_confirm_enter_prepares_foreground_launch_handoff -- --show-output`,
+  `cargo test -p runhaven-tui --locked prepared_launch_handoff_restores_terminal_before_launcher -- --show-output`,
+  `cargo test -p runhaven-tui --locked prepared_launch_handoff_uses_executable_plan_not_display_command -- --show-output`,
+  `cargo test -p runhaven-tui --locked foreground_runtime_launch_call_stays_in_ui_thread_handoff_owner -- --show-output`,
   `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
-  `cargo test -p runhaven-tui --locked app_shell -- --show-output`, and
-  `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --show-output`.
-  Final gate:
+  `cargo test -p runhaven-tui --locked service -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`,
+  `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --show-output`,
+  and full `cargo test -p runhaven-tui --locked --quiet` coverage for typed
+  confirmation handoff, display-only protocol notification, session-log
+  exclusion, and `PreparedLaunch` display/executable consistency.
+  Final gate passed:
   `cargo fmt --check`,
   `cargo check -p runhaven-tui --locked`,
-  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --quiet` (761 passed, 5 ignored),
   `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
   `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
   `cargo run --locked --bin runhaven-check-pins --quiet`,
@@ -1096,13 +1105,12 @@ with Codex app-server command execution still compiled dormant. The inline
 root `status` bridge is gone, but the full Codex `status/` module remains
 dormant until its broader dependency and security closure is designed.
 `session_log.rs` is active as source-first support, but session recording is
-not initialized from the active RunHaven path. The next slice should continue
-toward native `App`/`ChatWidget` ownership without adding new product screens
-to `app_shell.rs`. Workspace selection is active for current directory versus
-git repository root choices, and confirmation now prepares a typed
-`LaunchPlanData` intent while foreground launch stays fail-closed. Policy
-changes, active run transcript/logs, diagnostics, and actual launch execution
-still need MVP reattachment. Do not activate
+not initialized from the active RunHaven path. Workspace selection is active
+for current directory versus git repository root choices, and confirmation now
+hands a `PreparedLaunch` to the UI-thread foreground handoff. The next slices
+should continue the MVP path without adding product screens to `app_shell.rs`:
+active run transcript/logs, diagnostics, policy changes, and post-run TUI
+recovery. Do not activate
 native `App`, `ChatWidget`, full `status/`, real `app_server_session`,
 app-server transport, filesystem RPC, MCP, login, workspace command execution,
 Codex session recording initialization, or host-reaching execution until those
@@ -1110,5 +1118,3 @@ markers are removed, fail-closed, or routed through a reviewed RunHaven
 boundary. If native `App` startup promotes session recording, first replace the
 raw Codex env/path behavior with a RunHaven-reviewed policy and redaction
 boundary.
-Foreground launch remains read-only until native Codex app ownership and
-terminal restore are wired through the UI thread.

@@ -42,6 +42,7 @@ use crate::bottom_pane::StatusLineItem;
 use crate::bottom_pane::TerminalTitleItem;
 use crate::chatwidget::UserMessage;
 use crate::goal_files::GoalDraft;
+use crate::tui::runhaven::service::PreparedLaunch;
 use codex_app_server_protocol::AskForApproval;
 use codex_config::types::ApprovalsReviewer;
 use codex_features::Feature;
@@ -50,7 +51,6 @@ use codex_protocol::config_types::CollaborationModeMask;
 use codex_protocol::config_types::Personality;
 use codex_protocol::models::ActivePermissionProfile;
 use codex_protocol::openai_models::ReasoningEffort;
-use runhaven_core::ui_contracts::LaunchPlanData;
 
 use crate::history_cell::HistoryCell;
 
@@ -262,7 +262,7 @@ pub(crate) enum AppEvent {
     /// This is intentionally only an app-layer intent. Widgets must not start a
     /// foreground container process because they do not own terminal restore.
     RunHavenLaunchPrepared {
-        plan: Box<LaunchPlanData>,
+        launch: Box<PreparedLaunch>,
     },
 
     /// Restore an output-free interrupted turn into the composer and roll it back.

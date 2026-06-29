@@ -220,10 +220,11 @@ Progress note, 2026-06-28: The live staging shell now hosts
 rendering, cursor placement, frame scheduling, selected-index lookup, terminal
 title, footer status, text-input routing, and footer help now flow through
 `BottomPane` or defaulted `BottomPaneView` contracts instead of direct
-launch-wizard ownership. The current read-only confirmation behavior is
-preserved because confirmation only sets a notice; the view completes only on
-cancel. Native `App` and `ChatWidget` remain dormant until their host-reaching
-surfaces are fail-closed or routed through reviewed RunHaven boundaries.
+launch-wizard ownership. At that point, confirmation only set a notice and the
+view completed only on cancel; the later foreground launch handoff supersedes
+that read-only behavior. Native `App` and `ChatWidget` remain dormant until
+their host-reaching surfaces are fail-closed or routed through reviewed
+RunHaven boundaries.
 
 Progress note, 2026-06-29: The live staging shell now initializes and restores
 the real vendored Codex `Tui` runtime. Its loop consumes `TuiEventStream`,
@@ -301,22 +302,25 @@ Move only the RunHaven MVP screens into Codex-shaped surfaces:
 Defer dashboard breadth, rich history/diff, easter eggs, and Codex-native
 product affordances until the MVP TUI is fully working.
 
-Progress note, 2026-06-29: The MVP workspace picker is active inside the
+Progress note, 2026-06-29: The MVP workspace picker became active inside the
 BottomPane-owned `LaunchWizardView` without expanding `app_shell.rs`. The
 RunHaven service offers current directory and git repository root choices when
 the current directory is nested inside a repo, and the agent preview list is
-rebuilt from the selected workspace before review. Foreground launch remains
-disabled.
+rebuilt from the selected workspace before review. At that point foreground
+launch was still disabled; the next progress note supersedes that launch state.
 
 Progress note, 2026-06-29: The confirmation step now prepares a typed launch
 intent instead of only showing a disabled notice. `LaunchWizardView` emits
-`AppEvent::RunHavenLaunchPrepared` with the selected `LaunchPlanData`, and the
-staging shell drains that event into owner state while still leaving foreground
-execution fail-closed. The Codex-shaped `ServerNotification::LaunchPrepared`
-also carries the plan payload for the later App/ChatWidget event path. A guard
-keeps staging TUI code from calling `launch_run_plan` and keeps full launch
-plans out of Codex session logging until RunHaven owns terminal handoff and
-redaction.
+`AppEvent::RunHavenLaunchPrepared` with a RunHaven `PreparedLaunch`, which
+keeps the selected `LaunchPlanData` for display and the original
+`AgentRunPlan` for execution. The staging shell now exits its draw loop with
+that intent and calls `runhaven/launch_handoff.rs`, the single TUI owner allowed
+to invoke `launch_run_plan`, after Codex `Tui::with_restored` has released
+terminal ownership. The Codex-shaped `ServerNotification::LaunchPrepared` still
+carries the display plan payload for the later App/ChatWidget event path. A
+guard keeps widgets and backend facade code from calling `launch_run_plan` and
+keeps full launch plans out of Codex session logging until RunHaven owns a
+redaction policy.
 
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 

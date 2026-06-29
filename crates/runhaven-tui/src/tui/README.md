@@ -119,11 +119,11 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 370.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 13.
-- Copied Codex files with local edits: 51.
+- RunHaven-only files: 14.
+- Copied Codex files with local edits: 53.
 
 RunHaven-only files:
 
@@ -135,6 +135,7 @@ mod.rs
 pets/bundled_custom.rs
 runhaven/app_server_client.rs
 runhaven/app_server_session.rs
+runhaven/launch_handoff.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
 runhaven/protocol.rs
@@ -147,8 +148,10 @@ Copied Codex files with local edits:
 
 ```text
 app.rs
+app/event_dispatch.rs
 app/pets.rs
 app_event.rs
+app_event_sender.rs
 bottom_pane/app_link_view.rs
 bottom_pane/approval_overlay.rs
 bottom_pane/bottom_pane_view.rs
@@ -316,8 +319,8 @@ Local integration exceptions:
 - `serde_json` enables `preserve_order` at the RunHaven crate level to match
   Codex TUI's compact JSON formatting behavior.
 - `app_shell.rs` is temporary RunHaven-owned shell glue. It restores bare
-  interactive `runhaven` to a read-only launch preview while the full Codex app
-  shell is still being adapted. It now hosts a Codex `ListSelectionView`
+  interactive `runhaven` to a launch preview while the full Codex app shell is
+  still being adapted. It now hosts a Codex `ListSelectionView`
   launch picker through `runhaven/launch_wizard.rs`, initializes the real Codex
   `Tui` runtime, consumes `TuiEventStream`, draws through `Tui::draw`, and
   uses the shared Codex `FrameRequester` for bottom-pane and pet redraws.
@@ -398,19 +401,23 @@ Known integration gap:
   fail-closed until reviewed.
 - The Codex `Tui` runtime spine is now the active terminal runtime for bare
   interactive `runhaven`, but native Codex `App` ownership is not active yet.
-- The launch picker, read-only review, and confirmation screen still run from
+- The launch picker, review, and confirmation screen still run from
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   Confirmation now emits a typed `RunHavenLaunchPrepared` app event carrying
-  the validated `LaunchPlanData`; the staging shell records that intent and
-  leaves foreground launch fail-closed with a terminal-handoff-disabled notice.
-  The app event sender intentionally excludes that plan payload from Codex
-  session logging until RunHaven owns a redaction policy.
+  a RunHaven `PreparedLaunch`: the display-only `LaunchPlanData` plus the
+  original executable `AgentRunPlan`. The staging shell exits its draw loop
+  with that intent, then `runhaven/launch_handoff.rs` clears TUI-owned terminal
+  images and title state, calls Codex `Tui::with_restored`, and invokes
+  `runhaven_core::runtime::launch::launch_run_plan` only after terminal
+  ownership has been released. The app event sender intentionally excludes that
+  plan payload from Codex session logging until RunHaven owns a redaction
+  policy.
   The next Phase 4 slice should continue toward native `App` and `ChatWidget`
   ownership without adding new product screens to `app_shell.rs`. Workspace
   selection is now reattached inside the BottomPane-owned launch wizard for
-  current directory versus git repository root choices; policy changes and
-  final foreground launch still need to be reattached through the Codex-shaped
-  runtime and native app ownership.
+  current directory versus git repository root choices. Policy changes, active
+  run transcript/logs, diagnostics, and post-run TUI recovery remain before the
+  MVP TUI is complete.
 - The current product direction is MVP-first, not Codex parity. Promote only
   Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
   review, confirm launch, foreground launch handoff, active run
@@ -420,6 +427,6 @@ Known integration gap:
   `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
   editor, clipboard copy, or hooks RPC modules are activated, the test requires
   their risky upstream markers to be removed or fail-closed first.
-- Foreground launch must be prepared by the RunHaven service but executed by the
-  UI loop only after Codex terminal restore. Backend service tasks must not own
-  raw terminal state.
+- Foreground launch is prepared by the RunHaven service and executed only by
+  `runhaven/launch_handoff.rs` after Codex terminal restore. Backend service
+  tasks and widgets must not own raw terminal state or call `launch_run_plan`.

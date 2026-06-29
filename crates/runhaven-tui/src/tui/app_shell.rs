@@ -14,11 +14,11 @@ use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
-use runhaven_core::ui_contracts::LaunchPlanData;
 
 #[cfg(test)]
 use super::runhaven::launch_wizard::LAUNCH_WIZARD_VIEW_ID;
 use super::runhaven::launch_wizard::LaunchWizardView;
+use super::runhaven::service::PreparedLaunch;
 use super::runhaven::service::RunHavenTuiService;
 use crate::key_hint;
 use crate::render::renderable::Renderable;
@@ -61,15 +61,23 @@ pub(crate) fn run() -> Result<i32> {
     let mut restore_guard = CodexTerminalRestoreGuard::new();
     let mut state = ShellState::for_current_dir(tui.frame_requester())?;
 
-    let run_result = runtime.block_on(run_loop(&mut tui, &mut state));
-    let clear_image_result = state.clear_image_smoke(&mut tui);
-    let clear_terminal_result = tui.terminal.clear().context("clear terminal UI");
+    let exit_result = match runtime.block_on(run_loop(&mut tui, &mut state)) {
+        Ok(ShellExit::Quit) => {
+            state.clear_image_smoke(&mut tui)?;
+            tui.terminal.clear().context("clear terminal UI")?;
+            Ok(0)
+        }
+        Ok(ShellExit::Launch(launch)) => {
+            state.clear_image_smoke(&mut tui)?;
+            runtime.block_on(super::runhaven::launch_handoff::launch_prepared(
+                &mut tui, *launch,
+            ))
+        }
+        Err(error) => Err(error),
+    };
     drop(tui);
     restore_guard.restore()?;
-    run_result?;
-    clear_image_result?;
-    clear_terminal_result?;
-    Ok(0)
+    exit_result
 }
 
 struct CodexTerminalRestoreGuard {
@@ -103,7 +111,7 @@ impl Drop for CodexTerminalRestoreGuard {
     }
 }
 
-async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Result<()> {
+async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Result<ShellExit> {
     let tui_events = tui.event_stream();
     tokio::pin!(tui_events);
     tui.frame_requester().schedule_frame();
@@ -112,7 +120,8 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
         match event {
             TuiEvent::Key(key) => match state.handle_key(key) {
                 ShellAction::Continue => tui.frame_requester().schedule_frame(),
-                ShellAction::Quit => break,
+                ShellAction::Quit => return Ok(ShellExit::Quit),
+                ShellAction::Launch(launch) => return Ok(ShellExit::Launch(launch)),
             },
             TuiEvent::Paste(pasted) => {
                 state.handle_paste(&pasted);
@@ -126,22 +135,28 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
             }
         }
     }
-    Ok(())
+    Ok(ShellExit::Quit)
 }
 
 struct ShellState {
     bottom_pane: BottomPane,
     app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
-    prepared_launch: Option<LaunchPlanData>,
     image_smoke: ImageSmoke,
     show_footer_help: bool,
     last_terminal_title: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ShellAction {
     Continue,
     Quit,
+    Launch(Box<PreparedLaunch>),
+}
+
+#[derive(Debug)]
+enum ShellExit {
+    Quit,
+    Launch(Box<PreparedLaunch>),
 }
 
 impl ShellState {
@@ -206,7 +221,6 @@ impl ShellState {
         Ok(Self {
             bottom_pane,
             app_event_rx,
-            prepared_launch: None,
             image_smoke,
             show_footer_help: false,
             last_terminal_title: None,
@@ -221,8 +235,10 @@ impl ShellState {
         if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
             self.bottom_pane.handle_key_event(key);
-            self.drain_app_events();
-            return ShellAction::Continue;
+            return match self.drain_app_events() {
+                Some(launch) => ShellAction::Launch(Box::new(launch)),
+                None => ShellAction::Continue,
+            };
         }
 
         if matches!(key.code, KeyCode::Char('q')) {
@@ -240,7 +256,9 @@ impl ShellState {
         }
 
         self.bottom_pane.handle_key_event(key);
-        self.drain_app_events();
+        if let Some(launch) = self.drain_app_events() {
+            return ShellAction::Launch(Box::new(launch));
+        }
         if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
         }
@@ -254,20 +272,21 @@ impl ShellState {
     fn handle_paste(&mut self, pasted: &str) {
         self.show_footer_help = false;
         self.bottom_pane.handle_paste(pasted.to_string());
-        self.drain_app_events();
     }
 
-    fn drain_app_events(&mut self) {
+    fn drain_app_events(&mut self) -> Option<PreparedLaunch> {
+        let mut prepared_launch = None;
         while let Ok(event) = self.app_event_rx.try_recv() {
             match event {
-                AppEvent::RunHavenLaunchPrepared { plan } => {
-                    self.prepared_launch = Some(*plan);
+                AppEvent::RunHavenLaunchPrepared { launch } => {
+                    prepared_launch = Some(*launch);
                 }
                 _ => {
                     tracing::debug!("staging RunHaven TUI shell ignored unsupported app event");
                 }
             }
         }
+        prepared_launch
     }
 
     fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
@@ -768,6 +787,34 @@ mod tests {
     }
 
     #[test]
+    fn shell_typed_confirm_phrase_requests_foreground_launch_handoff() {
+        let mut state = confirm_required_shell_state();
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        for ch in "launch".chars() {
+            assert_eq!(
+                state.handle_key(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE)),
+                ShellAction::Continue
+            );
+        }
+
+        let action = state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        let ShellAction::Launch(prepared) = action else {
+            panic!("expected typed launch handoff action, got {action:?}");
+        };
+
+        assert!(prepared.data.confirm_required);
+        assert_eq!(prepared.data.command, prepared.executable.shell_command());
+    }
+
+    #[test]
     fn shell_render_shows_launch_contract_data() {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
@@ -966,7 +1013,7 @@ mod tests {
     }
 
     #[test]
-    fn shell_confirm_enter_prepares_launch_intent_without_launching() {
+    fn shell_confirm_enter_requests_foreground_launch_handoff() {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
@@ -978,18 +1025,15 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(
-            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
-            ShellAction::Continue
-        );
+        let action = state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        let ShellAction::Launch(prepared) = action else {
+            panic!("expected launch handoff action, got {action:?}");
+        };
         let output = render_to_text(&mut state, 120, 32);
 
-        let prepared = state
-            .prepared_launch
-            .as_ref()
-            .expect("confirmed launch should be prepared");
-        assert!(prepared.command.contains("container run"));
-        assert!(output.contains("Launch prepared. Terminal handoff is still disabled."));
+        assert!(prepared.data.command.contains("container run"));
+        assert_eq!(prepared.data.command, prepared.executable.shell_command());
+        assert!(output.contains("Launch prepared. Starting in the terminal."));
         assert!(output.contains("container run"));
     }
 

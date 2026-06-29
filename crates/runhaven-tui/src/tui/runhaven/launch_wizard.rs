@@ -8,6 +8,7 @@ use super::service::AgentLaunchPreview;
 use super::service::LaunchPreviewError;
 #[cfg(test)]
 use super::service::LaunchPreviewPayload;
+use super::service::PreparedLaunch;
 use super::service::WorkspaceLaunchPreview;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -60,7 +61,7 @@ pub(crate) struct LaunchWizardView {
     screen: LaunchWizardScreen,
     confirm_composer: TextArea,
     confirm_notice: Option<String>,
-    prepared_launch: Option<LaunchPlanData>,
+    launch_prepared: bool,
     app_event_tx: Option<AppEventSender>,
     image_smoke_status: Option<Line<'static>>,
     completion: Option<ViewCompletion>,
@@ -77,7 +78,7 @@ struct WorkspaceDecisionVm {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct AgentDecisionVm {
     agent: AgentCatalogItemData,
-    plan: Result<LaunchPlanData, LaunchPreviewError>,
+    plan: Result<PreparedLaunch, LaunchPreviewError>,
     status_label: String,
     auth_scope_label: String,
     auth_label: String,
@@ -94,6 +95,7 @@ enum LaunchWizardScreen {
 }
 
 const CONFIRM_PHRASE: &str = "launch";
+const LAUNCH_PREPARED_NOTICE: &str = "Launch prepared. Starting in the terminal.";
 pub(crate) const LAUNCH_WIZARD_VIEW_ID: &str = "runhaven.launch_wizard";
 
 impl LaunchWizardView {
@@ -177,7 +179,7 @@ impl LaunchWizardView {
             screen,
             confirm_composer: TextArea::new(),
             confirm_notice: None,
-            prepared_launch: None,
+            launch_prepared: false,
             app_event_tx: None,
             image_smoke_status,
             completion: None,
@@ -289,39 +291,42 @@ impl LaunchWizardView {
     }
 
     fn open_confirm(&mut self) {
-        if self.selected_plan().is_none() {
+        if self.selected_launch().is_none() {
             return;
         }
         self.confirm_composer = TextArea::new();
         self.confirm_notice = None;
-        self.prepared_launch = None;
+        self.launch_prepared = false;
         self.screen = LaunchWizardScreen::ConfirmLaunch;
     }
 
     fn confirm_current_plan(&mut self) {
-        let Some(plan) = self.selected_plan().cloned() else {
+        let Some(launch) = self.selected_launch().cloned() else {
             self.confirm_notice = Some("Plan could not be built.".to_string());
             return;
         };
 
-        if plan.confirm_required && !confirmation_matches(self.confirm_composer.text()) {
+        if launch.data.confirm_required && !confirmation_matches(self.confirm_composer.text()) {
             self.confirm_notice = Some(format!("Type {CONFIRM_PHRASE} before confirming."));
             return;
         }
 
-        if self.prepared_launch.as_ref() != Some(&plan) {
+        if !self.launch_prepared {
             if let Some(app_event_tx) = &self.app_event_tx {
                 app_event_tx.send(AppEvent::RunHavenLaunchPrepared {
-                    plan: Box::new(plan.clone()),
+                    launch: Box::new(launch),
                 });
             }
-            self.prepared_launch = Some(plan);
+            self.launch_prepared = true;
         }
-        self.confirm_notice =
-            Some("Launch prepared. Terminal handoff is still disabled.".to_string());
+        self.confirm_notice = Some(LAUNCH_PREPARED_NOTICE.to_string());
     }
 
     fn selected_plan(&self) -> Option<&LaunchPlanData> {
+        self.selected_launch().map(|launch| &launch.data)
+    }
+
+    fn selected_launch(&self) -> Option<&PreparedLaunch> {
         selected_decision(&self.decisions, &self.selected_idx)
             .and_then(|decision| decision.plan.as_ref().ok())
     }
@@ -590,14 +595,14 @@ impl Renderable for LaunchWizardView {
 impl From<AgentLaunchPreview> for AgentDecisionVm {
     fn from(preview: AgentLaunchPreview) -> Self {
         let status_label = match &preview.plan {
-            Ok(plan) if plan.confirm_required => "review".to_string(),
+            Ok(launch) if launch.data.confirm_required => "review".to_string(),
             Ok(_) => "ready".to_string(),
             Err(_) => "blocked".to_string(),
         };
         let auth_scope_label = preview
             .plan
             .as_ref()
-            .map(|plan| plan.auth_scope.clone())
+            .map(|launch| launch.data.auth_scope.clone())
             .unwrap_or_else(|_| "unknown".to_string());
         let auth_label = match preview.agent.sign_in.as_str() {
             "n/a" => "no sign-in".to_string(),
@@ -605,7 +610,7 @@ impl From<AgentLaunchPreview> for AgentDecisionVm {
         };
         let network_label = preview.plan.as_ref().map_or_else(
             |_| network_mode_label(&preview.agent.default_network).to_string(),
-            network_label,
+            |launch| network_label(&launch.data),
         );
 
         Self {
@@ -1073,7 +1078,7 @@ impl ReviewPlan {
         ];
 
         match &decision.plan {
-            Ok(plan) => append_review_plan_lines(&mut lines, plan),
+            Ok(launch) => append_review_plan_lines(&mut lines, &launch.data),
             Err(error) => {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![Span::styled(
@@ -1151,9 +1156,9 @@ impl ConfirmLaunch<'_> {
         ];
 
         match &decision.plan {
-            Ok(plan) => append_confirm_plan_lines(
+            Ok(launch) => append_confirm_plan_lines(
                 &mut lines,
-                plan,
+                &launch.data,
                 self.confirm_composer.text(),
                 self.confirm_notice.as_deref(),
             ),
@@ -1170,7 +1175,7 @@ impl ConfirmLaunch<'_> {
         let text_field_active = decision
             .plan
             .as_ref()
-            .is_ok_and(|plan| plan.confirm_required);
+            .is_ok_and(|launch| launch.data.confirm_required);
         lines.push(Line::from(""));
         lines.push(confirm_footer_line(text_field_active));
         lines
@@ -1184,7 +1189,7 @@ impl ConfirmLaunch<'_> {
         else {
             return (content, None);
         };
-        if !plan.confirm_required || content.height < 6 {
+        if !plan.data.confirm_required || content.height < 6 {
             return (content, None);
         }
 
@@ -1263,7 +1268,7 @@ impl Renderable for ConfirmLaunch<'_> {
         let composer = self
             .selected()
             .and_then(|decision| decision.plan.as_ref().ok())
-            .filter(|plan| plan.confirm_required)
+            .filter(|launch| launch.data.confirm_required)
             .map(|_| {
                 self.confirm_composer
                     .desired_height(width.saturating_sub(6).max(1))
@@ -1319,7 +1324,7 @@ impl PlanPreview {
         ];
 
         match &decision.plan {
-            Ok(plan) => append_plan_lines(&mut lines, plan),
+            Ok(launch) => append_plan_lines(&mut lines, &launch.data),
             Err(error) => {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![Span::styled(
@@ -1629,6 +1634,10 @@ mod tests {
     use crate::tui::runhaven::service::LaunchPreviewError;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use runhaven_core::runtime::plans::AgentRunPlan;
+    use runhaven_core::runtime::plans::AuthScope;
+    use runhaven_core::runtime::plans::NetworkMode;
+    use runhaven_core::runtime::plans::WorkspaceScope;
     use runhaven_core::ui_contracts::LaunchBoundaryData;
     use runhaven_core::ui_contracts::LaunchNetworkData;
     use tokio::sync::mpsc;
@@ -1636,7 +1645,7 @@ mod tests {
     fn ready_preview(name: &str) -> AgentLaunchPreview {
         AgentLaunchPreview {
             agent: agent(name),
-            plan: Ok(plan(name)),
+            plan: Ok(prepared_launch(name)),
         }
     }
 
@@ -1647,7 +1656,10 @@ mod tests {
             .push("This plan uses a less safe launch option.".to_string());
         AgentLaunchPreview {
             agent: agent(name),
-            plan: Ok(plan),
+            plan: Ok(PreparedLaunch::from_parts_for_tests(
+                plan,
+                executable_plan(name),
+            )),
         }
     }
 
@@ -1669,6 +1681,40 @@ mod tests {
             broker: "no".to_string(),
             default_network: "provider".to_string(),
             provider_host_count: 1,
+        }
+    }
+
+    fn prepared_launch(name: &str) -> PreparedLaunch {
+        PreparedLaunch::from_parts_for_tests(plan(name), executable_plan(name))
+    }
+
+    fn executable_plan(name: &str) -> AgentRunPlan {
+        AgentRunPlan {
+            command: vec![
+                "container".to_string(),
+                "run".to_string(),
+                "--name".to_string(),
+                format!("runhaven-{name}"),
+                format!("runhaven/{name}:0.1.0"),
+            ],
+            preflight: Vec::new(),
+            workspace: PathBuf::from("/tmp/project"),
+            state_volume: format!("runhaven-{name}-state"),
+            session: "none".to_string(),
+            container_name: format!("runhaven-{name}"),
+            profile_name: name.to_string(),
+            workspace_scope: WorkspaceScope::Current,
+            workspace_scope_note: None,
+            auth_scope: AuthScope::Agent,
+            worktree: None,
+            run_id: None,
+            network_name: Some("runhaven-provider".to_string()),
+            network_mode: NetworkMode::Provider,
+            egress_summary: "provider allowlist".to_string(),
+            image: format!("runhaven/{name}:0.1.0"),
+            provider_allowed_hosts: vec!["example.com".to_string()],
+            api_key_broker_env: None,
+            security_notices: Vec::new(),
         }
     }
 
@@ -1776,7 +1822,10 @@ mod tests {
         root_plan.boundary.mounted_workspace = "/tmp/repo -> /workspace".to_string();
         let root_preview = AgentLaunchPreview {
             agent: agent("codex"),
-            plan: Ok(root_plan),
+            plan: Ok(PreparedLaunch::from_parts_for_tests(
+                root_plan,
+                executable_plan("codex"),
+            )),
         };
         let mut view = LaunchWizardView::new_with_workspace_choices(
             vec![
@@ -1922,7 +1971,7 @@ mod tests {
     }
 
     #[test]
-    fn secure_plan_confirm_enter_prepares_launch_event_without_launching() {
+    fn secure_plan_confirm_enter_prepares_foreground_launch_handoff() {
         let (app_event_tx, mut app_event_rx) = mpsc::unbounded_channel();
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
@@ -1935,17 +1984,15 @@ mod tests {
         view.handle_key(key(KeyCode::Enter));
 
         assert!(view.is_confirming());
-        assert_eq!(
-            view.confirm_notice.as_deref(),
-            Some("Launch prepared. Terminal handoff is still disabled.")
-        );
+        assert_eq!(view.confirm_notice.as_deref(), Some(LAUNCH_PREPARED_NOTICE));
         match app_event_rx.try_recv().expect("launch prepared event") {
-            AppEvent::RunHavenLaunchPrepared { plan } => {
-                assert_eq!(plan.profile_name, "codex");
+            AppEvent::RunHavenLaunchPrepared { launch } => {
+                assert_eq!(launch.data.profile_name, "codex");
                 assert_eq!(
-                    plan.command,
+                    launch.data.command,
                     "container run --name runhaven-codex runhaven/codex:0.1.0"
                 );
+                assert_eq!(launch.data.command, launch.executable.shell_command());
             }
             other => panic!("unexpected app event: {other:?}"),
         }
@@ -2006,9 +2053,38 @@ mod tests {
         assert_eq!(view.confirm_text(), "Launch");
         view.handle_key(key(KeyCode::Enter));
 
-        assert_eq!(
-            view.confirm_notice.as_deref(),
-            Some("Launch prepared. Terminal handoff is still disabled.")
+        assert_eq!(view.confirm_notice.as_deref(), Some(LAUNCH_PREPARED_NOTICE));
+    }
+
+    #[test]
+    fn confirm_required_plan_emits_prepared_launch_after_typed_phrase() {
+        let (app_event_tx, mut app_event_rx) = mpsc::unbounded_channel();
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.set_app_event_sender(AppEventSender::new(app_event_tx));
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        for ch in "launch".chars() {
+            view.handle_key(key(KeyCode::Char(ch)));
+        }
+        view.handle_key(key(KeyCode::Enter));
+
+        assert_eq!(view.confirm_notice.as_deref(), Some(LAUNCH_PREPARED_NOTICE));
+        match app_event_rx.try_recv().expect("launch prepared event") {
+            AppEvent::RunHavenLaunchPrepared { launch } => {
+                assert!(launch.data.confirm_required);
+                assert_eq!(launch.data.command, launch.executable.shell_command());
+            }
+            other => panic!("unexpected app event: {other:?}"),
+        }
+        view.handle_key(key(KeyCode::Enter));
+        assert!(
+            app_event_rx.try_recv().is_err(),
+            "typed confirmation should emit one launch intent"
         );
     }
 
@@ -2052,10 +2128,7 @@ mod tests {
         }
         view.handle_key(key(KeyCode::Enter));
 
-        assert_eq!(
-            view.confirm_notice.as_deref(),
-            Some("Launch prepared. Terminal handoff is still disabled.")
-        );
+        assert_eq!(view.confirm_notice.as_deref(), Some(LAUNCH_PREPARED_NOTICE));
     }
 
     #[test]
