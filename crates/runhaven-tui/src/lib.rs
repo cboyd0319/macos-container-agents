@@ -12,6 +12,7 @@ pub(crate) use tui::app_event_sender;
 pub(crate) use tui::app_server_approval_conversions;
 pub(crate) use tui::app_server_session;
 pub(crate) use tui::bottom_pane;
+pub(crate) use tui::branch_summary;
 pub(crate) use tui::chatwidget;
 pub(crate) use tui::clipboard_paste;
 pub(crate) use tui::color;
@@ -59,6 +60,7 @@ pub(crate) use tui::ui_consts;
 pub(crate) use tui::update_action;
 pub(crate) use tui::version;
 pub(crate) use tui::width;
+pub(crate) use tui::workspace_command;
 pub(crate) use tui::workspace_messages;
 pub(crate) use tui::wrapping;
 

@@ -46,6 +46,8 @@ pub(crate) mod app_server_session {
 pub(crate) mod chatwidget {
     use codex_protocol::user_input::TextElement;
 
+    pub(crate) use crate::branch_summary::StatusLineGitSummary;
+
     #[derive(Debug, Clone, PartialEq)]
     pub(crate) struct UserMessage {
         pub(crate) text: String,
@@ -54,9 +56,6 @@ pub(crate) mod chatwidget {
         pub(crate) text_elements: Vec<TextElement>,
         pub(crate) mention_bindings: Vec<()>,
     }
-
-    #[derive(Debug, Clone, Default, PartialEq, Eq)]
-    pub(crate) struct StatusLineGitSummary;
 }
 
 pub(crate) mod goal_files {

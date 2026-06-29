@@ -107,7 +107,6 @@ impl AppServerSession {
 
 #[cfg(test)]
 mod tests {
-    use super::super::protocol::UnsupportedFamily;
     use super::*;
 
     #[tokio::test]
@@ -130,17 +129,27 @@ mod tests {
     async fn unsupported_methods_fail_closed() {
         let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
 
-        let error = session
-            .unsupported(UnsupportedMethod::FsReadFile)
-            .await
-            .expect_err("unsupported request should fail");
+        for unsupported_method in [
+            UnsupportedMethod::FsReadFile,
+            UnsupportedMethod::McpServerList,
+            UnsupportedMethod::PluginList,
+            UnsupportedMethod::AppList,
+            UnsupportedMethod::HooksList,
+            UnsupportedMethod::AccountLoginStart,
+            UnsupportedMethod::EnvironmentAdd,
+        ] {
+            let error = session
+                .unsupported(unsupported_method)
+                .await
+                .expect_err("unsupported request should fail");
 
-        match error {
-            TypedRequestError::Unsupported { method, family } => {
-                assert_eq!(method, "fs/readFile");
-                assert_eq!(family, UnsupportedFamily::Fs);
+            match error {
+                TypedRequestError::Unsupported { method, family } => {
+                    assert_eq!(method, unsupported_method.method());
+                    assert_eq!(family, unsupported_method.family());
+                }
+                other => panic!("expected unsupported error, got {other:?}"),
             }
-            other => panic!("expected unsupported error, got {other:?}"),
         }
         session.shutdown().await.expect("shutdown");
     }

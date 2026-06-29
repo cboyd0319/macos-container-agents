@@ -123,7 +123,7 @@ Current vendor audit summary:
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
 - RunHaven-only files: 12.
-- Copied Codex files with local edits: 43.
+- Copied Codex files with local edits: 50.
 
 RunHaven-only files:
 
@@ -168,7 +168,13 @@ bottom_pane/title_setup.rs
 bottom_pane/unified_exec_footer.rs
 chatwidget/pets.rs
 custom_terminal.rs
+diff_render.rs
+history_cell/mcp.rs
+history_cell/mod.rs
+history_cell/notices.rs
+history_cell/session.rs
 insert_history.rs
+markdown_render.rs
 markdown_render_tests.rs
 motion.rs
 pets/mod.rs
@@ -187,6 +193,7 @@ test_backend.rs
 test_support.rs
 tui.rs
 tui/event_stream.rs
+workspace_command.rs
 wrapping.rs
 ```
 
@@ -255,6 +262,12 @@ Local integration exceptions:
   telemetry behavior remain dormant. The feedback diagnostics env collector is
   shape-compatible but returns no diagnostics until RunHaven has a redaction
   policy for host environment capture.
+- `branch_summary.rs` and `workspace_command.rs` are now active for the next
+  ChatWidget status path. `branch_summary.rs` stays byte-identical to upstream
+  and talks only to a `WorkspaceCommandExecutor`. `workspace_command.rs` keeps
+  the upstream app-server `command/exec` runner compiled dormant because
+  RunHaven has not promoted Codex app-server transport, filesystem RPC, MCP,
+  login, or host-reaching execution paths.
 - `crates/codex/utils/cli`, `crates/codex/utils/elapsed`, and
   `crates/codex/utils/sleep-inhibitor` are now original-name crate authorities
   for dormant Codex TUI CLI, history, exec-cell, and chat turn-lifecycle

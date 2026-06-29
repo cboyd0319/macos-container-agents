@@ -17,11 +17,17 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(any())]
 use codex_app_server_client::AppServerRequestHandle;
+#[cfg(any())]
 use codex_app_server_protocol::ClientRequest;
+#[cfg(any())]
 use codex_app_server_protocol::CommandExecParams;
+#[cfg(any())]
 use codex_app_server_protocol::CommandExecResponse;
+#[cfg(any())]
 use codex_app_server_protocol::RequestId;
+#[cfg(any())]
 use uuid::Uuid;
 
 /// Shared handle for running workspace commands from TUI components.
@@ -150,10 +156,12 @@ pub(crate) trait WorkspaceCommandExecutor: Send + Sync {
 
 /// Workspace command runner that forwards every request to the active app-server.
 #[derive(Clone)]
+#[cfg(any())]
 pub(crate) struct AppServerWorkspaceCommandRunner {
     request_handle: AppServerRequestHandle,
 }
 
+#[cfg(any())]
 impl AppServerWorkspaceCommandRunner {
     /// Creates a runner from an app-server request handle owned by the current TUI session.
     pub(crate) fn new(request_handle: AppServerRequestHandle) -> Self {
@@ -161,6 +169,7 @@ impl AppServerWorkspaceCommandRunner {
     }
 }
 
+#[cfg(any())]
 impl WorkspaceCommandExecutor for AppServerWorkspaceCommandRunner {
     /// Sends the command as a one-off app-server `command/exec` request.
     ///

@@ -28,6 +28,8 @@ pub(crate) mod app_event_sender;
 
 #[allow(dead_code, unused_imports)]
 pub(crate) mod bottom_pane;
+#[allow(dead_code)]
+pub(crate) mod branch_summary;
 
 #[allow(dead_code)]
 pub(crate) mod clipboard_paste;
@@ -190,6 +192,8 @@ pub(crate) mod update_action;
 pub(crate) mod version;
 #[allow(dead_code)]
 pub(crate) mod width;
+#[allow(dead_code)]
+pub(crate) mod workspace_command;
 #[allow(dead_code)]
 pub(crate) mod wrapping;
 
@@ -418,6 +422,63 @@ mod drift_tests {
     }
 
     #[test]
+    fn chatwidget_branch_summary_uses_source_first_boundary() {
+        let module_source = include_str!("mod.rs");
+        let bridge_source = include_str!("app_event_shared.rs");
+        let branch_summary_source = include_str!("branch_summary.rs");
+        let workspace_command_source = include_str!("workspace_command.rs");
+        let app_shell_source = include_str!("app_shell.rs");
+        let runhaven_sources = [
+            include_str!("runhaven/app_server_client.rs"),
+            include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/protocol.rs"),
+            include_str!("runhaven/service.rs"),
+            include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/terminal_handoff.rs"),
+        ];
+
+        assert!(
+            module_declared(module_source, "branch_summary")
+                && module_declared(module_source, "workspace_command"),
+            "ChatWidget status promotion must use the real branch_summary.rs plus workspace_command.rs source boundary"
+        );
+        assert!(
+            !bridge_source.contains("struct StatusLineGitSummary"),
+            "app_event_shared.rs must not keep the StatusLineGitSummary bridge once branch_summary.rs is active"
+        );
+        for marker in [
+            "std::process::Command",
+            "use tokio::process",
+            "tokio::process::Command::new",
+            "std::env",
+            "std::fs",
+            "runhaven_core::",
+        ] {
+            assert!(
+                !branch_summary_source.contains(marker),
+                "branch_summary.rs must stay best-effort metadata over WorkspaceCommandExecutor, not direct host access marker {marker:?}"
+            );
+        }
+        assert!(
+            workspace_command_source
+                .contains("#[cfg(any())]\npub(crate) struct AppServerWorkspaceCommandRunner")
+                && workspace_command_source.contains("ClientRequest::OneOffCommandExec"),
+            "workspace_command.rs may carry the upstream app-server runner only while compiled dormant"
+        );
+        assert!(
+            !app_shell_source.contains("WorkspaceCommandRunner")
+                && !app_shell_source.contains("AppServerWorkspaceCommandRunner"),
+            "the temporary app_shell must not start app-server workspace command execution"
+        );
+        for source in runhaven_sources {
+            assert!(
+                !source.contains("AppServerWorkspaceCommandRunner"),
+                "RunHaven-owned adapters must not activate app-server workspace command execution in this slice"
+            );
+        }
+    }
+
+    #[test]
     fn app_event_shared_shrinks_only() {
         let source = include_str!("app_event_shared.rs");
         let inline_modules = top_level_inline_module_declarations(source);
@@ -478,6 +539,16 @@ mod drift_tests {
             "app_server_session.rs",
             include_str!("app_server_session.rs"),
             &["mod fs;"],
+        );
+        assert_risky_markers_absent_when_active(
+            module_source,
+            "chatwidget",
+            "chatwidget.rs",
+            include_str!("chatwidget.rs"),
+            &[
+                "crate::clipboard_copy::ClipboardLease",
+                "ExternalEditorState",
+            ],
         );
         assert_risky_markers_absent_when_active(
             module_source,

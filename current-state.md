@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-06-28 UTC
+Last updated: 2026-06-29 UTC
 
 ## Current Objective
 
@@ -891,6 +891,36 @@ Latest TUI Codex runtime ownership:
   `scripts/compare-codex-tui.sh`, and
   `git diff --check`.
 
+Latest ChatWidget status-source promotion:
+
+- 2026-06-29: Promoted the real vendored Codex `branch_summary.rs` and the
+  `workspace_command.rs` contract for the next ChatWidget status-line path.
+  `app_event_shared.rs` no longer owns the `StatusLineGitSummary` bridge; it
+  re-exports the real upstream type from `branch_summary.rs`.
+- This does not activate Codex app-server transport or host command execution.
+  The upstream `AppServerWorkspaceCommandRunner` remains compiled dormant in
+  `workspace_command.rs`, and a drift guard blocks `app_shell.rs` plus
+  RunHaven-owned adapters from using it in this slice. `branch_summary.rs`
+  remains best-effort metadata over an injected `WorkspaceCommandExecutor` and
+  has no direct host process, environment, filesystem, or RunHaven core access.
+- Verified so far:
+  `cargo test -p runhaven-tui --locked` as the baseline,
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked --tests`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked branch_summary -- --show-output`,
+  `cargo test -p runhaven-tui --locked unsupported_methods_fail_closed -- --show-output`,
+  `cargo test -p runhaven-tui --locked unsupported_method_matrix_fails_closed -- --show-output`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -901,10 +931,13 @@ Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4.
 `workspace_messages.rs` is active from real vendored source,
 `launch_wizard.rs` implements `BottomPaneView`, the staging shell hosts that
 view inside native `BottomPane`, and the active terminal runtime now uses
-Codex `Tui` plus `TuiEventStream`. The next slice should continue toward
-native `App`/`ChatWidget` ownership without adding new product screens to
-`app_shell.rs`. Do not activate native `App`, `ChatWidget`, real
-`app_server_session`, or app-server transport until host-reaching markers are
-removed, fail-closed, or routed through a reviewed RunHaven boundary.
+Codex `Tui` plus `TuiEventStream`. `branch_summary.rs` and the
+`workspace_command.rs` contract are active for the next ChatWidget status path,
+with Codex app-server command execution still compiled dormant. The next slice
+should continue toward native `App`/`ChatWidget` ownership without adding new
+product screens to `app_shell.rs`. Do not activate native `App`, `ChatWidget`,
+real `app_server_session`, app-server transport, filesystem RPC, MCP, login, or
+host-reaching execution until those markers are removed, fail-closed, or routed
+through a reviewed RunHaven boundary.
 Foreground launch remains read-only until native Codex app ownership and
 terminal restore are wired through the UI thread.
