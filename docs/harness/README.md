@@ -11,7 +11,7 @@ Harness = instructions + tools + environment + state + feedback.
 
 | Subsystem | RunHaven Artifact | Purpose |
 | --- | --- | --- |
-| Instructions | `AGENTS.md` | Startup path, hard rules, and routing |
+| Instructions | `AGENTS.md`, `.agents/skills/` | Startup path, hard rules, routing, and repo-local on-demand skills |
 | Tools | shell, git, file edits, `init.sh` | Do useful work and verify it locally |
 | Environment | `Cargo.toml`, locks, `rust-toolchain.toml`, `pins.toml`, image templates | Make versions and setup self-describing |
 | State | `feature_list.json`, `current-state.md` | Current status, blockers, evidence, and next step |
@@ -26,7 +26,7 @@ names:
 
 | Template Concept | RunHaven Owner |
 | --- | --- |
-| Root router | `AGENTS.md`, with thin `CLAUDE.md`, `GEMINI.md`, and Copilot shims |
+| Root router and repo-local skills | `AGENTS.md`, `.agents/skills/`, with thin `CLAUDE.md`, `GEMINI.md`, and Copilot shims |
 | Architecture map | `docs/ARCHITECTURE.md`, `boundaries/component-inventory.md`, `state/modularization-plan.md` |
 | Product behavior | `README.md`, `docs/USAGE.md`, `docs/CAPABILITIES.md`, `docs/ROADMAP.md`, `docs/plans/` |
 | Security rules | `docs/SECURITY_MODEL.md`, `boundaries/security-boundary-map.md`, `boundaries/change-contract.md` |

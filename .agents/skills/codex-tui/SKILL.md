@@ -82,12 +82,15 @@ For Phase 4, prefer this order unless live plan files say otherwise:
 
 1. Keep Codex `Tui`, `TuiEventStream`, `FrameRequester`, and `BottomPane`
    ownership active.
-2. Promote the next source-first surface needed for `ChatWidget`.
+2. Treat real vendored `branch_summary.rs` and the `workspace_command.rs`
+   contract as active for the next `ChatWidget` status-line path.
 3. Remove or shrink temporary bridge types as their real owners become active.
 4. Add drift and security guards for each promoted surface.
 5. Keep native `App`, real `app_server_session`, app-server transport,
    filesystem RPC, MCP, login, and host-reaching paths dormant or fail-closed
    until their markers are removed or guarded.
+6. Continue toward native `App`/`ChatWidget` ownership without adding product
+   screens to `app_shell.rs`.
 
 ## Guard Expectations
 

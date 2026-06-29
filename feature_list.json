@@ -1,7 +1,7 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-28",
+  "last_updated": "2026-06-29",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -33,7 +33,8 @@
       "evidence": [
         "2026-06-17: Startup, harness skill routing, harness overview, active feature state, current-state handoff, README development guidance, and affected harness docs were compressed to the lightweight five-subsystem model. JSON validation, local Markdown link check, pin policy, stale-reference scans, and git diff checks passed.",
         "2026-06-24: Harness gap-analysis pass against the learn-harness-engineering course closed the remaining missed mechanisms: a status_legend plus a single `active` slice make single_active_feature checkable; a startup baseline gate, decision-rationale capture, boundary-journey table, independent evaluator routing for security changes, agent-oriented-error and verify-before-refactor gates, a representative task set for cleanup decisions, and a mechanical Tauri capability-scope guard test. Tauri tests (incl. the capability guard), pin check, JSON validation, and git diff checks passed.",
-        "2026-06-27: Deep review of /Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/ confirmed RunHaven should keep the lightweight three-file startup contract and adapt the OpenAI advanced repo-template concepts into existing owners instead of copying parallel template files. Updated harness evaluation, overview mapping, quality snapshot, source ledger, and manifest. Pin check, JSON validation, and git diff hygiene passed."
+        "2026-06-27: Deep review of /Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/ confirmed RunHaven should keep the lightweight three-file startup contract and adapt the OpenAI advanced repo-template concepts into existing owners instead of copying parallel template files. Updated harness evaluation, overview mapping, quality snapshot, source ledger, and manifest. Pin check, JSON validation, and git diff hygiene passed.",
+        "2026-06-29: Deep review of .agents/ confirmed the repo-local codex-tui skill is now a full RunHaven TUI routing skill. Updated AGENTS.md, current-state.md, the repo-local skills, and focused harness docs so repo-local skills are on-demand instruction surfaces while the three-file startup contract stays intact. Verified with skill validation, pin check, JSON validation, Markdown link check, and git diff hygiene."
       ],
       "notes": "Historical evidence remains in docs/harness/evidence/evidence-log.md and product docs. It is not startup context."
     },

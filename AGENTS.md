@@ -178,12 +178,12 @@ Tauri launch/run-control behavior.
   correctness.
 - For direct Codex CLI behavior or vendored Codex TUI behavior, use
   `codex-cli-guide` and the local Codex source/config as evidence.
-- For RunHaven TUI work, use the `rust`, the Persona Codex TUI skill at
-  `/Users/c/Documents/GitHub/persona/content/skills/codex-tui`, and
-  `adversarial-review` together as the end-of-slice gate before commit: Rust
+- For RunHaven TUI work, use the repo-local `.agents/skills/codex-tui`
+  skill first. It requires the Persona Codex TUI skill at
+  `/Users/c/Documents/GitHub/persona/content/skills/codex-tui`, then `rust`
+  and `adversarial-review` as the end-of-slice gate before commit: Rust
   crate/tooling correctness, Codex source-pattern alignment, then boundary and
-  overclaim review. The repo-local `.agents/skills/codex-tui` wrapper exists
-  only to make that Persona skill discoverable from this project.
+  overclaim review.
 - For Codex-vendored TUI and `codex-*` dependencies, preserving the original
   Codex package name, crate name, and module path is the default. Use a local
   bridge only when compiling or activating the real Codex surface would cross a

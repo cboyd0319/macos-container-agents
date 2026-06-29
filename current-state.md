@@ -91,13 +91,12 @@ TUI, Tauri, or frontend layers.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
   upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
-- TUI implementation slices should end with the combined `rust`, Persona
-  Codex TUI skill
-  (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), and
-  `adversarial-review` skill gate before commit: Rust crate/tooling
-  correctness, Codex source-pattern alignment, then boundary and overclaim
-  review. The repo-local `.agents/skills/codex-tui` wrapper exists only to make
-  that Persona skill discoverable from this project.
+- TUI implementation slices should use the repo-local
+  `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
+  skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
+  `rust` and `adversarial-review` as the end-of-slice gate before commit: Rust
+  crate/tooling correctness, Codex source-pattern alignment, then boundary and
+  overclaim review.
 - Antigravity (`agy`) is research-only in this repo. Do not use it for
   end-of-slice code review, adversarial review, verification, or proof of
   correctness.
@@ -920,6 +919,18 @@ Latest ChatWidget status-source promotion:
   `python3 -m json.tool feature_list.json >/dev/null`,
   `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
   `git diff --check`.
+
+Latest repo-local agent harness audit:
+
+- 2026-06-29: Deep review of `.agents/` found that
+  `.agents/skills/codex-tui` is now a full repo-local TUI routing skill.
+  `AGENTS.md`, this file, repo-local skills, and focused harness docs now
+  describe `.agents/skills/` as on-demand instruction surfaces while
+  preserving the three-file startup contract.
+- Verified with repo-local skill validation for `codex-tui` and `harness`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json >/dev/null`, local Markdown link
+  check over touched docs, and `git diff --check`.
 
 ## Blockers
 
