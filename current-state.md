@@ -1151,12 +1151,13 @@ Latest RunHaven-only TUI MVP surface:
   list, confirmation-gated raw log snapshot display, and secret-free diagnostics
   for auth broker status/log plus provider egress decisions.
 - 2026-06-29: Simplified the initial agent chooser for non-technical users.
-  The chooser now shows plain guidance, agent descriptions, workspace, current
-  network mode, and the short `/workspace only` safety summary. It no longer
-  renders the side `Plan Preview`, exact `container run` command, provider-host
-  list, or broker/image/auth detail on the first screen. Review and confirm
-  still show auth scope, network posture, not-shared host data, provider hosts,
-  safety notes, and the exact command before launch.
+  The chooser now shows plain guidance, status-first agent rows, workspace,
+  current network posture, and the short `/workspace only` safety summary. It
+  no longer renders catalog-style agent descriptions, the side `Plan Preview`,
+  exact `container run` command, provider-host list, or broker/image/auth
+  detail on the first screen. Review and confirm still show auth scope, network
+  posture, not-shared host data, provider hosts, safety notes, and the exact
+  command before launch.
 - 2026-06-29: Removed the active `RUNHAVEN_TUI_IMAGE_SMOKE` hook from the live
   `app_shell.rs` path so core TUI completion stays free of Cubby/pet polish
   scope. The bundled Cubby package and lower pet/image modules remain parked

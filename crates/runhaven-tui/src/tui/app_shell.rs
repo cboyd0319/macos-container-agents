@@ -479,7 +479,8 @@ mod tests {
 
         let output = render_to_text(&mut state, 120, 32);
         assert!(output.contains("antigravity"));
-        assert!(output.contains("Google Antigravity CLI"));
+        assert!(output.contains("Ready. Provider only. Workspace only."));
+        assert!(!output.contains("Google Antigravity CLI"));
         assert_eq!(state.selected_index(), Some(0));
     }
 
@@ -715,13 +716,14 @@ mod tests {
 
         assert!(output.contains("RunHaven"));
         assert!(output.contains("Step 1/4: Choose agent"));
-        assert!(output.contains("Choose an agent"));
-        assert!(output.contains("RunHaven will show the full plan before launch"));
+        assert!(output.contains("Pick the agent to run"));
+        assert!(output.contains("review the plan before anything starts"));
         assert!(output.contains("Safety"));
         assert!(output.contains("/workspace only"));
         assert!(output.contains("Host home and credentials are not mounted"));
-        assert!(output.contains("provider allowlist"));
-        assert!(output.contains("Google Antigravity CLI"));
+        assert!(output.contains("Provider only"));
+        assert!(output.contains("Ready. Provider only. Workspace only."));
+        assert!(!output.contains("Google Antigravity CLI"));
         assert!(!output.contains("Plan Preview"));
         assert!(!output.contains("Exact command"));
         assert!(!output.contains("container run"));
@@ -779,7 +781,7 @@ mod tests {
             .draw(|frame| render(frame, &mut state))
             .expect("draw");
         assert!(
-            buffer_text(&terminal).contains("Choose an agent"),
+            buffer_text(&terminal).contains("Pick the agent to run"),
             "test setup should render the simplified picker first"
         );
 
@@ -794,7 +796,7 @@ mod tests {
 
         assert!(output.contains("Step 3/4: Review plan"));
         assert!(output.contains("Exact command"));
-        assert!(!output.contains("Choose an agent. RunHaven will show the full plan"));
+        assert!(!output.contains("Pick the agent to run"));
     }
 
     #[test]
@@ -838,7 +840,7 @@ mod tests {
         assert!(output.contains("Safety"));
         assert!(output.contains("/workspace only"));
         assert!(output.contains("Host home and credentials"));
-        assert!(output.contains("provider allowlist"));
+        assert!(output.contains("Provider only"));
     }
 
     #[test]
@@ -862,7 +864,7 @@ mod tests {
         let output = render_to_text(&mut state, 120, 32);
         assert!(output.contains("? help"));
         assert!(output.contains("Choose agent"));
-        assert!(output.contains("provider allowlist"));
+        assert!(output.contains("Provider only"));
 
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE)),

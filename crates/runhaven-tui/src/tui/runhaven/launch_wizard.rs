@@ -401,10 +401,15 @@ impl LaunchWizardView {
                 decision.status_style(),
             ));
             line.push_span(" · ");
-            line.push_span(Span::styled(
-                decision.network_label.clone(),
-                decision.network_style(),
-            ));
+            let network_label = if matches!(
+                self.screen,
+                LaunchWizardScreen::ChooseWorkspace | LaunchWizardScreen::ChooseAgent
+            ) {
+                decision.first_step_network_label().to_string()
+            } else {
+                decision.network_label.clone()
+            };
+            line.push_span(Span::styled(network_label, decision.network_style()));
             line.push_span(" · ");
             line.push_span(Span::styled(
                 decision.boundary_label.clone(),
@@ -633,15 +638,27 @@ impl From<WorkspaceLaunchPreview> for WorkspaceDecisionVm {
 impl AgentDecisionVm {
     fn selection_item(&self) -> SelectionItem {
         let plan_error = self.plan.as_ref().err().cloned();
+        let picker_description = self.picker_description();
         SelectionItem {
             name: self.agent.name.clone(),
-            description: Some(self.agent.description.clone()),
-            selected_description: Some(self.agent.description.clone()),
+            description: Some(picker_description.clone()),
+            selected_description: Some(picker_description),
             is_disabled: plan_error.is_some(),
             disabled_reason: plan_error.map(|error| error.to_string()),
             dismiss_on_select: false,
             search_value: Some(self.search_value()),
             ..Default::default()
+        }
+    }
+
+    fn picker_description(&self) -> String {
+        match self.status_label.as_str() {
+            "ready" => format!(
+                "Ready. {}. Workspace only.",
+                self.first_step_network_label()
+            ),
+            "review" => "Needs confirmation. Review before launch.".to_string(),
+            _ => "Blocked. Fix the issue before launch.".to_string(),
         }
     }
 
@@ -671,6 +688,15 @@ impl AgentDecisionVm {
             "ready" => safe_style(),
             "review" => warning_style(),
             _ => danger_style(),
+        }
+    }
+
+    fn first_step_network_label(&self) -> &'static str {
+        match self.network_label.as_str() {
+            "provider allowlist" => "Provider only",
+            "local only" => "Local only",
+            "internet unrestricted" => "Unrestricted internet",
+            _ => "Custom network",
         }
     }
 }
@@ -752,7 +778,7 @@ fn agent_selection_params(
         title: None,
         subtitle: None,
         footer_note: Some(Line::from(
-            "Enter reviews the plan. Confirming will start the agent after terminal restore.",
+            "Enter opens the plan. Nothing starts until you confirm.",
         )),
         footer_hint: Some(footer_hint_line()),
         items,
@@ -943,7 +969,7 @@ impl SafetyHeader {
                 Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
                 Span::styled(self.step_label, boundary_style()),
             ]),
-            Line::from("Choose an agent. RunHaven will show the full plan before launch."),
+            Line::from("Pick the agent to run. You will review the plan before anything starts."),
         ];
 
         if let Some(selected) = self.selected() {
@@ -952,7 +978,10 @@ impl SafetyHeader {
                 Span::styled(selected.agent.name.clone(), selected.status_style()),
                 Span::raw("  "),
                 Span::styled("Network  ", muted_but_readable_style()),
-                Span::styled(selected.network_label.clone(), selected.network_style()),
+                Span::styled(
+                    selected.first_step_network_label(),
+                    selected.network_style(),
+                ),
             ]));
         }
         lines.push(label_value(
@@ -1518,6 +1547,22 @@ mod tests {
         }
     }
 
+    fn internet_preview(name: &str) -> AgentLaunchPreview {
+        let mut data = plan(name);
+        data.network.mode = "internet".to_string();
+        data.network.summary = "internet unrestricted".to_string();
+        data.network.provider_allowed_hosts.clear();
+        data.confirm_required = true;
+        let mut executable = executable_plan(name);
+        executable.network_mode = NetworkMode::Internet;
+        executable.egress_summary = "internet unrestricted".to_string();
+        executable.provider_allowed_hosts.clear();
+        AgentLaunchPreview {
+            agent: agent(name),
+            plan: Ok(PreparedLaunch::from_parts_for_tests(data, executable)),
+        }
+    }
+
     fn blocked_preview(name: &str) -> AgentLaunchPreview {
         AgentLaunchPreview {
             agent: agent(name),
@@ -1720,7 +1765,8 @@ mod tests {
             LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
 
         let output = render_to_text(&view, 120, 32);
-        assert!(output.contains("Confirming will start the agent after terminal restore."));
+        assert!(output.contains("Enter opens the plan. Nothing starts until you confirm."));
+        assert!(output.contains("Ready. Provider only. Workspace only."));
         assert!(!output.contains("Launch is still disabled"));
 
         view.handle_key(key(KeyCode::Enter));
@@ -1728,6 +1774,22 @@ mod tests {
         let output = render_to_text(&view, 120, 32);
         assert!(output.contains("RunHaven starts it after restoring the terminal."));
         assert!(!output.contains("will not start the container"));
+    }
+
+    #[test]
+    fn first_step_internet_mode_stays_cautionary() {
+        let view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![internet_preview("shell")],
+        );
+
+        let output = render_to_text(&view, 80, 24);
+        let footer = format!("{:?}", view.footer_status_line());
+
+        assert!(output.contains("Unrestricted internet"));
+        assert!(output.contains("Needs confirmation. Review before launch."));
+        assert!(footer.contains("Unrestricted internet"));
+        assert!(!output.contains("internet unrestricted"));
     }
 
     #[test]
@@ -2068,7 +2130,7 @@ mod tests {
         let footer = format!("{:?}", view.footer_status_line());
         assert!(footer.contains("Choose agent"));
         assert!(footer.contains("codex"));
-        assert!(footer.contains("provider allowlist"));
+        assert!(footer.contains("Provider only"));
         assert!(view.terminal_title().contains("project"));
         assert!(view.terminal_title().contains("Choose agent"));
         assert!(view.terminal_title().contains("codex"));
@@ -2079,6 +2141,7 @@ mod tests {
         let footer = format!("{:?}", view.footer_status_line());
         assert!(footer.contains("Review plan"));
         assert!(footer.contains("claude"));
+        assert!(footer.contains("provider allowlist"));
         assert!(view.terminal_title().contains("Review plan"));
         assert!(view.terminal_title().contains("claude"));
 

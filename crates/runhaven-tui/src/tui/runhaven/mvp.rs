@@ -1058,8 +1058,8 @@ mod tests {
         let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
 
         let output = render_to_text(&mut view, 120, 32);
-        assert!(output.contains("Choose an agent"));
-        assert!(output.contains("RunHaven will show the full plan before launch"));
+        assert!(output.contains("Pick the agent to run"));
+        assert!(output.contains("review the plan before anything starts"));
         assert!(line_text(view.footer_status()).contains("auth agent"));
 
         view.handle_key_event(key(KeyCode::Char('a')));
@@ -1068,7 +1068,7 @@ mod tests {
 
         view.handle_key_event(key(KeyCode::Char('n')));
         let output = render_to_text(&mut view, 120, 32);
-        assert!(output.contains("local only"));
+        assert!(output.contains("Local only"));
         assert!(line_text(view.footer_status()).contains("network internal"));
     }
 
