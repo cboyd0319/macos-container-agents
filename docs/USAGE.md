@@ -32,12 +32,13 @@ confirmation text; there, esc backs out and `q` is entered as text.
 
 The active-runs screen shows RunHaven-owned active markers without workspace
 paths. Opening logs requires typing `logs` before RunHaven reads a bounded raw
-output snapshot. The history screen shows recent run records, review commands,
-and worktree branch details without host workspace paths. Diagnostics show
-auth and network metadata without secrets.
+output snapshot. The diagnostics screen shows Mac/container preflight checks,
+auth status, and recent auth/network decisions without raw secrets or workspace
+paths. The history screen shows recent run records, review commands, and
+worktree branch details without host workspace paths.
 
-Use the CLI for advanced run management, diff review, worktree review, cleanup, and
-maintenance:
+Use the CLI for advanced run management, diff review, worktree review, cleanup,
+and maintenance:
 
 ```bash
 runhaven plan claude

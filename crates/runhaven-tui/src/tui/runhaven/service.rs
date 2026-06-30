@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use runhaven_core::diagnostics::auth_status_payload;
 use runhaven_core::diagnostics::read_auth_broker_log_tail_bounded;
 use runhaven_core::diagnostics::read_egress_policy_log_tail_bounded;
+use runhaven_core::doctor::collect_checks;
 use runhaven_core::records::read_run_records_tail_bounded;
 use runhaven_core::runtime::active::active_run_log_snapshot_payload;
 use runhaven_core::runtime::active::read_active_run_records;
@@ -292,6 +293,7 @@ impl RunHavenTuiService {
         limit: usize,
     ) -> anyhow::Result<RunHavenDiagnosticsData> {
         Ok(RunHavenDiagnosticsData::from_payloads(
+            collect_checks(),
             auth_status_payload(),
             read_egress_policy_log_tail_bounded(limit, DIAGNOSTICS_LOG_TAIL_BYTES)?,
             read_auth_broker_log_tail_bounded(limit, DIAGNOSTICS_LOG_TAIL_BYTES)?,

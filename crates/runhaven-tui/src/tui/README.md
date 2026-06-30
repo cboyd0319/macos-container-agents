@@ -482,10 +482,11 @@ Known integration gap:
   summaries to the TUI history screen using a bounded tail read. It shows run
   ids, status, policy summaries, git/worktree summaries, and CLI review
   commands, but does not render stored host workspace paths.
-- Diagnostics render auth status, auth-broker decisions, and provider egress
-  decisions as metadata. Workspace paths and unknown fields are omitted, auth
-  broker request paths are scrubbed of query strings and fragments before
-  display, and the TUI diagnostics path uses bounded tail reads for log files.
+- Diagnostics render shared `runhaven-core` doctor/preflight checks, auth
+  status, auth-broker decisions, and provider egress decisions as metadata.
+  Workspace paths and unknown fields are omitted, auth broker request paths are
+  scrubbed of query strings and fragments before display, and the TUI
+  diagnostics path uses bounded tail reads for log files.
 - The current RunHaven-only TUI checkpoint is present. Remaining TUI work is
   full v0.6 completion, cleanup, and hardening: keep native `App` and
   `ChatWidget` dormant unless a future RunHaven scope needs that specific

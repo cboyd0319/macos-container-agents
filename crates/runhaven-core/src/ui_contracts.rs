@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::doctor::Check;
 use crate::provider::auth_broker::sanitize_broker_request_path;
 use crate::provider::auth_profiles::{agent_broker, agent_sign_in};
 use crate::runtime::plans::AgentRunPlan;
@@ -119,9 +120,19 @@ pub struct RunHistorySummaryData {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunHavenDiagnosticsData {
+    pub doctor_checks: Vec<DoctorCheckData>,
     pub auth_status: AuthStatusData,
     pub egress_log: Vec<EgressDecisionData>,
     pub auth_log: Vec<AuthDecisionData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DoctorCheckData {
+    pub name: String,
+    pub ok: bool,
+    pub detail: String,
+    pub remedy: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -391,11 +402,16 @@ impl ActiveRunLogSnapshotData {
 
 impl RunHavenDiagnosticsData {
     pub fn from_payloads(
+        doctor_checks: impl IntoIterator<Item = Check>,
         auth_status: serde_json::Value,
         egress_log: impl IntoIterator<Item = serde_json::Value>,
         auth_log: impl IntoIterator<Item = serde_json::Value>,
     ) -> Self {
         Self {
+            doctor_checks: doctor_checks
+                .into_iter()
+                .map(DoctorCheckData::from_check)
+                .collect(),
             auth_status: AuthStatusData::from_payload(auth_status),
             egress_log: egress_log
                 .into_iter()
@@ -405,6 +421,23 @@ impl RunHavenDiagnosticsData {
                 .into_iter()
                 .map(AuthDecisionData::from_log_record)
                 .collect(),
+        }
+    }
+}
+
+impl DoctorCheckData {
+    pub fn from_check(check: Check) -> Self {
+        let name = strip_terminal_controls(&check.name);
+        let detail = if name == "Apple container CLI" && check.ok {
+            "found on PATH".to_string()
+        } else {
+            strip_terminal_controls(&check.detail)
+        };
+        Self {
+            name,
+            ok: check.ok,
+            detail,
+            remedy: strip_terminal_controls(&check.remedy),
         }
     }
 }
@@ -754,6 +787,20 @@ mod tests {
     #[test]
     fn diagnostics_contract_maps_secret_free_fields_only() {
         let data = RunHavenDiagnosticsData::from_payloads(
+            [
+                Check {
+                    name: "container\u{1b}".to_string(),
+                    ok: false,
+                    detail: "not found\u{7}".to_string(),
+                    remedy: "Install Apple container 1.0.0.".to_string(),
+                },
+                Check {
+                    name: "Apple container CLI".to_string(),
+                    ok: true,
+                    detail: "/Users/example/bin/container".to_string(),
+                    remedy: "Install Apple container 1.0.0.".to_string(),
+                },
+            ],
             serde_json::json!({
                 "status": "available",
                 "runtime": "host-broker",
@@ -791,6 +838,9 @@ mod tests {
         );
 
         assert_eq!(data.auth_status.status, "available");
+        assert_eq!(data.doctor_checks[0].name, "container");
+        assert_eq!(data.doctor_checks[0].detail, "not found");
+        assert_eq!(data.doctor_checks[1].detail, "found on PATH");
         assert_eq!(data.auth_status.profiles[0].name, "codex");
         assert_eq!(data.egress_log[0].host, "example.com");
         assert_eq!(data.auth_log[0].path, "/v1/responses");

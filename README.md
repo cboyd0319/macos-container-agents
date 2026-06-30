@@ -99,9 +99,9 @@ The TUI is an unreleased RunHaven-only checkpoint over the same Rust backend. It
 opens with a launch flow, shows the exact command and safety facts before
 launch, requires typed confirmation for lower-security plans, restores the
 terminal before starting the agent, and includes active-run summaries,
-confirmation-gated log snapshots, run history, diagnostics, and post-run
-recovery. It does not replace the CLI: subcommands, pipes, and redirected
-invocations still use the CLI directly.
+confirmation-gated log snapshots, run history, preflight diagnostics, and
+post-run recovery. It does not replace the CLI: subcommands, pipes, and
+redirected invocations still use the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -172,10 +172,10 @@ runhaven image doctor
 ```
 
 The current TUI exposes active-run summaries, bounded log snapshots only after
-you type `logs`, run history without host workspace paths, secret-free
-diagnostics, and post-run recovery over the same validated cores. Stop, kill,
-repair, diff review, worktree merge/discard, image rebuild, state cleanup, and
-network cleanup remain CLI-first today.
+you type `logs`, run history without host workspace paths, preflight checks,
+secret-free diagnostics, and post-run recovery over the same validated cores.
+Stop, kill, repair, diff review, worktree merge/discard, image rebuild, state
+cleanup, and network cleanup remain CLI-first today.
 
 ## Status and roadmap
 

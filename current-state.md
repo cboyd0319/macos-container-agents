@@ -1432,6 +1432,26 @@ Latest TUI run history surface:
   `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
   scan, and diff check.
 
+Latest TUI preflight diagnostics surface:
+
+- 2026-06-30: Promoted shared `runhaven-core` doctor checks into the
+  RunHaven-only TUI diagnostics screen without expanding `app_shell.rs`. The
+  TUI service now combines preflight checks, auth status, provider egress
+  metadata, and auth broker metadata in `RunHavenDiagnosticsData`.
+- The diagnostics view shows concise `ok` or `fix` preflight rows and inline
+  remedies before auth/network metadata. Terminal control bytes are stripped
+  from doctor-derived UI fields, successful `container` binary checks do not
+  expose host install paths, broker request paths remain scrubbed, and log reads
+  stay bounded.
+- Security boundary is unchanged: native `App`, `ChatWidget`, app-server
+  transport, filesystem RPC, MCP, login, workspace command execution, Codex
+  session recording, and host-reaching Codex execution remain dormant or
+  fail-closed. Verification covered focused diagnostics contracts, the
+  diagnostics snapshot matrix, full `runhaven-core` and `runhaven-tui` tests,
+  `codex-vendored-tests` no-run, clippy for `runhaven-core` and
+  `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
+  scan, and diff check.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -1439,9 +1459,9 @@ Latest TUI run history surface:
 ## Next Step
 
 The next work is a hardest-first full-TUI gap analysis and completion plan for
-`v0.6.0`. Start from the verified checkpoint plus run-history surface, then
-close the highest-risk RunHaven needs before low-risk polish: final launch UX,
-active-run/log UX, diagnostics and doctor/preflight guidance, failure recovery,
+`v0.6.0`. Start from the verified checkpoint plus run-history and preflight
+diagnostics surfaces, then close the highest-risk RunHaven needs before
+low-risk polish: final launch UX, active-run/log UX, failure recovery,
 run-control or CLI fallback text, diff/worktree review or CLI fallback text,
 cleanup guidance, Cubby/pet/terminal image/Zork decisions, and whether native
 `App` or `ChatWidget` should stay dormant or be promoted. Keep native `App` and

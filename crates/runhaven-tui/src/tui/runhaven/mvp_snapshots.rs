@@ -11,6 +11,7 @@ use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::AuthDecisionData;
 use runhaven_core::ui_contracts::AuthProfileStatusData;
 use runhaven_core::ui_contracts::AuthStatusData;
+use runhaven_core::ui_contracts::DoctorCheckData;
 use runhaven_core::ui_contracts::EgressDecisionData;
 use runhaven_core::ui_contracts::LaunchBoundaryData;
 use runhaven_core::ui_contracts::LaunchNetworkData;
@@ -257,6 +258,21 @@ fn diagnostics_view() -> RunHavenMvpView {
     let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
     view.screen = MvpScreen::Diagnostics(Box::new(DiagnosticsScreen {
         result: Ok(RunHavenDiagnosticsData {
+            doctor_checks: vec![
+                DoctorCheckData {
+                    name: "macOS".to_string(),
+                    ok: true,
+                    detail: "26.0".to_string(),
+                    remedy: "Use a macOS 26+ host.".to_string(),
+                },
+                DoctorCheckData {
+                    name: "Apple container CLI".to_string(),
+                    ok: false,
+                    detail: "not found on PATH".to_string(),
+                    remedy: "Install Apple container 1.0.0 and run `container system start`."
+                        .to_string(),
+                },
+            ],
             auth_status: AuthStatusData {
                 status: "ready".to_string(),
                 runtime: "runhaven isolated login state".to_string(),

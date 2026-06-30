@@ -260,6 +260,7 @@ fn diagnostics_view_omits_secret_and_workspace_fields() {
     let output = render_to_text(&mut view, 120, 40);
 
     assert!(output.contains("Diagnostics"));
+    assert!(output.contains("Preflight"));
     assert!(output.contains("example.com"));
     assert!(output.contains("/v1/responses"));
     assert!(!output.contains("token=secret"));

@@ -437,6 +437,7 @@ fn diagnostics_payload_maps_secret_free_log_metadata() {
         .diagnostics_payload(10)
         .expect("diagnostics");
 
+    assert!(!payload.doctor_checks.is_empty());
     assert_eq!(payload.egress_log[0].host, "example.com");
     assert_eq!(payload.auth_log[0].path, "/v1/responses");
     assert_eq!(payload.auth_log[0].upstream_status, Some(200));

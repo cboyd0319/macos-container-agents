@@ -9,6 +9,7 @@ use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
 use runhaven_core::ui_contracts::AuthDecisionData;
+use runhaven_core::ui_contracts::DoctorCheckData;
 use runhaven_core::ui_contracts::EgressDecisionData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 use runhaven_core::ui_contracts::RunHistorySummaryData;
@@ -354,7 +355,7 @@ fn diagnostics_lines(screen: &DiagnosticsScreen) -> Vec<Line<'static>> {
     let mut lines = vec![
         header_line("Diagnostics"),
         tab_line(),
-        Line::from("Secret-free status and recent broker/proxy decisions."),
+        Line::from("Preflight status, auth metadata, and recent broker/proxy decisions."),
         Line::from(""),
     ];
     match &screen.result {
@@ -371,6 +372,7 @@ fn diagnostics_lines(screen: &DiagnosticsScreen) -> Vec<Line<'static>> {
 }
 
 fn append_diagnostics_data(lines: &mut Vec<Line<'static>>, data: &RunHavenDiagnosticsData) {
+    append_doctor_lines(lines, &data.doctor_checks);
     lines.push(label_value(
         "Auth",
         data.auth_status.status.clone(),
@@ -391,6 +393,65 @@ fn append_diagnostics_data(lines: &mut Vec<Line<'static>>, data: &RunHavenDiagno
     }
     append_egress_lines(lines, &data.egress_log);
     append_auth_lines(lines, &data.auth_log);
+}
+
+fn append_doctor_lines(lines: &mut Vec<Line<'static>>, checks: &[DoctorCheckData]) {
+    lines.push(Line::from(vec![Span::styled(
+        "Preflight",
+        selected_row_style(),
+    )]));
+    if checks.is_empty() {
+        lines.push(Line::from("No preflight checks returned."));
+        lines.push(Line::from(""));
+        return;
+    }
+    let passed = checks.iter().filter(|check| check.ok).count();
+    if passed > 0 {
+        lines.push(Line::from(vec![
+            Span::styled("ok", safe_style()),
+            Span::raw("  "),
+            Span::styled(check_count_label(passed), muted_but_readable_style()),
+        ]));
+    }
+
+    let failed: Vec<_> = checks.iter().filter(|check| !check.ok).collect();
+    if failed.is_empty() {
+        lines.push(Line::from(""));
+        return;
+    }
+
+    for check in failed.iter().take(6) {
+        lines.push(Line::from(vec![
+            Span::styled("fix", warning_style()),
+            Span::raw("  "),
+            Span::styled(check.name.clone(), boundary_style()),
+            Span::raw("  "),
+            Span::styled(check.detail.clone(), muted_but_readable_style()),
+        ]));
+        lines.push(Line::from(vec![
+            Span::raw("    "),
+            Span::styled(check.remedy.clone(), warning_style()),
+        ]));
+    }
+    if failed.len() > 6 {
+        lines.push(Line::from(vec![
+            Span::styled("fix", warning_style()),
+            Span::raw("  "),
+            Span::styled(
+                format!("{} more checks need attention.", failed.len() - 6),
+                warning_style(),
+            ),
+        ]));
+    }
+    lines.push(Line::from(""));
+}
+
+fn check_count_label(count: usize) -> String {
+    if count == 1 {
+        "1 check passed".to_string()
+    } else {
+        format!("{count} checks passed")
+    }
 }
 
 fn append_egress_lines(lines: &mut Vec<Line<'static>>, entries: &[EgressDecisionData]) {

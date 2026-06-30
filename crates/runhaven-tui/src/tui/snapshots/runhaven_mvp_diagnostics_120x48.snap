@@ -5,7 +5,12 @@ expression: rendered
 
   RunHaven v0.5.0  Diagnostics
   1 Launch  2 Runs  3 Diagnostics  h History
-  Secret-free status and recent broker/proxy decisions.
+  Preflight status, auth metadata, and recent broker/proxy decisions.
+
+  Preflight
+  ok  1 check passed
+  fix  Apple container CLI  not found on PATH
+      Install Apple container 1.0.0 and run `container system start`.
 
   Auth        ready
   Runtime     runhaven isolated login state
