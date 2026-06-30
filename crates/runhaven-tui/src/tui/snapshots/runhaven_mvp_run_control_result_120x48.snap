@@ -1,0 +1,20 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Repair marker
+  1 Launch  2 Runs  3 Diagnostics  h History
+  This action only targets the selected RunHaven-owned container.
+
+  Run ID      run-20260629-001
+  Profile     codex
+  Container   runhaven-codex-001-run
+  Status      running
+
+  Removed stale active marker for run run-20260629-001 (runhaven-codex-project-run).
+  Result      removed
+  Exit code   1
+  Marker      removed
+
+  Press r to refresh active runs, or Esc to go back.

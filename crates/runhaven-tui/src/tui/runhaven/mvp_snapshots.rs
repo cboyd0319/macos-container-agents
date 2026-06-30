@@ -16,6 +16,7 @@ use runhaven_core::ui_contracts::EgressDecisionData;
 use runhaven_core::ui_contracts::LaunchBoundaryData;
 use runhaven_core::ui_contracts::LaunchNetworkData;
 use runhaven_core::ui_contracts::LaunchPlanData;
+use runhaven_core::ui_contracts::RunControlResultData;
 use runhaven_core::ui_contracts::RunHistoryListData;
 use runhaven_core::ui_contracts::RunHistorySummaryData;
 
@@ -65,6 +66,30 @@ fn runhaven_mvp_snapshot_matrix() {
         120,
         48,
         active_runs_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_run_control_stop_80x24",
+        80,
+        24,
+        run_control_stop_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_run_control_stop_120x48",
+        120,
+        48,
+        run_control_stop_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_run_control_result_80x24",
+        80,
+        24,
+        run_control_result_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_run_control_result_120x48",
+        120,
+        48,
+        run_control_result_view(),
     );
     snapshot_static_screen(
         "runhaven_mvp_log_confirmation_80x24",
@@ -213,6 +238,39 @@ fn active_runs_view() -> RunHavenMvpView {
         },
         selected_idx: 0,
         notice: None,
+    }));
+    view
+}
+
+fn run_control_stop_view() -> RunHavenMvpView {
+    let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
+    view.screen = MvpScreen::RunControl(Box::new(RunControlScreen {
+        run: active_run(),
+        action: RunControlAction::Stop,
+        state: RunControlState::Confirm {
+            typed: String::new(),
+            notice: None,
+        },
+    }));
+    view
+}
+
+fn run_control_result_view() -> RunHavenMvpView {
+    let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
+    view.screen = MvpScreen::RunControl(Box::new(RunControlScreen {
+        run: active_run(),
+        action: RunControlAction::Repair,
+        state: RunControlState::Complete(RunControlResultData {
+            action: "repair".to_string(),
+            run_id: "run-20260629-001".to_string(),
+            container_name: "runhaven-codex-project-run".to_string(),
+            return_code: Some(1),
+            status: "removed".to_string(),
+            marker_removed: Some(true),
+            message:
+                "Removed stale active marker for run run-20260629-001 (runhaven-codex-project-run)."
+                    .to_string(),
+        }),
     }));
     view
 }

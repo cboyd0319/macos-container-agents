@@ -6,7 +6,7 @@ expression: rendered
   RunHaven v0.5.0  Active runs
   1 Launch  2 Runs  3 Diagnostics  h History
 
-  Enter opens a raw log confirmation for the selected run.
+  Enter opens logs. s Stop. K Hard stop. x Repair marker. r Refresh.
 
   > run-20260629-001  codex  provider  running
 

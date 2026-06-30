@@ -58,3 +58,29 @@ fn run_log_snapshot_request_uses_runhaven_method() {
     assert_eq!(request.request_id(), 42);
     assert_eq!(request.method(), "runhaven/run/logSnapshot");
 }
+
+#[test]
+fn run_control_requests_use_runhaven_methods() {
+    let stop = ClientRequest::RunHavenRunStop {
+        request_id: 43,
+        run_id: "run-123".to_string(),
+        confirm_stop: true,
+    };
+    let kill = ClientRequest::RunHavenRunKill {
+        request_id: 44,
+        run_id: "run-123".to_string(),
+        confirm_kill: true,
+    };
+    let repair = ClientRequest::RunHavenRunRepair {
+        request_id: 45,
+        run_id: "run-123".to_string(),
+        confirm_repair: true,
+    };
+
+    assert_eq!(stop.request_id(), 43);
+    assert_eq!(stop.method(), "runhaven/run/stop");
+    assert_eq!(kill.request_id(), 44);
+    assert_eq!(kill.method(), "runhaven/run/kill");
+    assert_eq!(repair.request_id(), 45);
+    assert_eq!(repair.method(), "runhaven/run/repair");
+}

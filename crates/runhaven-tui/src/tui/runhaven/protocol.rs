@@ -27,6 +27,21 @@ pub(crate) enum ClientRequest {
         lines: u32,
         confirm_sensitive_output: bool,
     },
+    RunHavenRunStop {
+        request_id: RequestId,
+        run_id: String,
+        confirm_stop: bool,
+    },
+    RunHavenRunKill {
+        request_id: RequestId,
+        run_id: String,
+        confirm_kill: bool,
+    },
+    RunHavenRunRepair {
+        request_id: RequestId,
+        run_id: String,
+        confirm_repair: bool,
+    },
     Unsupported {
         request_id: RequestId,
         method: UnsupportedMethod,
@@ -46,6 +61,9 @@ impl ClientRequest {
             | Self::RunHavenDiagnostics { request_id, .. }
             | Self::RunHavenValidateWorkspace { request_id, .. }
             | Self::RunHavenRunLogSnapshot { request_id, .. }
+            | Self::RunHavenRunStop { request_id, .. }
+            | Self::RunHavenRunKill { request_id, .. }
+            | Self::RunHavenRunRepair { request_id, .. }
             | Self::Unsupported { request_id, .. } => *request_id,
             #[cfg(test)]
             Self::BackendFailureForTest { request_id, .. } => *request_id,
@@ -59,6 +77,9 @@ impl ClientRequest {
             Self::RunHavenDiagnostics { .. } => "runhaven/diagnostics",
             Self::RunHavenValidateWorkspace { .. } => "runhaven/workspace/validate",
             Self::RunHavenRunLogSnapshot { .. } => "runhaven/run/logSnapshot",
+            Self::RunHavenRunStop { .. } => "runhaven/run/stop",
+            Self::RunHavenRunKill { .. } => "runhaven/run/kill",
+            Self::RunHavenRunRepair { .. } => "runhaven/run/repair",
             Self::Unsupported { method, .. } => method.method(),
             #[cfg(test)]
             Self::BackendFailureForTest { .. } => "runhaven/test/backendFailure",

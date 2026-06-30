@@ -31,6 +31,9 @@ use super::HistoryScreen;
 use super::LOG_CONFIRM_PHRASE;
 use super::MvpScreen;
 use super::PostRunOutcome;
+use super::RunControlAction;
+use super::RunControlScreen;
+use super::RunControlState;
 use super::RunHavenMvpView;
 use super::RunLogsScreen;
 use super::RunLogsState;
@@ -40,6 +43,7 @@ pub(super) fn render(view: &RunHavenMvpView, area: Rect, buf: &mut Buffer) {
         MvpScreen::Launch => view.launch.render(area, buf),
         MvpScreen::ActiveRuns(screen) => render_active_runs(screen, area, buf),
         MvpScreen::RunLogs(screen) => render_run_logs(screen, area, buf),
+        MvpScreen::RunControl(screen) => render_run_control(screen, area, buf),
         MvpScreen::History(screen) => render_history(screen, area, buf),
         MvpScreen::Diagnostics(screen) => render_diagnostics(screen, area, buf),
         MvpScreen::PostRun(outcome) => render_post_run(outcome, area, buf),
@@ -55,6 +59,10 @@ pub(super) fn desired_height(view: &RunHavenMvpView, width: u16) -> u16 {
         }
         MvpScreen::RunLogs(screen) => {
             paragraph(run_logs_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+        }
+        MvpScreen::RunControl(screen) => {
+            paragraph(run_control_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16
+                + 2
         }
         MvpScreen::History(screen) => {
             paragraph(history_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
@@ -83,7 +91,7 @@ fn active_runs_lines(screen: &ActiveRunsScreen) -> Vec<Line<'static>> {
         return lines;
     }
     lines.push(Line::from(
-        "Enter opens a raw log confirmation for the selected run.",
+        "Enter opens logs. s Stop. K Hard stop. x Repair marker. r Refresh.",
     ));
     lines.push(Line::from(""));
     for (idx, run) in screen.runs.runs.iter().enumerate() {
@@ -132,6 +140,125 @@ fn active_runs_lines(screen: &ActiveRunsScreen) -> Vec<Line<'static>> {
         lines.push(Line::from(Span::styled(notice.clone(), warning_style())));
     }
     lines
+}
+
+fn render_run_control(screen: &RunControlScreen, area: Rect, buf: &mut Buffer) {
+    render_panel(area, buf, run_control_lines(screen));
+}
+
+fn run_control_lines(screen: &RunControlScreen) -> Vec<Line<'static>> {
+    let mut lines = vec![
+        header_line(screen.action.title()),
+        tab_line(),
+        Line::from("This action only targets the selected RunHaven-owned container."),
+        Line::from(""),
+        label_value("Run ID", screen.run.run_id.clone(), boundary_style()),
+        label_value("Profile", screen.run.profile.clone(), accent_style()),
+        label_value(
+            "Container",
+            screen.run.container_name.clone(),
+            muted_but_readable_style(),
+        ),
+        label_value(
+            "Status",
+            screen.run.status.clone(),
+            status_style(&screen.run.status),
+        ),
+        Line::from(""),
+    ];
+
+    match &screen.state {
+        RunControlState::Confirm { typed, notice } => {
+            lines.push(Line::from(Span::styled(
+                run_control_warning(screen.action),
+                warning_style(),
+            )));
+            lines.push(Line::from(vec![
+                Span::raw("Type "),
+                Span::styled(screen.action.phrase(), selected_row_style()),
+                Span::raw(", then press Enter."),
+            ]));
+            lines.push(label_value(
+                "Typed",
+                typed.clone(),
+                muted_but_readable_style(),
+            ));
+            if let Some(notice) = notice {
+                lines.push(Line::from(Span::styled(notice.clone(), warning_style())));
+            }
+        }
+        RunControlState::Complete(result) => {
+            lines.push(Line::from(Span::styled(
+                result.message.clone(),
+                result_style(&result.status),
+            )));
+            lines.push(label_value(
+                "Result",
+                result.status.clone(),
+                result_style(&result.status),
+            ));
+            if let Some(code) = result.return_code {
+                lines.push(label_value(
+                    "Exit code",
+                    code.to_string(),
+                    if code == 0 {
+                        safe_style()
+                    } else {
+                        warning_style()
+                    },
+                ));
+            }
+            if let Some(marker_removed) = result.marker_removed {
+                lines.push(label_value(
+                    "Marker",
+                    if marker_removed { "removed" } else { "kept" },
+                    if marker_removed {
+                        safe_style()
+                    } else {
+                        warning_style()
+                    },
+                ));
+            }
+            lines.push(Line::from(""));
+            lines.push(Line::from(
+                "Press r to refresh active runs, or Esc to go back.",
+            ));
+        }
+        RunControlState::Error(message) => {
+            lines.push(Line::from(Span::styled(
+                "Run control failed.",
+                danger_style(),
+            )));
+            lines.push(Line::from(message.clone()));
+            lines.push(Line::from(""));
+            lines.push(Line::from(
+                "Press r to refresh active runs, or Esc to go back.",
+            ));
+        }
+    }
+    lines
+}
+
+fn run_control_warning(action: RunControlAction) -> &'static str {
+    match action {
+        RunControlAction::Stop => {
+            "Stop asks the container to exit cleanly. Work inside the agent may stop."
+        }
+        RunControlAction::Kill => {
+            "Hard stop kills the container now. Unsaved work inside the agent may be lost."
+        }
+        RunControlAction::Repair => {
+            "Repair checks whether the container still exists before changing the marker."
+        }
+    }
+}
+
+fn result_style(status: &str) -> Style {
+    match status {
+        "requested" | "removed" => safe_style(),
+        "kept" => warning_style(),
+        _ => danger_style(),
+    }
 }
 
 fn render_run_logs(screen: &RunLogsScreen, area: Rect, buf: &mut Buffer) {

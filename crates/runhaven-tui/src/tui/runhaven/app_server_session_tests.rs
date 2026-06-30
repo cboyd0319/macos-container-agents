@@ -96,3 +96,46 @@ async fn run_log_snapshot_requires_sensitive_output_confirmation_before_backend_
 
     session.shutdown().await.expect("shutdown");
 }
+
+#[tokio::test]
+async fn run_control_requires_confirmation_before_backend_lookup() {
+    let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
+
+    let error = session
+        .stop_run("not-a-real-run".to_string(), false)
+        .await
+        .expect_err("stop without confirmation should fail validation");
+    match error {
+        TypedRequestError::Validation { method, message } => {
+            assert_eq!(method, "runhaven/run/stop");
+            assert!(message.contains("Confirm stop"));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+
+    let error = session
+        .kill_run("not-a-real-run".to_string(), false)
+        .await
+        .expect_err("hard stop without confirmation should fail validation");
+    match error {
+        TypedRequestError::Validation { method, message } => {
+            assert_eq!(method, "runhaven/run/kill");
+            assert!(message.contains("Confirm hard stop"));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+
+    let error = session
+        .repair_run("not-a-real-run".to_string(), false)
+        .await
+        .expect_err("repair without confirmation should fail validation");
+    match error {
+        TypedRequestError::Validation { method, message } => {
+            assert_eq!(method, "runhaven/run/repair");
+            assert!(message.contains("Confirm repair"));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+
+    session.shutdown().await.expect("shutdown");
+}

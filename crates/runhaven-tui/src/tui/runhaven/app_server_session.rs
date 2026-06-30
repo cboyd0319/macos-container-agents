@@ -11,6 +11,7 @@ use std::time::Instant;
 use runhaven_core::ui_contracts::ActiveRunListData;
 use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::AgentCatalogData;
+use runhaven_core::ui_contracts::RunControlResultData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 
 use super::app_server_client::AppServerClient;
@@ -109,6 +110,51 @@ impl AppServerSession {
                 run_id,
                 lines,
                 confirm_sensitive_output,
+            })
+            .await
+    }
+
+    pub(crate) async fn stop_run(
+        &mut self,
+        run_id: String,
+        confirm_stop: bool,
+    ) -> Result<RunControlResultData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenRunStop {
+                request_id,
+                run_id,
+                confirm_stop,
+            })
+            .await
+    }
+
+    pub(crate) async fn kill_run(
+        &mut self,
+        run_id: String,
+        confirm_kill: bool,
+    ) -> Result<RunControlResultData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenRunKill {
+                request_id,
+                run_id,
+                confirm_kill,
+            })
+            .await
+    }
+
+    pub(crate) async fn repair_run(
+        &mut self,
+        run_id: String,
+        confirm_repair: bool,
+    ) -> Result<RunControlResultData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenRunRepair {
+                request_id,
+                run_id,
+                confirm_repair,
             })
             .await
     }

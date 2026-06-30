@@ -488,3 +488,53 @@ async fn log_snapshot_requires_sensitive_output_confirmation_before_backend_look
         other => panic!("expected validation error, got {other:?}"),
     }
 }
+
+#[tokio::test]
+async fn run_control_requires_typed_confirmation_before_backend_lookup() {
+    let service = RunHavenTuiService::new();
+    for (request, method, expected) in [
+        (
+            ClientRequest::RunHavenRunStop {
+                request_id: 43,
+                run_id: "not-a-real-run".to_string(),
+                confirm_stop: false,
+            },
+            "runhaven/run/stop",
+            "Confirm stop",
+        ),
+        (
+            ClientRequest::RunHavenRunKill {
+                request_id: 44,
+                run_id: "not-a-real-run".to_string(),
+                confirm_kill: false,
+            },
+            "runhaven/run/kill",
+            "Confirm hard stop",
+        ),
+        (
+            ClientRequest::RunHavenRunRepair {
+                request_id: 45,
+                run_id: "not-a-real-run".to_string(),
+                confirm_repair: false,
+            },
+            "runhaven/run/repair",
+            "Confirm repair",
+        ),
+    ] {
+        let error = service
+            .handle_request(request)
+            .await
+            .expect_err("missing run-control confirmation should fail validation");
+
+        match error {
+            RunHavenServiceError::Validation {
+                method: actual,
+                message,
+            } => {
+                assert_eq!(actual, method);
+                assert!(message.contains(expected), "{message}");
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+    }
+}

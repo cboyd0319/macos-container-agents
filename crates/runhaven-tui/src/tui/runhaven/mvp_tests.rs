@@ -95,6 +95,65 @@ fn active_runs_view_omits_workspace_paths_and_opens_log_confirmation() {
 }
 
 #[test]
+fn active_runs_run_controls_open_separate_typed_confirmation_screens() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    write_active_run_payload(
+        "run-123",
+        serde_json::json!({
+            "timestamp": "2026-06-29T00:00:00Z",
+            "run_id": "run-123",
+            "profile": "codex",
+            "workspace": "/Users/c/secret/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-project-run",
+            "state_volume": "runhaven-codex-shared-home",
+            "session": "none"
+        }),
+    )
+    .expect("active marker");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
+
+    view.handle_key_event(key(KeyCode::Char('2')));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("s Stop"));
+    assert!(output.contains("K Hard stop"));
+    assert!(output.contains("x Repair marker"));
+
+    view.handle_key_event(key(KeyCode::Char('s')));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Stop run"));
+    assert!(output.contains("Type stop"));
+    assert!(output.contains("run-123"));
+    assert!(output.contains("runhaven-codex-project-run"));
+    assert!(!output.contains("/Users/c/secret/project"));
+
+    view.handle_key_event(key(KeyCode::Enter));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Type stop before stopping this run."));
+
+    assert!(view.handle_paste("stop".to_string()));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Paste is ignored"));
+
+    view.handle_key_event(key(KeyCode::Esc));
+    view.handle_key_event(key(KeyCode::Char('K')));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Hard stop run"));
+    assert!(output.contains("Type kill"));
+    assert!(!output.contains("/Users/c/secret/project"));
+
+    view.handle_key_event(key(KeyCode::Esc));
+    view.handle_key_event(key(KeyCode::Char('x')));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Repair marker"));
+    assert!(output.contains("Type repair"));
+    assert!(!output.contains("/Users/c/secret/project"));
+}
+
+#[test]
 fn history_view_lists_run_records_without_workspace_paths() {
     let cache = tempfile::tempdir().expect("cache");
     let _cache_home = override_cache_root_for_tests(cache.path());

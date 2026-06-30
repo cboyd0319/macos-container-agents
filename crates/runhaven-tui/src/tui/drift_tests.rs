@@ -649,6 +649,77 @@ fn foreground_runtime_launch_call_stays_in_ui_thread_handoff_owner() {
 }
 
 #[test]
+fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
+    let service_source = include_str!("runhaven/service.rs");
+    let protocol_source = include_str!("runhaven/protocol.rs");
+    let session_source = include_str!("runhaven/app_server_session.rs");
+    let mvp_source = include_str!("runhaven/mvp.rs");
+    let app_shell_source = include_str!("app_shell.rs");
+
+    for marker in [
+        ["stop", "_active", "_run"].concat(),
+        ["kill", "_active", "_run"].concat(),
+        ["repair", "_active", "_run"].concat(),
+    ] {
+        let owners = tui_rust_sources()
+            .into_iter()
+            .filter_map(|path| {
+                let relative = relative_tui_source(&path);
+                if relative == std::path::Path::new("drift_tests.rs") {
+                    return None;
+                }
+                let source = std::fs::read_to_string(&path).expect("source should be readable");
+                source
+                    .contains(&marker)
+                    .then(|| relative.display().to_string())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            owners,
+            ["runhaven/service.rs"],
+            "direct core run-control call {marker:?} must stay in the RunHaven TUI service"
+        );
+    }
+
+    assert!(
+        service_source.contains("validate_run_control_confirmation")
+            && service_source.contains("Confirm stop before stopping this run.")
+            && service_source.contains("Confirm hard stop before killing this run.")
+            && service_source.contains("Confirm repair before changing this active-run marker."),
+        "run-control service calls must validate explicit confirmation before backend lookup"
+    );
+    assert!(
+        protocol_source.contains("RunHavenRunStop")
+            && protocol_source.contains("RunHavenRunKill")
+            && protocol_source.contains("RunHavenRunRepair")
+            && session_source.contains("RunHavenRunStop")
+            && session_source.contains("RunHavenRunKill")
+            && session_source.contains("RunHavenRunRepair"),
+        "app-server facade must expose only the reviewed RunHaven run-control methods"
+    );
+    assert!(
+        mvp_source.contains("RunControlState::Confirm")
+            && mvp_source.contains("typed.trim() != screen.action.phrase()")
+            && mvp_source.contains("Paste is ignored here."),
+        "TUI run-control screens must keep separate typed confirmation and reject paste"
+    );
+    for marker in [
+        "stop_active_run",
+        "kill_active_run",
+        "repair_active_run",
+        "RunHavenRunStop",
+        "RunHavenRunKill",
+        "RunHavenRunRepair",
+    ] {
+        assert!(
+            !app_shell_source.contains(marker),
+            "app_shell.rs must not own run-control marker {marker:?}"
+        );
+    }
+}
+
+#[test]
 fn app_event_shared_shrinks_only() {
     let source = include_str!("app_event_shared.rs");
     let inline_modules = top_level_inline_module_declarations(source);

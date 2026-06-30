@@ -14,6 +14,7 @@ use runhaven_core::ui_contracts::ActiveRunListData;
 use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::ActiveRunSummaryData;
 use runhaven_core::ui_contracts::LaunchPlanData;
+use runhaven_core::ui_contracts::RunControlResultData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 use runhaven_core::ui_contracts::RunHistoryListData;
 use runhaven_core::ui_contracts::RunHistorySummaryData;
@@ -81,6 +82,7 @@ enum MvpScreen {
     Launch,
     ActiveRuns(Box<ActiveRunsScreen>),
     RunLogs(Box<RunLogsScreen>),
+    RunControl(Box<RunControlScreen>),
     History(Box<HistoryScreen>),
     Diagnostics(Box<DiagnosticsScreen>),
     PostRun(Box<PostRunOutcome>),
@@ -107,6 +109,68 @@ enum RunLogsState {
     },
     Loaded(ActiveRunLogSnapshotData),
     Error(String),
+}
+
+#[derive(Clone)]
+struct RunControlScreen {
+    run: ActiveRunSummaryData,
+    action: RunControlAction,
+    state: RunControlState,
+}
+
+#[derive(Clone)]
+enum RunControlState {
+    Confirm {
+        typed: String,
+        notice: Option<String>,
+    },
+    Complete(RunControlResultData),
+    Error(String),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RunControlAction {
+    Stop,
+    Kill,
+    Repair,
+}
+
+impl RunControlAction {
+    fn title(self) -> &'static str {
+        match self {
+            Self::Stop => "Stop run",
+            Self::Kill => "Hard stop run",
+            Self::Repair => "Repair marker",
+        }
+    }
+
+    fn phrase(self) -> &'static str {
+        match self {
+            Self::Stop => "stop",
+            Self::Kill => "kill",
+            Self::Repair => "repair",
+        }
+    }
+
+    fn method(self) -> &'static str {
+        match self {
+            Self::Stop => "runhaven/run/stop",
+            Self::Kill => "runhaven/run/kill",
+            Self::Repair => "runhaven/run/repair",
+        }
+    }
+
+    fn missing_confirmation_notice(self) -> &'static str {
+        match self {
+            Self::Stop => "Type stop before stopping this run.",
+            Self::Kill => "Type kill before hard-stopping this run.",
+            Self::Repair => "Type repair before changing this active-run marker.",
+        }
+    }
+
+    fn paste_notice(self) -> String {
+        format!("Type {} by hand. Paste is ignored here.", self.phrase())
+    }
 }
 
 #[derive(Clone)]
@@ -224,6 +288,24 @@ impl RunHavenMvpView {
         }));
     }
 
+    fn show_run_control_for_selected_run(&mut self, action: RunControlAction) {
+        let Some(run) = self
+            .active_runs_screen()
+            .and_then(ActiveRunsScreen::selected_run)
+            .cloned()
+        else {
+            return;
+        };
+        self.screen = MvpScreen::RunControl(Box::new(RunControlScreen {
+            run,
+            action,
+            state: RunControlState::Confirm {
+                typed: String::new(),
+                notice: None,
+            },
+        }));
+    }
+
     fn active_runs_screen(&self) -> Option<&ActiveRunsScreen> {
         match &self.screen {
             MvpScreen::ActiveRuns(screen) => Some(screen),
@@ -234,7 +316,9 @@ impl RunHavenMvpView {
     fn cycle_section(&mut self) {
         match self.screen {
             MvpScreen::Launch => self.show_active_runs(),
-            MvpScreen::ActiveRuns(_) | MvpScreen::RunLogs(_) => self.show_history(),
+            MvpScreen::ActiveRuns(_) | MvpScreen::RunLogs(_) | MvpScreen::RunControl(_) => {
+                self.show_history();
+            }
             MvpScreen::History(_) => self.show_diagnostics(),
             MvpScreen::Diagnostics(_) | MvpScreen::PostRun(_) => self.show_launch(),
         }
@@ -309,6 +393,30 @@ impl RunHavenMvpView {
             KeyCode::Tab | KeyCode::Char('3') => ActiveRunAction::Diagnostics,
             KeyCode::Char('4') | KeyCode::Char('h') => ActiveRunAction::History,
             KeyCode::Char('r') => ActiveRunAction::Refresh,
+            KeyCode::Char('s') => {
+                if screen.selected_run().is_some() {
+                    ActiveRunAction::Control(RunControlAction::Stop)
+                } else {
+                    screen.notice = Some("No active runs are available.".to_string());
+                    ActiveRunAction::None
+                }
+            }
+            KeyCode::Char('K') => {
+                if screen.selected_run().is_some() {
+                    ActiveRunAction::Control(RunControlAction::Kill)
+                } else {
+                    screen.notice = Some("No active runs are available.".to_string());
+                    ActiveRunAction::None
+                }
+            }
+            KeyCode::Char('x') => {
+                if screen.selected_run().is_some() {
+                    ActiveRunAction::Control(RunControlAction::Repair)
+                } else {
+                    screen.notice = Some("No active runs are available.".to_string());
+                    ActiveRunAction::None
+                }
+            }
             KeyCode::Up | KeyCode::Char('k') => {
                 screen.select_previous();
                 ActiveRunAction::None
@@ -379,6 +487,59 @@ impl RunHavenMvpView {
                 _ => {}
             },
         }
+    }
+
+    fn handle_run_control_key(&mut self, key_event: KeyEvent) {
+        let mut execute = None;
+        let MvpScreen::RunControl(screen) = &mut self.screen else {
+            return;
+        };
+        match &mut screen.state {
+            RunControlState::Confirm { typed, notice } => match key_event.code {
+                KeyCode::Esc => self.show_active_runs(),
+                KeyCode::Backspace => {
+                    typed.pop();
+                    *notice = None;
+                }
+                KeyCode::Enter => {
+                    if typed.trim() != screen.action.phrase() {
+                        *notice = Some(screen.action.missing_confirmation_notice().to_string());
+                        return;
+                    }
+                    execute = Some((screen.action, screen.run.run_id.clone()));
+                }
+                KeyCode::Char(ch) => {
+                    typed.push(ch);
+                    *notice = None;
+                }
+                _ => {}
+            },
+            RunControlState::Complete(_) | RunControlState::Error(_) => match key_event.code {
+                KeyCode::Esc | KeyCode::Char('2') | KeyCode::Char('r') => self.show_active_runs(),
+                KeyCode::Char('1') => self.show_launch(),
+                KeyCode::Tab | KeyCode::Char('3') => self.show_diagnostics(),
+                KeyCode::Char('4') | KeyCode::Char('h') => self.show_history(),
+                _ => {}
+            },
+        }
+
+        if let Some((action, run_id)) = execute {
+            let state = self.run_control_result_state(action, &run_id);
+            if let MvpScreen::RunControl(screen) = &mut self.screen {
+                screen.state = state;
+            }
+        }
+    }
+
+    fn run_control_result_state(&self, action: RunControlAction, run_id: &str) -> RunControlState {
+        let result = match action {
+            RunControlAction::Stop => self.service.stop_run_data(run_id, true, action.method()),
+            RunControlAction::Kill => self.service.kill_run_data(run_id, true, action.method()),
+            RunControlAction::Repair => self.service.repair_run_data(run_id, true, action.method()),
+        };
+        result
+            .map(RunControlState::Complete)
+            .unwrap_or_else(|error| RunControlState::Error(error.to_string()))
     }
 
     fn handle_diagnostics_key(&mut self, key_event: KeyEvent) {
@@ -452,6 +613,13 @@ impl RunHavenMvpView {
                 Span::raw(" · "),
                 Span::styled("raw output", warning_style()),
             ]),
+            MvpScreen::RunControl(screen) => Line::from(vec![
+                Span::styled("RunHaven", selected_row_style()),
+                Span::raw(" · run control · "),
+                Span::styled(screen.action.phrase(), warning_style()),
+                Span::raw(" · "),
+                Span::styled(screen.run.run_id.clone(), boundary_style()),
+            ]),
             MvpScreen::Diagnostics(_) => Line::from(vec![
                 Span::styled("RunHaven", selected_row_style()),
                 Span::raw(" · diagnostics · "),
@@ -488,6 +656,7 @@ enum ActiveRunAction {
     History,
     Refresh,
     OpenLogs,
+    Control(RunControlAction),
 }
 
 impl ActiveRunsScreen {
@@ -559,9 +728,13 @@ impl BottomPaneView for RunHavenMvpView {
                     ActiveRunAction::History => self.show_history(),
                     ActiveRunAction::Refresh => self.show_active_runs(),
                     ActiveRunAction::OpenLogs => self.show_logs_for_selected_run(),
+                    ActiveRunAction::Control(action) => {
+                        self.show_run_control_for_selected_run(action);
+                    }
                 }
             }
             MvpScreen::RunLogs(_) => self.handle_logs_key(key_event),
+            MvpScreen::RunControl(_) => self.handle_run_control_key(key_event),
             MvpScreen::History(_) => self.handle_history_key(key_event),
             MvpScreen::Diagnostics(_) => self.handle_diagnostics_key(key_event),
             MvpScreen::PostRun(_) => self.handle_post_run_key(key_event),
@@ -597,6 +770,13 @@ impl BottomPaneView for RunHavenMvpView {
             MvpScreen::Launch => self.launch.terminal_title(),
             MvpScreen::ActiveRuns(_) => "RunHaven | Active runs".to_string(),
             MvpScreen::RunLogs(screen) => format!("RunHaven | Logs | {}", screen.run.run_id),
+            MvpScreen::RunControl(screen) => {
+                format!(
+                    "RunHaven | {} | {}",
+                    screen.action.title(),
+                    screen.run.run_id
+                )
+            }
             MvpScreen::History(_) => "RunHaven | History".to_string(),
             MvpScreen::Diagnostics(_) => "RunHaven | Diagnostics".to_string(),
             MvpScreen::PostRun(outcome) => {
@@ -614,6 +794,9 @@ impl BottomPaneView for RunHavenMvpView {
         match &self.screen {
             MvpScreen::Launch => self.launch.accepts_text_input(),
             MvpScreen::RunLogs(screen) => matches!(screen.state, RunLogsState::Confirm { .. }),
+            MvpScreen::RunControl(screen) => {
+                matches!(screen.state, RunControlState::Confirm { .. })
+            }
             _ => false,
         }
     }
@@ -636,10 +819,30 @@ impl BottomPaneView for RunHavenMvpView {
                 ("up/down".to_string(), "choose".to_string()),
                 ("enter".to_string(), "logs".to_string()),
                 ("r".to_string(), "refresh".to_string()),
+                ("s".to_string(), "stop".to_string()),
+                ("K".to_string(), "hard stop".to_string()),
+                ("x".to_string(), "repair marker".to_string()),
                 ("1".to_string(), "launch".to_string()),
                 ("3".to_string(), "diagnostics".to_string()),
                 ("h".to_string(), "history".to_string()),
             ],
+            MvpScreen::RunControl(screen) => match screen.state {
+                RunControlState::Confirm { .. } => vec![
+                    (
+                        screen.action.phrase().to_string(),
+                        "type to confirm".to_string(),
+                    ),
+                    ("enter".to_string(), "run".to_string()),
+                    ("esc".to_string(), "back".to_string()),
+                ],
+                RunControlState::Complete(_) | RunControlState::Error(_) => vec![
+                    ("r".to_string(), "refresh runs".to_string()),
+                    ("esc".to_string(), "back".to_string()),
+                    ("1".to_string(), "launch".to_string()),
+                    ("3".to_string(), "diagnostics".to_string()),
+                    ("h".to_string(), "history".to_string()),
+                ],
+            },
             MvpScreen::RunLogs(screen) => match screen.state {
                 RunLogsState::Confirm { .. } => vec![
                     ("logs".to_string(), "type to load".to_string()),
@@ -704,6 +907,15 @@ impl BottomPaneView for RunHavenMvpView {
                     *notice = Some(format!(
                         "Type {LOG_CONFIRM_PHRASE} by hand. Paste is ignored here."
                     ));
+                    return true;
+                }
+                false
+            }
+            MvpScreen::RunControl(screen) => {
+                if let RunControlState::Confirm { notice, .. } = &mut screen.state
+                    && !pasted.is_empty()
+                {
+                    *notice = Some(screen.action.paste_notice());
                     return true;
                 }
                 false

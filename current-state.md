@@ -38,9 +38,9 @@ active until the RunHaven-only workflow is complete and verified:
   review, exact-command review, typed confirmation when required, terminal
   restore, foreground launch handoff, and post-run recovery all work through
   `PreparedLaunch` and `AgentRunPlan`.
-- Run operation: active-run status, bounded readable logs, confirmation-gated
-  raw output, failure states, and remediation text are visible without exposing
-  workspace paths or secrets.
+- Run operation: active-run status, typed stop/hard-stop/repair controls,
+  bounded readable logs, confirmation-gated raw output, failure states, and
+  remediation text are visible without exposing workspace paths or secrets.
 - Diagnostics: doctor/preflight, provider egress, auth status/log metadata,
   terminal capability status, and common blocked-state guidance are reachable
   from the TUI and stay secret-free.
@@ -1452,6 +1452,21 @@ Latest TUI preflight diagnostics surface:
   `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
   scan, and diff check.
 
+## Latest TUI Slice
+
+- 2026-06-30: Promoted TUI run-control from a gap into a guarded RunHaven
+  surface. Active Runs now opens separate Stop, Hard stop, and Repair marker
+  screens; each requires typing `stop`, `kill`, or `repair` before the service
+  calls the shared `runhaven-core` stop/kill/repair function. Run-control
+  results use `RunControlResultData`, the app-server facade has explicit
+  RunHaven methods for those three actions, snapshots cover confirmation and
+  result states, and a drift guard keeps direct run-control calls inside
+  `runhaven/service.rs` instead of `app_shell.rs` or dormant Codex surfaces.
+  Verified with focused run-control tests, the full `runhaven-core` and
+  `runhaven-tui` suites, `codex-vendored-tests` no-run, clippy for
+  `runhaven-core` and `runhaven-tui`, pin policy, Codex TUI compare, JSON
+  validation, snap-new scan, and diff check.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -1462,8 +1477,8 @@ The next work is a hardest-first full-TUI gap analysis and completion plan for
 `v0.6.0`. Start from the verified checkpoint plus run-history and preflight
 diagnostics surfaces, then close the highest-risk RunHaven needs before
 low-risk polish: final launch UX, active-run/log UX, failure recovery,
-run-control or CLI fallback text, diff/worktree review or CLI fallback text,
-cleanup guidance, Cubby/pet/terminal image/Zork decisions, and whether native
+diff/worktree review or CLI fallback text, cleanup guidance,
+Cubby/pet/terminal image/Zork decisions, and whether native
 `App` or `ChatWidget` should stay dormant or be promoted. Keep native `App` and
 `ChatWidget` dormant unless the full-TUI scope genuinely needs that specific
 owner. If native `App` startup is promoted, first replace raw Codex env/path

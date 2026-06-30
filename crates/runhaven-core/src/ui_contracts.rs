@@ -14,6 +14,7 @@ pub enum RunHavenComponentPayload {
     LaunchPlan(Box<LaunchPlanData>),
     ActiveRunList(ActiveRunListData),
     ActiveRunLogSnapshot(Box<ActiveRunLogSnapshotData>),
+    RunControlResult(Box<RunControlResultData>),
     Diagnostics(Box<RunHavenDiagnosticsData>),
 }
 
@@ -86,6 +87,18 @@ pub struct ActiveRunLogSnapshotData {
     pub truncated: bool,
     pub source: String,
     pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunControlResultData {
+    pub action: String,
+    pub run_id: String,
+    pub container_name: String,
+    pub return_code: Option<i32>,
+    pub status: String,
+    pub marker_removed: Option<bool>,
+    pub message: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -397,6 +410,100 @@ impl ActiveRunLogSnapshotData {
             source: raw.source,
             warnings: raw.warnings,
         })
+    }
+}
+
+impl RunControlResultData {
+    pub fn from_stop_payload(value: serde_json::Value) -> serde_json::Result<Self> {
+        Self::from_stop_or_kill_payload("stop", value)
+    }
+
+    pub fn from_kill_payload(value: serde_json::Value) -> serde_json::Result<Self> {
+        Self::from_stop_or_kill_payload("kill", value)
+    }
+
+    pub fn from_repair_payload(value: serde_json::Value) -> serde_json::Result<Self> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        struct RawRepairResult {
+            run_id: String,
+            container_name: String,
+            inspect_return_code: i32,
+            marker_removed: bool,
+            status: String,
+        }
+
+        let raw: RawRepairResult = serde_json::from_value(value)?;
+        let run_id = strip_terminal_controls(&raw.run_id);
+        let container_name = strip_terminal_controls(&raw.container_name);
+        let status = strip_terminal_controls(&raw.status);
+        Ok(Self {
+            action: "repair".to_string(),
+            return_code: Some(raw.inspect_return_code),
+            marker_removed: Some(raw.marker_removed),
+            message: repair_message(&run_id, &container_name, &status),
+            run_id,
+            container_name,
+            status,
+        })
+    }
+
+    fn from_stop_or_kill_payload(
+        action: &'static str,
+        value: serde_json::Value,
+    ) -> serde_json::Result<Self> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        struct RawRunControlResult {
+            run_id: String,
+            container_name: String,
+            return_code: i32,
+        }
+
+        let raw: RawRunControlResult = serde_json::from_value(value)?;
+        let run_id = strip_terminal_controls(&raw.run_id);
+        let container_name = strip_terminal_controls(&raw.container_name);
+        let status = if raw.return_code == 0 {
+            "requested"
+        } else {
+            "failed"
+        }
+        .to_string();
+        Ok(Self {
+            action: action.to_string(),
+            return_code: Some(raw.return_code),
+            marker_removed: None,
+            message: stop_or_kill_message(action, &run_id, &container_name, raw.return_code),
+            run_id,
+            container_name,
+            status,
+        })
+    }
+}
+
+fn stop_or_kill_message(
+    action: &str,
+    run_id: &str,
+    container_name: &str,
+    return_code: i32,
+) -> String {
+    let label = if action == "kill" {
+        "Hard stop"
+    } else {
+        "Stop"
+    };
+    if return_code == 0 {
+        format!("{label} requested for run {run_id} ({container_name}).")
+    } else {
+        format!("{label} failed for run {run_id} ({container_name}) with exit code {return_code}.")
+    }
+}
+
+fn repair_message(run_id: &str, container_name: &str, status: &str) -> String {
+    match status {
+        "removed" => format!("Removed stale active marker for run {run_id} ({container_name})."),
+        "kept" => format!("Kept active marker for run {run_id}; the container still exists."),
+        _ => format!("Could not verify active marker for run {run_id} ({container_name})."),
     }
 }
 
@@ -757,6 +864,56 @@ mod tests {
         let decoded: RunHavenComponentPayload =
             serde_json::from_value(encoded).expect("deserialize snapshot payload");
 
+        assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn run_control_result_contract_maps_core_payloads_to_ui_shape() {
+        let stop = RunControlResultData::from_stop_payload(serde_json::json!({
+            "run_id": "run-123",
+            "container_name": "runhaven-codex-project-run",
+            "return_code": 0
+        }))
+        .expect("stop result data");
+
+        assert_eq!(stop.action, "stop");
+        assert_eq!(stop.run_id, "run-123");
+        assert_eq!(stop.container_name, "runhaven-codex-project-run");
+        assert_eq!(stop.return_code, Some(0));
+        assert_eq!(stop.status, "requested");
+        assert_eq!(stop.marker_removed, None);
+        assert!(stop.message.contains("Stop requested"));
+
+        let repair = RunControlResultData::from_repair_payload(serde_json::json!({
+            "run_id": "run-456",
+            "container_name": "runhaven-codex-stale-run",
+            "inspect_return_code": 1,
+            "marker_removed": true,
+            "status": "removed"
+        }))
+        .expect("repair result data");
+
+        assert_eq!(repair.action, "repair");
+        assert_eq!(repair.run_id, "run-456");
+        assert_eq!(repair.return_code, Some(1));
+        assert_eq!(repair.status, "removed");
+        assert_eq!(repair.marker_removed, Some(true));
+        assert!(repair.message.contains("Removed stale active marker"));
+
+        let payload = RunHavenComponentPayload::RunControlResult(Box::new(repair.clone()));
+        let encoded = serde_json::to_value(&payload).expect("serialize run control payload");
+        assert_eq!(
+            encoded.get("type").and_then(serde_json::Value::as_str),
+            Some("runControlResult")
+        );
+        let data = encoded.get("data").expect("run control data");
+        assert!(data.get("runId").is_some());
+        assert!(data.get("containerName").is_some());
+        assert!(data.get("returnCode").is_some());
+        assert!(data.get("markerRemoved").is_some());
+        assert!(data.get("run_id").is_none());
+        let decoded: RunHavenComponentPayload =
+            serde_json::from_value(encoded).expect("deserialize run control payload");
         assert_eq!(decoded, payload);
     }
 
