@@ -1,0 +1,25 @@
+{
+  "type": "agentCatalog",
+  "data": {
+    "agents": [
+      {
+        "name": "codex",
+        "description": "OpenAI Codex CLI with workspace-write sandboxing inside the container.",
+        "image": "runhaven/codex:0.1.0",
+        "signIn": "runhaven login",
+        "broker": "yes",
+        "defaultNetwork": "provider",
+        "providerHostCount": 4
+      },
+      {
+        "name": "shell",
+        "description": "Generic shell profile for custom agent images.",
+        "image": "runhaven/base:0.1.0",
+        "signIn": "n/a",
+        "broker": "n/a",
+        "defaultNetwork": "internet",
+        "providerHostCount": 0
+      }
+    ]
+  }
+}

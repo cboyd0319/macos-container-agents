@@ -77,10 +77,10 @@ Focused checks:
 
 ```bash
 cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run --locked --bin runhaven-check-pins
-cargo build --locked
+cargo build --workspace --locked
 npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e
@@ -117,13 +117,24 @@ Tauri launch/run-control behavior.
   sentences, plain verbs, concrete nouns, and clear next actions. Keep exact
   commands, paths, hosts, and security facts when they matter; explain them in
   plain language instead of hiding them.
-- TUI source-first rule: for `src/runhaven/cli/tui/`, vendor or adapt from the
-  official local Codex TUI source at
+- TUI source-first rule: for `crates/runhaven-tui/src/tui/`, vendor or adapt
+  from the official local Codex TUI source at
   `/Users/c/Documents/GitHub/codex/codex-rs/tui` before writing custom code.
   Custom TUI code is allowed only for RunHaven domain data, security-boundary
   mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
   where no Codex equivalent exists. Document each exception in the TUI plan or
   architecture docs.
+- TUI direction: avoid non-RunHaven Codex product features. Use Codex TUI
+  architecture as the source-first terminal checkpoint, but finish only the
+  terminal surfaces that harden the shared RunHaven workflow: clean workspace
+  and agent selection, network/auth visibility, plan review, typed launch
+  confirmation, foreground launch handoff, post-run recovery, active-run
+  status/control, bounded logs, diagnostics/doctor guidance, and history or
+  run-record review when backed by existing core data. Leave Cubby/pet,
+  terminal-image, Zork, native Codex App, native ChatWidget, and unrelated
+  Codex product features dormant, fail-closed, parked, or documented unless
+  they harden the RunHaven boundary. After this branch is merged, shift product
+  focus to a native-feeling macOS GUI as the easy path for nontechnical users.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar
   size, take the one correct on edge cases; lazy means writing less code, not
@@ -139,12 +150,14 @@ Tauri launch/run-control behavior.
   If a touched file is already difficult to review or would become so, split it
   along existing boundaries in the same slice instead of creating large-file
   debt.
-- Keep `src/runhaven/` organized by ownership boundary. Shared/runtime behavior
-  lives under `doctor`, `diagnostics`, `image`, `provider`, `records`,
-  `runtime`, and `support`; `cli/` owns Clap dispatch and human presentation.
-  Internal `src/runhaven` code should import explicit module paths under
-  `crate::runhaven::...`; the flat `src/lib.rs` re-exports are a compatibility
-  facade for Tauri and external callers, not an internal service locator.
+- Keep the Rust workspace organized by ownership boundary. `crates/runhaven`
+  owns binary entrypoints only. `crates/runhaven-core` owns runtime, provider,
+  records, image, doctor, diagnostics, support, harness, and shared UI
+  contracts. `crates/runhaven-cli` owns Clap dispatch and human CLI
+  presentation. `crates/runhaven-tui` owns the Codex-vendored terminal UI and
+  RunHaven TUI adapters. `src-tauri` is a workspace member that depends on
+  `runhaven-core` through typed commands. Do not recreate a root compatibility
+  facade or put shared runtime truth in the CLI/TUI crates.
 - Use exact subprocess argument lists, not executable shell strings, for
   runtime command generation.
 - Keep direct dependencies, package manifests, runtime pins, and image package
@@ -160,6 +173,32 @@ Tauri launch/run-control behavior.
 - If code, files, docs, config, dependencies, or harness surface do not need to
   exist, delete them.
 - Do not add Windows or Linux runtime or contributor-verification targets.
+
+## Specialist Routing
+
+- For Rust work in this repo, use
+  `/Users/c/Documents/GitHub/persona/content/skills/rust`.
+- For non-trivial Rust implementation, review, debugging, or test-gate work,
+  use the `rust-expert` and `rust-test-debug-architect` agents with bounded
+  ownership, then verify their findings against live files.
+- For security-sensitive changes, use `security-engineering`; use
+  `adversarial-review` for major architecture or boundary claims before
+  committing.
+- Antigravity (`agy`) is research-only in this repo. Do not use it for
+  end-of-slice code review, adversarial review, verification, or proof of
+  correctness.
+- For direct Codex CLI behavior or vendored Codex TUI behavior, use
+  `codex-cli-guide` and the local Codex source/config as evidence.
+- For RunHaven TUI work, use the repo-local `.agents/skills/codex-tui`
+  skill first. It requires the Persona Codex TUI skill at
+  `/Users/c/Documents/GitHub/persona/content/skills/codex-tui`, then `rust`
+  and `adversarial-review` as the end-of-slice gate before commit: Rust
+  crate/tooling correctness, Codex source-pattern alignment, then boundary and
+  overclaim review.
+- For Codex-vendored TUI and `codex-*` dependencies, preserving the original
+  Codex package name, crate name, and module path is the default. Use a local
+  bridge only when compiling or activating the real Codex surface would cross a
+  RunHaven security boundary that has not been designed and tested.
 
 ## Definition Of Done
 

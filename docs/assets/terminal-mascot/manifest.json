@@ -2,6 +2,7 @@
   "source": "/Users/c/Downloads/runhaven/ChatGPT Image Jun 26, 2026, 07_10_26 PM (1).png",
   "method": "edge-connected dark background removal, aspect-fit resize with one-pixel safety inset, hard alpha, nearest stable xterm-256 quantization, half-block ANSI export",
   "terminal_palette": "xterm 256-color indices 16-255 only; base indices 0-15 intentionally avoided for macOS Terminal.app profile stability",
+  "repo_root": "/Users/c/Downloads/pet",
   "sizes": [
     {
       "pixels": [
@@ -12,8 +13,8 @@
         16,
         9
       ],
-      "png": "docs/assets/terminal-mascot/cubby-halfblock-16x18-ansi256.png",
-      "ansi": "docs/assets/terminal-mascot/cubby-halfblock-16x18-ansi256.ansi",
+      "png": "terminal-mascot/cubby-halfblock-16x18-ansi256.png",
+      "ansi": "terminal-mascot/cubby-halfblock-16x18-ansi256.ansi",
       "ansi_256_indices": [
         17,
         23,
@@ -58,8 +59,8 @@
         24,
         13
       ],
-      "png": "docs/assets/terminal-mascot/cubby-halfblock-24x26-ansi256.png",
-      "ansi": "docs/assets/terminal-mascot/cubby-halfblock-24x26-ansi256.ansi",
+      "png": "terminal-mascot/cubby-halfblock-24x26-ansi256.png",
+      "ansi": "terminal-mascot/cubby-halfblock-24x26-ansi256.ansi",
       "ansi_256_indices": [
         16,
         17,
@@ -108,8 +109,8 @@
         32,
         18
       ],
-      "png": "docs/assets/terminal-mascot/cubby-halfblock-32x36-ansi256.png",
-      "ansi": "docs/assets/terminal-mascot/cubby-halfblock-32x36-ansi256.ansi",
+      "png": "terminal-mascot/cubby-halfblock-32x36-ansi256.png",
+      "ansi": "terminal-mascot/cubby-halfblock-32x36-ansi256.ansi",
       "ansi_256_indices": [
         16,
         17,
@@ -174,8 +175,8 @@
         40,
         22
       ],
-      "png": "docs/assets/terminal-mascot/cubby-halfblock-40x44-ansi256.png",
-      "ansi": "docs/assets/terminal-mascot/cubby-halfblock-40x44-ansi256.ansi",
+      "png": "terminal-mascot/cubby-halfblock-40x44-ansi256.png",
+      "ansi": "terminal-mascot/cubby-halfblock-40x44-ansi256.ansi",
       "ansi_256_indices": [
         16,
         17,
@@ -241,8 +242,8 @@
         48,
         26
       ],
-      "png": "docs/assets/terminal-mascot/cubby-halfblock-48x52-ansi256.png",
-      "ansi": "docs/assets/terminal-mascot/cubby-halfblock-48x52-ansi256.ansi",
+      "png": "terminal-mascot/cubby-halfblock-48x52-ansi256.png",
+      "ansi": "terminal-mascot/cubby-halfblock-48x52-ansi256.ansi",
       "ansi_256_indices": [
         16,
         17,

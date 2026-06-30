@@ -1,0 +1,23 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Run review
+  Run ID  run-20260629-002  Profile  codex
+  Git         Git: changed=true before=1234567 after=89abcde files=3
+  Fallback    runhaven runs show run-20260629-002
+
+  Returned    8 lines
+  Source      git diff
+  Diff can include workspace file contents.
+
+  Diff preview
+  diff --git a/src/main.rs b/src/main.rs
+  index 1111111..2222222 100644
+  --- a/src/main.rs
+  +++ b/src/main.rs
+  @@ -1,3 +1,4 @@
+   fn main() {
+  +    println!("RunHaven reviewed this change");
+   }

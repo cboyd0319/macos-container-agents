@@ -12,7 +12,7 @@ verification routing, harness docs, lifecycle handoff, or harness evidence.
 
 RunHaven uses a lightweight five-part harness:
 
-- Instructions: `AGENTS.md`
+- Instructions: `AGENTS.md` plus repo-local `.agents/skills/` loaded on demand
 - Tools: shell, git, file edits, and `init.sh`
 - Environment: manifests, lockfiles, `rust-toolchain.toml`, and `pins.toml`
 - State: `feature_list.json` and `current-state.md`
@@ -31,8 +31,10 @@ RunHaven uses a lightweight five-part harness:
   before adding a new harness file.
 - Do not require HarnessForge or any optional owner tool for ordinary
   contributor verification.
-- Do not add machine-local paths, personal tool mandates, credential rotation,
-  cloud-cost actions, pushes, PRs, or broad automation.
+- Do not add new machine-local paths, personal tool mandates, credential
+  rotation, cloud-cost actions, pushes, PRs, or broad automation. Existing
+  repo-approved Persona and local Codex evidence paths in `AGENTS.md` are the
+  narrow exception for Codex TUI source-first work.
 - Treat structural scores as advisory signals, not proof of agent
   effectiveness.
 - Record only current state and meaningful verification. Keep raw logs and long

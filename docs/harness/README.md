@@ -11,11 +11,32 @@ Harness = instructions + tools + environment + state + feedback.
 
 | Subsystem | RunHaven Artifact | Purpose |
 | --- | --- | --- |
-| Instructions | `AGENTS.md` | Startup path, hard rules, and routing |
+| Instructions | `AGENTS.md`, `.agents/skills/` | Startup path, hard rules, routing, and repo-local on-demand skills |
 | Tools | shell, git, file edits, `init.sh` | Do useful work and verify it locally |
 | Environment | `Cargo.toml`, locks, `rust-toolchain.toml`, `pins.toml`, image templates | Make versions and setup self-describing |
 | State | `feature_list.json`, `current-state.md` | Current status, blockers, evidence, and next step |
 | Feedback | focused commands, `./init.sh`, runtime smokes when needed | Prevent unsupported completion claims |
+
+## External Template Mapping
+
+The Learn Harness Engineering resources and the OpenAI advanced repo template
+were rechecked on 2026-06-27. RunHaven should not copy that template
+one-for-one. It already has the same operating surfaces under project-specific
+names:
+
+| Template Concept | RunHaven Owner |
+| --- | --- |
+| Root router and repo-local skills | `AGENTS.md`, `.agents/skills/`, with thin `CLAUDE.md`, `GEMINI.md`, and Copilot shims |
+| Architecture map | `docs/ARCHITECTURE.md`, `boundaries/component-inventory.md`, `state/modularization-plan.md` |
+| Product behavior | `README.md`, `docs/USAGE.md`, `docs/CAPABILITIES.md`, `docs/ROADMAP.md`, `docs/plans/` |
+| Security rules | `docs/SECURITY_MODEL.md`, `boundaries/security-boundary-map.md`, `boundaries/change-contract.md` |
+| Plan and handoff state | `feature_list.json`, `current-state.md`, `docs/plans/` |
+| Reliability and checks | `feedback/verification-matrix.md`, `feedback/sensor-registry.md`, `feedback/quality-document.md`, `init.sh` |
+| References and generated facts | `docs/RESEARCH.md`, `docs/harness/research/`, `docs/CLI_SURFACE_COVERAGE.md`, `pins.toml` |
+
+Keep this mapping when importing harness ideas: adapt the concept into the
+existing owner first, and add a new file only when no current owner can hold it
+cleanly.
 
 ## Startup Budget
 
@@ -32,6 +53,7 @@ is reference material, not mandatory startup context.
 
 | Task Surface | First File To Read |
 | --- | --- |
+| Harness health or external template comparison | `../HARNESS_EVALUATION.md`, then `feedback/quality-document.md` |
 | Verification choice | `feedback/verification-matrix.md` |
 | Component ownership | `boundaries/component-inventory.md` |
 | Security or privacy boundary | `boundaries/security-boundary-map.md` |

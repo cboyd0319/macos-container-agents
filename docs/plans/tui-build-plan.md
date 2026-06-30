@@ -4,8 +4,10 @@ The master plan for building the RunHaven terminal UI as a first-class,
 reference-quality, reusable implementation. This is the build sequence and the
 vendoring strategy; the rendering patterns live in
 [`tui-architecture.md`](tui-architecture.md) and the brand and graphics vision
-lives in [`ratatui-brand-graphics.md`](ratatui-brand-graphics.md). Durable
-decisions are logged in `current-state.md`; this doc is the working plan.
+lives in [`ratatui-brand-graphics.md`](ratatui-brand-graphics.md). The Codex
+source capability map lives in
+[`codex-tui-capabilities.md`](codex-tui-capabilities.md). Durable decisions are
+logged in `current-state.md`; this doc is the working plan.
 
 ## Purpose
 
@@ -19,6 +21,122 @@ command shown in the UI.
 This TUI is also the **reference implementation** for several sibling projects,
 so it is built fully and right now, not as a deferred minimal launcher. That goal
 drives the architecture below.
+
+## Current Reset State
+
+The earlier custom TUI phases below are historical design evidence. The active
+source has now been reset to a Codex TUI source baseline in
+`crates/runhaven-tui/src/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
+crate buildable. A bare interactive `runhaven` now opens an unreleased
+RunHaven-only MVP inside the staged Codex runtime while native Codex `App` and
+`ChatWidget` remain deferred.
+
+The dbt-wizard comparison note shows the right production pattern: keep a
+coherent terminal app substrate, add a narrow product payload seam, and render
+domain-specific cards from that seam. RunHaven should copy that architecture
+move, not the dbt product shape and not Codex chat ontology.
+
+dbt-wizard is not the visual target. RunHaven should stay closer to the native
+Codex look: a compact intro and status area, the bottom composer and status
+line, and small RunHaven cards that feel like Codex surfaces. Avoid an
+analytics-dashboard feel unless the user is explicitly in a diagnostics,
+history, or dashboard view. Cubby, pet behavior, mascot polish, and Zork are
+final-pass work after the core TUI is complete.
+
+The first active payload seam is in `crates/runhaven-core/src/ui_contracts.rs`:
+`AgentCatalogData`, `LaunchPlanData`, and tagged `RunHavenComponentPayload`
+fixtures. New visual work should feed RunHaven cards from those payloads into
+the Codex-vendored shell instead of inventing another custom Ratatui screen.
+
+The first bottom-pane source slice is also staged. RunHaven now compiles the
+Codex `ListSelectionView` family from `bottom_pane/list_selection_view.rs` and
+its helper modules. `crates/runhaven-tui/src/tui/mod.rs` still owns a small
+facade for the event sender, list keymap, paste normalization, cancellation, and
+completion types until the full Codex bottom pane is adapted. The facade uses
+Codex's default list navigation keys. The upstream list-selection snapshot tests
+are opt-in behind `codex-vendored-tests` because their Codex snapshot goldens
+were intentionally removed during the vendor reset.
+
+The first Codex text-entry source slice is also staged. Step 4 confirmation now
+uses the vendored `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs`
+editor primitive through the same temporary facade. This gives the confirmation
+field Codex text editing, cursor placement, and Vim-keymap coverage without
+adopting the full chat composer yet. Paste is intentionally ignored for the
+lower-security typed confirmation phrase so the extra intent still means
+typing.
+
+The deeper Codex capability review corrected the next seam: the full
+`ChatComposer` is not an isolated widget target unless RunHaven only uses the
+small `public_widgets::ComposerInput` wrapper. The native Codex path is the
+terminal runtime, `App` event loop, `ChatWidget`, `BottomPane`, and
+`app_server_session.rs` typed facade working together. The next source-first
+work should therefore align the runtime/event loop and typed app-server seam
+before wiring real launch execution through the chat/composer path.
+
+This means RunHaven is taking the capability guide's Strategy C path, a
+Codex-compatible client, not Strategy B as the product architecture. Strategy B
+remains acceptable only as a temporary compile bridge for low-coupling modules
+while the source-first runtime, app-server facade, and native shell are adapted.
+RunHaven's domain is close enough to Codex's agent/thread/turn/session model to
+reuse more of the native app, but the RunHaven security boundary still controls
+which app-server calls are exposed.
+
+The first RunHaven product card over that Codex picker is now active. The
+temporary `app_shell.rs` no longer draws its own agent list; it hosts a
+RunHaven launch-wizard view model in `tui/runhaven/launch_wizard.rs`, rendered
+through Codex `SelectionViewParams` and `ListSelectionView`. The view model is
+RunHaven-owned because it maps `AgentCatalogData` and `LaunchPlanData` into
+security facts: boundary, host home, credentials, auth scope, network mode, and
+the exact command preview. The generic picker remains source-first Codex code.
+
+The temporary app shell now uses Codex shell chrome for the current picker and
+review step. It reserves a footer area rendered by the vendored
+`bottom_pane/footer.rs`, feeds that footer with RunHaven status text from the
+launch-wizard view model, shows `?` help through Codex footer hint rendering,
+and writes sanitized terminal titles with the vendored `terminal_title.rs`
+helper. The product-specific data still lives under `tui/runhaven/`; the footer
+and terminal-title mechanics stay Codex-owned.
+
+The current launch wizard now includes the Step 4 confirmation screen. Enter on
+the review step opens confirmation, the exact planner command stays visible,
+and plans marked `confirm_required` require typing `launch` before confirmation.
+Confirmation now emits a prepared RunHaven launch intent, and `app_shell.rs`
+hands the terminal to the foreground launch path only after Codex terminal
+restore. The first chooser stays plain; review and confirm show the dense
+safety facts and exact command before launch.
+
+Historical visual check for the native Codex pet renderer:
+
+The earlier `RUNHAVEN_TUI_IMAGE_SMOKE=1` hook has been removed from the live
+`app_shell.rs` path during core-completion cleanup. The bundled RunHaven Cubby
+package and lower Codex pet/image modules remain parked as source-first
+infrastructure. Reintroduce a bounded visual smoke only in a final-pass pet
+slice or when a core terminal-image check explicitly requires it.
+
+Immediate integration order:
+
+1. Keep vendored Codex source compiling in small slices.
+2. Define presentation-neutral RunHaven UI payloads from existing domain data.
+3. Follow the capability guide's Strategy C path by adapting a
+   Codex-compatible client shape, not a permanent small TUI-kit extraction.
+4. Adapt the Codex terminal runtime and event loop: `Tui`, `TuiEventStream`,
+   `FrameRequester`, raw-mode restore, bracketed paste, focus, job control, and
+   redraw scheduling.
+5. Adapt the Codex app-server facade pattern before inventing RunHaven transport
+   glue. The facade should own typed planner, launch, status, interrupt,
+   history, diagnostics, and session calls. Host-reaching Codex RPCs such as
+   remote filesystem, MCP, and IDE actions stay fail-closed unless a RunHaven
+   security design explicitly promotes them.
+6. Continue replacing temporary shell glue with Codex `App`, `ChatWidget`,
+   `BottomPane`, footer, status, title, keymap, pets, and tooltips while keeping
+   RunHaven domain data isolated under `tui/runhaven/`. Footer and
+   terminal-title basics are now active; launch confirmation now uses Codex
+   `TextArea`, but real launch execution is not wired yet.
+7. Wire real launch execution from the confirmation step only after the
+   Codex-native runtime, app-server facade, and bottom-pane path are clear and
+   the command remains owned by RunHaven's planner.
+8. Remove vendored code only after recording why removal is better than leaving
+   it and adapting it.
 
 ## Audience and principles
 
@@ -36,13 +154,11 @@ drives the architecture below.
 - Accessibility is a requirement, not a setting: `NO_COLOR`, a reduced-motion
   switch, colorblind-safe palettes, never color-only state, and a line-mode
   fallback for assistive tech.
-- Delight is the default, not opt-in. The Cubby pet is visible and animated by
-  default to make RunHaven approachable to less-technical users; the user can
-  toggle it off. This still honors the two rules above: reduced-motion keeps the
-  pet visible but static, and the restraint rule keeps all animation off
-  confirmation and destructive screens. So "pet on by default" means the idle pet
-  animates on safe/idle surfaces unless reduced-motion or the user's toggle says
-  otherwise; the pet stays visible either way.
+- Delight is final-pass polish, not the current core-completion gate. Cubby,
+  pet behavior, mascot polish, and Zork should wait until the TUI shell, launch
+  flow, recovery, active-run logs, diagnostics, guards, and cleanup are finished.
+  When pet work resumes, reduced-motion, confirmation/destructive-screen
+  restraint, and an explicit user toggle still apply.
 
 ## Architecture: the framework / screen seam
 
@@ -51,7 +167,7 @@ so the reusable core can later be extracted into a shared crate without dragging
 RunHaven specifics:
 
 ```
-src/runhaven/cli/tui/
+crates/runhaven-tui/src/tui/
   codex/        vendored, attributed codex primitives (third-party; see below)
   <framework>   domain-agnostic core: theme/ColorMode, the event+tick loop, the
                 widget/card system, key hints, tooltips, the snapshot test harness
@@ -108,6 +224,9 @@ terminal image overlay ownership.
 | `render/` (Renderable trait) | foundation | layout composition (Column/Flex/Row/Inset); base for cards |
 | `key_hint.rs` | foundation | consistent keyboard-hint rendering |
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
+| `bottom_pane/list_selection_view.rs` + helpers | vendored bottom pane | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; active through the temporary RunHaven shell until native `App` owns the flow |
+| `bottom_pane/textarea.rs` + `textarea/vim.rs` | vendored bottom pane | native Codex text editor for the Step 4 confirmation phrase; deterministic upstream tests run by default, snapshot/randomized tests stay opt-in |
+| `bottom_pane/chat_composer.rs` + `public_widgets/composer_input.rs` | evaluate through runtime/app-server seam | `ComposerInput` is the Strategy B standalone wrapper; full `ChatComposer` belongs with the Strategy C Codex-compatible path: `App`, `ChatWidget`, `BottomPane`, event loop, and app-server facade |
 | `terminal_hyperlinks.rs` | foundation | OSC 8 clickable paths and URLs |
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
@@ -124,100 +243,55 @@ terminal image overlay ownership.
 | `diff_render.rs` + `diff_model.rs` | evaluated at Phase 4, not vendored | RunHaven uses its own `records::run_diff_text` data path and text diff view rather than pulling Codex git helpers |
 | `pager_overlay.rs` | evaluated at Phase 3, not vendored | upstream transcript/chat overlay is tied to Codex history cells, keymaps, and app events; RunHaven ships a dedicated bounded log viewer instead |
 | `status_indicator_widget.rs` / throbber | not vendored | doctor and diagnostics remain static/plain until a real async spinner is needed |
-| `onboarding/` | referenced at Phase 5, not vendored | RunHaven ships its own first-run guide over the shared planner/run surfaces |
-| `notifications/` | referenced at Phase 5, not vendored | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
+| `onboarding/` | evaluate during product-screen reattachment | RunHaven ships its own first-run guide over the shared planner/run surfaces |
+| `notifications/` | evaluate during product-screen reattachment | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
 | `markdown_render.rs` / `markdown.rs` | reference | rich help/remediation (or `pulldown-cmark` directly) |
 | `terminal_palette.rs` / `terminal_probe.rs` | reference (heavy) | true terminal-aware default colors |
 | `tooltips.{rs,txt}` | superseded by evaluation row above | keep RunHaven's current tips until Codex timing/suppression/accessibility behavior is reviewed |
 | `keymap.rs` (6176 lines) | superseded by evaluation row above | full rebindable-keybinding config is probably too broad, but command vocabulary and conflict handling should be evaluated |
 | `file_search.rs` | skip | codex-event glue; use a fuzzy crate (e.g. `nucleo`) directly |
 | `get_git_diff` | skip | uses `codex_git_utils`; RunHaven has its own git handling |
-| chat domain (chatwidget, composer, bottom_pane input, markdown_stream, transcript, token_usage, model_catalog) | skip | agent chat runs inside the container, not in the TUI |
-| app-server / MCP / IDE backend | skip | codex backend, not applicable |
+| chat domain (`App`, `ChatWidget`, markdown_stream, transcript, token_usage, model_catalog) | evaluate through native Codex path | do not rebuild chat/thread plumbing; adapt the native shell and typed app-server seam where it fits RunHaven, then map RunHaven run/session data into those surfaces |
+| `app_server_session.rs` typed facade | evaluate next | major Codex TUI seam for keeping typed client calls out of `App` and `ChatWidget`; adapt the facade pattern before inventing RunHaven transport glue, but keep remote filesystem, MCP, IDE, and other host-reaching RPCs fail-closed unless a RunHaven security design explicitly permits them |
+| MCP / IDE backend | skip unless promoted by security design | Codex product backend surfaces are not RunHaven defaults; review only after the boundary and user outcome are clear |
 
 Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,
 `image` (png+webp); the foundation adds text-layout crates (`unicode-width`,
 `url`, `textwrap` as needed). No C dependencies.
 
-## Build phases
+## Active Strategy C Phases
 
-Each phase ships at the reference-quality bar (below). Phases are sequenced so
-later screens build on earlier foundations.
+The active execution plan is now split under
+`docs/plans/codex-tui-strategy-c/`. That plan supersedes the old custom
+Ratatui phase list in this document. The old phases are historical design
+evidence only; do not use them as current completion status.
 
-### Phase 0 - Foundation (complete)
+Current phase order:
 
-The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
-`wrapping`, `terminal_hyperlinks`, `selection_list`, OSC 52 clipboard). Build:
+1. Lock the vendor baseline.
+2. Stop growing the temporary shell.
+3. Build the Codex-shaped backend facade.
+4. Adapt `App` and `BottomPane`.
+5. Adapt `ChatWidget` transcript and status.
+6. Reattach RunHaven product screens.
+7. Cull or stub unsupported Codex product features.
 
-- the theme system: `color.rs` plus a `Palette` and `ColorMode` (dark/light
-  detection), honoring `NO_COLOR` and a reduced-motion switch;
-- the event + tick loop (RunHaven's own, `event::poll`-driven, supporting
-  animation, replacing codex's tokio `FrameRequester`);
-- the VT100 + `insta` snapshot test harness used by every later screen.
+The runtime-spine compile and terminal-handoff proof completed on 2026-06-27 as
+supporting gates for Phase 3. They do not renumber the canonical Strategy C
+plan.
 
-### Phase 1 - Brand complete (complete)
+Key corrections from the Strategy C review:
 
-- Header logo: render `docs/assets/logo.png` through the Codex-derived terminal
-  image overlay path on graphics terminals, with a half-block fallback on plain
-  terminals.
-- Native Cubby pet: the idle loop (blink, spark pulse) is driven by
-  `codex::animation` and the Phase 0 tick loop, with Codex-derived ambient
-  placement/rendering where supported and half-block fallback everywhere else.
-  Cubby is enabled and visible by default on safe/idle surfaces; `p` and
-  `RUNHAVEN_TUI_PET=0` hide the pet without hiding the logo. Reduced-motion keeps
-  Cubby visible but static.
-- RunHaven-authored rotating tooltips that teach shortcuts and the security
-  model. Evaluate Codex's tooltip timing/suppression/accessibility behavior
-  before replacing them.
-
-### Phase 2 - The launcher flow (complete)
-
-The directory-and-provider front door.
-
-- Workspace/folder picker (fuzzy search) so a user points RunHaven at their
-  project.
-- Agent/provider picker (extends the existing home list).
-- Plan + egress review card: the defining security screen, what the run mounts,
-  the network mode, the provider hosts it may reach, and what it explicitly will
-  not touch (host home, credentials), built from RunHaven's planner/policy.
-- Confirm-launch modal: names the exact mounts, network mode, and egress posture;
-  type-to-confirm only for less-secure choices.
-- Launch a real run.
-
-### Phase 3 - Run management (complete)
-
-- Live run dashboard: active run list, sanitized live status, resource summary,
-  network attachments, and a streaming egress ledger backed by the provider
-  runtime's decision-delta flusher.
-- Bounded log viewer: explicit active-run log snapshots with search, scrolling,
-  tail-following, and ANSI parsing through `vt100` so escape sequences are not
-  replayed into the user's terminal.
-- Stop / kill / repair with plain typed-confirm screens (no motion on
-  destructive surfaces), routed through the existing validated run-control
-  cores.
-
-### Phase 4 - History and diagnostics (complete)
-
-- Run history with per-run records and "what changed" diff review
-  (`diff_render`).
-- Diagnostics: egress log, auth status, and a terminal/render capability probe.
-- `doctor`: prerequisite checks with spinners and inline remediation.
-
-### Phase 5 - Polish (complete)
-
-- Guided onboarding: a fresh cache opens the RunHaven Guide first, and `?`/F1
-  opens it later from the main screens.
-- Run-done / waiting-for-input notifications: the dashboard surfaces explicit
-  notices for stale/done runs, control transitions, status errors, and output
-  that appears to be waiting for interactive input.
-- Full accessibility pass: `NO_COLOR`, reduced-motion, colorblind-safe palettes,
-  line-mode fallback, and `RUNHAVEN_TUI_COLOR_MODE=light|dark` are documented
-  and covered by focused render tests.
-- Themes and Zork easter egg: light/dark palette selection is implemented, and
-  the hidden Home-only `~` screen runs the bundled MIT-licensed Zork I story
-  through an attributed Ferrif-derived Z-machine.
-- Complete snapshot coverage; the architecture doc is finalized as the reference
-  guide for sibling projects.
+- `app_shell.rs` and staged `mod.rs` are compile bridges, not architecture.
+- `launch_wizard.rs` stays UI-owned. The RunHaven service returns payloads and
+  events; the UI turns them into views.
+- Foreground launch is prepared through the typed facade, but the UI loop owns
+  terminal restore and `launch_run_plan`.
+- Vendor Codex protocol, utility, and TUI-adjacent crates first, preserving
+  original crate names where practical. Keep active RunHaven behavior behind
+  the RunHaven backend boundary.
+- Upstream `.snap` files remain external by default in the local Codex checkout.
+  RunHaven snapshots are generated only for wired RunHaven behavior.
 
 ## Reference-quality bar (every phase)
 
@@ -231,81 +305,38 @@ The directory-and-provider front door.
 - Vendored code attributed; new dependencies pure-Rust and exact-pinned.
 - The framework / screen seam kept clean so the core stays extractable.
 
-## Dependencies on RunHaven domain APIs
+## Dependencies On RunHaven Domain APIs
 
-Some phases need RunHaven's own planner/run code to expose structured data to the
-TUI rather than printed text:
+The Strategy C TUI must consume structured data from `runhaven-core`, not CLI
+text:
 
-- Phase 2 (plan/egress review, confirm) needs the resolved run plan, mounts,
-  network mode, and egress allow-set as structured values.
-- Phase 3 (dashboard, egress ledger) needs a live run-status and
-  network-decision stream. Complete: the TUI consumes the existing active-run
-  status/log cores and the provider runtime writes egress decision deltas during
-  provider-mode execution.
-- Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
-  data. Complete: `src/runhaven/records/` exposes a real facade over
-  `run_history` and JSONL IO, `src/runhaven/diagnostics.rs` owns secret-free log
-  readers/status payloads, and `src/runhaven/doctor.rs` owns shared host
-  readiness checks. TUI Phase 4 consumes those data modules, not CLI prose.
+- planner data: resolved run plan, mounts, state volume, network mode, provider
+  hosts, auth scope, security notices, and exact command arguments
+- run control data: active run records, status payloads, log snapshots, stop,
+  kill, and repair results
+- records data: run history, run detail, and `records::run_diff_text`
+- diagnostics data: egress log, auth broker log, auth status, terminal
+  capability facts, and doctor checks
 
-Any structured output the TUI needs that the CLI does not yet expose is a CLI gap
-to close in the shared library, not text to re-parse. These are surfaced per
-phase as they arise.
+Any structured output the TUI needs that `runhaven-core` does not yet expose is
+a shared-library gap to close. Do not parse CLI prose in the TUI.
 
-## Status
+## Current Status
 
-- Vendored: the pet/image rendering core (`tui/codex/`: terminal detection, image
-  protocol, sixel, pet model, frames, catalog, animation timing) with attribution
-  and the `base64`/`image` deps.
-- Complete: Phase 0 foundation primitives. The TUI now has a theme/settings
-  layer with `NO_COLOR`, reduced-motion, and line-mode switches; a synchronous
-  `event::poll` tick loop; Codex-derived color helpers; a Codex-derived VT100
-  backend; and `insta` snapshots for the current home/detail screens at multiple
-  sizes.
-- Complete: Phase 1 brand. The launcher loads the validated Cubby Codex pet
-  package from `src/runhaven/cli/tui/assets/cubby/`, drives the idle loop with
-  Codex animation timing, renders the current atlas frame as a half-block
-  fallback, and emits the Codex Kitty/iTerm2/Sixel image overlay after the
-  ratatui draw when the terminal supports it. Cubby is visible by default,
-  `p` toggles it for the session, `RUNHAVEN_TUI_PET=0` starts with it hidden,
-  reduced-motion keeps it visible but static, and line-mode omits it. The copied
-  QA evidence for the pet lives in `docs/assets/cubby-pet/`.
-- Complete: Phase 2 launcher flow. The TUI now has a workspace picker with
-  simple fuzzy filtering and typed paths, keeps the existing agent picker, builds
-  `AgentRunPlan` through RunHaven's shared planner, renders the workspace mount,
-  state volume, network mode, provider egress posture, explicit non-mounts, and
-  equivalent CLI command, requires typed confirmation for plans with security
-  notices, restores the terminal, and launches through `launch_run_plan`.
-- Complete: Phase 3 run management. The TUI now has a run dashboard (`d`) with
-  active runs, sanitized status/resource/network details, and a provider egress
-  ledger; provider-mode runs stream egress decisions to the JSONL log as deltas
-  while the run is active; logs open as explicit bounded snapshots with search,
-  scroll, tail-following, and ANSI parsing through `vt100`; and stop, hard-stop,
-  and stale-marker repair use plain typed-confirm screens over the existing
-  validated run-control cores.
-- Complete: pre-Phase 4 organization lock. Shared TUI data dependencies now
-  live outside CLI presentation: host readiness in `doctor.rs`, secret-free
-  diagnostics in `diagnostics.rs`, auth posture labels in
-  `provider/auth_profiles.rs`, and run history behind `records/` with
-  `records/run_history.rs` plus `records/io.rs`. Internal `src/runhaven` imports
-  use explicit ownership paths instead of the crate-root compatibility facade.
-- Complete: Phase 4 history and diagnostics. The TUI now has run history (`h`),
-  per-run diff review, diagnostics (`g`) for egress/auth metadata and terminal
-  render capabilities, and a doctor screen (`d` from diagnostics) with
-  prerequisite checks plus inline remediation. Diff review uses the shared
-  `records::run_diff_text` API; diagnostics and doctor consume
-  `diagnostics.rs` and `doctor.rs` data rather than CLI prose.
-- Complete: Phase 5 polish. A fresh cache starts on the RunHaven Guide and
-  `?`/F1 opens it later; the dashboard emits plain notices for status errors,
-  control transitions, stale/done runs, and output that appears to be waiting for
-  input; accessibility controls cover no-color, reduced-motion, line-mode, and
-  explicit light/dark palette selection; VT100 snapshots now cover guide,
-  launcher, dashboard, logs, control, history, diagnostics, and doctor screens;
-  and the architecture guide is finalized around the framework/screen seam.
-- Complete: post-polish Zork easter egg. The Home-only `~` screen runs the
-  bundled MIT-licensed Zork I story through a vendored, attributed
-  Ferrif-derived Z-machine. The implementation adds no new Cargo dependencies,
-  runs in-process only, performs no subprocess/network/workspace/container
-  access, validates the bundled story by exact length and SHA-256, and constrains
-  save/restore to one private RunHaven cache slot with Quetzal/IFF validation
-  before restore.
+- The source copy is broad enough for Strategy C, and the live TUI is now a
+  RunHaven-only MVP hosted in the staged shell. Native Codex `App` and
+  `ChatWidget` remain deferred.
+- Active staged pieces: terminal title, footer, `BottomPane`,
+  `ListSelectionView`, `TextArea`, workspace picker, plain agent chooser,
+  policy mutation, review, typed confirmation, foreground launch handoff,
+  post-run recovery, active-run list, confirmation-gated log snapshots, and
+  secret-free diagnostics. The native Cubby pet package and Codex pet/image
+  renderer remain available as parked source-first infrastructure, but are not
+  part of the current core-completion gate.
+- The first agent chooser is intentionally plain. Dense launch details such as
+  auth scope, provider hosts, not-shared host data, safety notes, and the exact
+  `container run` command belong in review and confirm.
+- Not yet active: native Codex `App` loop, `ChatWidget`, full app-server
+  transport, filesystem RPC, MCP, login, workspace command execution, Codex
+  session recording, unrelated Codex product surfaces, full history/diff
+  dashboard, and Zork.

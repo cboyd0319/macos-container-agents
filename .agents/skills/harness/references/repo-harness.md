@@ -15,6 +15,7 @@ Startup context is limited to:
 ## Load On Demand
 
 - Harness overview: `../../../../docs/harness/README.md`
+- Repo-local skill packages: `../../../../.agents/skills/`
 - Verification routing: `../../../../docs/harness/feedback/verification-matrix.md`
 - Component boundaries: `../../../../docs/harness/boundaries/component-inventory.md`
 - Security boundaries: `../../../../docs/harness/boundaries/security-boundary-map.md`

@@ -1,6 +1,6 @@
 # TUI Architecture Patterns
 
-Reference guidance for the RunHaven terminal UI (`src/runhaven/cli/tui/` and its
+Reference guidance for the RunHaven terminal UI (`crates/runhaven-tui/src/tui/` and its
 submodules), drawn from studying the Codex `ratatui` TUI and adapting its
 component approach to RunHaven's launcher and manager domain.
 
@@ -18,6 +18,46 @@ run records). The TUI never re-derives or duplicates that logic; widgets are
 pure functions of that data. This is already why the agent detail screen reuses
 auth posture labels from `provider/auth_profiles.rs` and `default_network_mode`
 instead of restating them.
+
+## Product Contract Seam
+
+RunHaven should use the same high-level move that made dbt-wizard's Codex TUI
+integration production-ready: domain truth becomes a stable product payload,
+then terminal and desktop renderers draw that payload.
+
+For RunHaven, the first seam is:
+
+```text
+RunHaven planner/state/records
+  -> crates/runhaven-core/src/ui_contracts.rs
+  -> Ratatui widgets in crates/runhaven-tui/src/tui/
+  -> optional Tauri or React renderers from the same payloads
+```
+
+The contract layer is RunHaven-owned and presentation-neutral. It must not
+depend on Ratatui, Codex protocol types, Codex app-server types, or CLI prose
+parsing. It may expose only data the CLI already treats as safe to show, such
+as the selected agent, workspace path, state volume name, network posture,
+provider hosts, safety notes, and the exact command the TUI will run.
+
+The active first payloads are `AgentCatalogData`, `LaunchPlanData`, and the
+tagged `RunHavenComponentPayload` enum. Keep adding active-run, history,
+diagnostics, and diff payloads as those screens are reattached to the vendored
+shell.
+
+## Visual Target
+
+Use dbt-wizard as proof that a narrow product payload seam can ship, not as the
+RunHaven visual model. RunHaven should stay closer to native Codex: compact
+intro and status content, bottom composer, bottom status line, Codex wrapping
+and selection behavior, and RunHaven-specific cards that fit inside that shell.
+Cubby, pet behavior, mascot polish, terminal image polish, and Zork are
+final-pass work after the core TUI is complete.
+
+Do not turn the default launcher into an analytics dashboard. Dense grids,
+counts, and health bars belong in explicit diagnostics, history, or dashboard
+views. The first-run and launch-review flow should feel like Codex with a
+RunHaven safety layer, not like a data operations console.
 
 ## Codex Source First
 
@@ -55,11 +95,20 @@ Do not parse CLI prose or import shared data from `cli/app.rs`.
 
 ## Current module map
 
-The current split is the reference shape:
+The pre-reset custom TUI split remains useful design history, but it is not the
+active source shape during the Codex vendor reset. The active source under
+`crates/runhaven-tui/src/tui/` is a Codex source snapshot plus a staged `mod.rs`
+adapter that keeps the crate buildable while integration proceeds.
+
+Target ownership for the rebuilt source remains:
 
 | Module | Ownership |
 | --- | --- |
-| `mod.rs` | TUI entrypoint, app state, render dispatch, shared home/detail rendering, terminal overlay lifecycle. |
+| `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
+| `app_shell.rs` | Temporary shell host for the Codex `ListSelectionView` launch picker, image-smoke bridge, and terminal restore loop; remove or shrink when the full Codex app shell is adapted. |
+| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into a plain Codex picker, review step, typed confirmation, and prepared launch intent. |
+| `bottom_pane/list_selection_view.rs` and helpers | Codex-vendored selection surface now compiled through a temporary RunHaven facade; use it before adding custom list, picker, tab, search, side-panel, or footer behavior. |
+| `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
 | `theme.rs`, `color.rs`, `event_loop.rs` | Domain-agnostic settings, palettes, color math, and deterministic tick timing. |
 | `widgets.rs`, `tooltips.rs` | Shared draw helpers and RunHaven-authored footer tips. Widgets draw data; they do not query the domain. |
@@ -67,7 +116,7 @@ The current split is the reference shape:
 | `runs.rs`, `run_views.rs` | Active-run state, egress/log/control adapters, dashboard notices, and dashboard/log/control rendering. |
 | `history.rs`, `history_views.rs` | Run history, diff review, diagnostics, terminal capability, doctor state, and their views. |
 | `guide_views.rs` | First-run and help guide. It routes users to existing workflows; it does not own product logic. |
-| `brand.rs`, `pet.rs`, `codex/` | RunHaven logo/Cubby asset adapters over attributed Codex-derived welcome, pet, and terminal graphics primitives. |
+| `brand.rs`, `pet.rs`, `codex/` | Final-pass RunHaven logo/Cubby asset adapters over attributed Codex-derived welcome, pet, and terminal graphics primitives. |
 | `snapshot.rs`, `test_backend.rs` | VT100 snapshot harness used by screen regression tests. |
 
 If a new screen needs shared data, add the data API outside `cli/` first. If a
@@ -111,7 +160,7 @@ Design screens from flows, not from available commands:
 | Monitor | Home, Guide, or after a launch record exists | Dashboard, bounded logs, or a typed run-control result. |
 | Review | Home, Guide, or Dashboard notice | History list and selected run diff. |
 | Diagnose | Home, Guide, or History | Diagnostics and doctor checks with inline remediation. |
-| Display/accessibility | Guide or environment variables | Cubby visibility, reduced motion, line mode, no-color, light/dark palette. |
+| Display/accessibility | Guide or environment variables | Reduced motion, line mode, no-color, light/dark palette, and later Cubby visibility once final pet polish resumes. |
 
 When adding a screen, name its flow, entry point, success state, and escape path
 before adding key bindings. If a destination does not serve one of these flows,
@@ -176,14 +225,26 @@ The brand graphics, startup chrome, and hidden Zork easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
 
-The active Home header uses `brand.rs` to load the RunHaven logo from
-`docs/assets/logo.png`, render a terminal-safe half-block fallback, and emit the
-same Codex-derived terminal image overlay used by pets when the terminal
-supports it. Cubby is not the header hero; `pet.rs` adapts the validated Cubby
-Codex pet package into Codex's ambient pet placement and overlay contract.
-RunHaven supplies the available pane and the Cubby asset, while
-`codex/ambient.rs` owns the target size, composer gap, right anchor, clear area,
-and image protocol lifecycle.
+The current vendor-reset shell is intentionally staged. It keeps the
+Codex-vendored TUI source in `crates/runhaven-tui/src/tui/` and opens a
+RunHaven-only MVP launch flow while native Codex `App`, `ChatWidget`, richer
+history, resume, and command surfaces are adapted.
+When the header logo or Cubby pet returns, prefer Codex-native modules and
+terminal-image behavior over custom RunHaven rendering code.
+
+The first real bottom-pane primitive is now online: Codex `ListSelectionView`
+and its popup, scroll, tab, row-width, wrapping, and side-content helpers compile
+inside `runhaven-tui`. The temporary facade in `tui/mod.rs` exists only to avoid
+pulling Codex's full chat composer and app-server event stack before the app
+shell is ready. Keep future picker and wizard work on this primitive unless a
+RunHaven-specific security boundary requires a documented exception.
+
+The first RunHaven product use of that primitive is the launch wizard adapter in
+`tui/runhaven/launch_wizard.rs`. It is intentionally not generic Codex code. It
+renders planner-backed security facts, including `/workspace only`, host home
+not mounted, credentials not mounted by default, auth scope, network mode, and
+the exact command preview. The generic selection behavior, side-content layout,
+footer rendering, cancellation, and list keys remain Codex source.
 
 Legacy terminal-mascot assets remain under `docs/assets/terminal-mascot/` as
 historical QA/source evidence from the earlier Cubby hero experiment. They are
@@ -191,6 +252,8 @@ not active TUI code.
 
 Source-first candidates to evaluate before adding custom TUI behavior:
 
+- `codex-tui-capabilities.md`: source map for Codex TUI capabilities and reuse
+  risk.
 - `chatwidget/status_surfaces.rs`: status line and terminal-title model.
 - `status/card.rs`: `/status` card structure.
 - `theme_picker.rs` and `render/highlight`: syntax/highlighting themes.

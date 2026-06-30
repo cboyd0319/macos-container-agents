@@ -15,6 +15,37 @@ projects. Keep the architecture clear enough to reuse: source-first Codex
 vendoring, thin RunHaven product adapters, shared data contracts, documented
 culling decisions, and user-facing copy that non-technical users can understand.
 
+## Comparison Evidence
+
+The dbt-wizard comparison note at
+`/Users/c/Downloads/runhaven-dbt-wizard-codex-tui-direction.md` is useful
+evidence, not a product direction to copy wholesale.
+
+The Codex capability map at
+[`codex-tui-capabilities.md`](codex-tui-capabilities.md) is the repo-owned
+source map for what the Codex TUI already provides. Use it before deciding to
+write custom TUI code, especially for the bottom pane, composer, keymaps,
+terminal runtime, streaming output, history cells, approvals, sessions, status,
+pets, and VT100/snapshot tests.
+
+The lesson to carry forward is:
+
+- Copy the architecture move: domain truth becomes a stable UI payload, then
+  shared renderers draw it.
+- Do not copy the dbt or Codex chat product shape unless RunHaven intentionally
+  becomes a Codex chat fork.
+- Keep Codex source as the base for terminal infrastructure: render lifecycle,
+  status line patterns, bottom pane behavior, key handling, terminal image
+  support, pets, text wrapping, styling, and related generic TUI behavior.
+- Keep RunHaven as the product model: profiles, launch plans, active runs,
+  run history, diagnostics, egress policy, auth posture, and safety boundaries.
+- Build a small RunHaven UI contract seam before wiring product screens into
+  the vendored app shell.
+
+That means the next integration layer is presentation-neutral RunHaven payloads,
+starting with launch-plan data from `AgentRunPlan`. Ratatui widgets and any
+future Tauri/React surface should consume the same payload shape.
+
 ## Source
 
 Primary source:
@@ -23,7 +54,7 @@ Primary source:
 /Users/c/Documents/GitHub/codex/codex-rs/tui/src/
 ```
 
-The intent is to fully replace the current custom `src/runhaven/cli/tui/` tree
+The intent is to fully replace the current custom `crates/runhaven-tui/src/tui/` tree
 with vendored Codex TUI source, then make RunHaven changes from that baseline.
 
 Local Codex configuration evidence:
@@ -122,7 +153,7 @@ RunHaven boundary that any final TUI must keep.
 
 ## After Vendoring
 
-After `src/runhaven/cli/tui/` is replaced with the vendored source, review the
+After `crates/runhaven-tui/src/tui/` is replaced with the vendored source, review the
 vendored baseline against this wishlist.
 
 Then make decisions in this order:
@@ -159,7 +190,7 @@ has better evidence.
 
 ### Upstream Codex Snapshot Goldens
 
-Decision: remove copied `*.snap` files under `src/runhaven/cli/tui/`.
+Decision: remove copied `*.snap` files under `crates/runhaven-tui/src/tui/`.
 
 Why removal is better than leaving and adapting:
 
@@ -229,7 +260,7 @@ Why leaving and adapting is better than removing:
 - The full Codex bottom pane currently imports app-server, protocol, skills,
   plugin, file-search, and chat-composer surfaces that are not needed to verify
   pet discovery.
-- The staged contract in `src/runhaven/cli/tui/mod.rs` mirrors the Codex data
+- The staged contract in `crates/runhaven-tui/src/tui/mod.rs` mirrors the Codex data
   types the picker returns: `SelectionItem`, `SelectionViewParams`, callbacks,
   side content sizing, event sender, and the standard popup hint.
 - `pets/picker.rs` and `pets/preview.rs` stay compiled and tested. They are not
@@ -237,6 +268,32 @@ Why leaving and adapting is better than removing:
 - The next bottom-pane pass should replace the staged contract with the full
   adapted Codex bottom-pane view once the wider app-shell dependencies are
   ready.
+
+### Temporary Native Pet Image Smoke
+
+Superseded decision: a temporary visual smoke path was added to the old
+read-only `app_shell.rs` so image quality could be checked before the full app
+shell and bottom pane were adapted. That hook has since been removed from the
+live shell during core-completion cleanup.
+
+Why this is a small RunHaven adapter instead of a custom renderer:
+
+- The smoke path uses Codex's vendored `AmbientPet`, frame extraction,
+  `FrameRequester`, and `render_ambient_pet_image` terminal-image writer.
+- It materializes RunHaven's verified bundled Cubby package into the same
+  Codex custom-pet package shape, using `custom:runhaven-cubby` under
+  `$CODEX_HOME/pets/runhaven-cubby/`.
+- It does not overwrite or depend on a user's own `$CODEX_HOME/pets/cubby/`.
+- It gives the vendored `FrameRequester` a small Tokio runtime instead of
+  replacing the scheduler with local code.
+- It was off by default and only ran with `RUNHAVEN_TUI_IMAGE_SMOKE=1`.
+- `RUNHAVEN_TUI_IMAGE_SMOKE_PET=<selector>` pointed the smoke at another Codex
+  pet selector when needed.
+
+Current state: the live shell has no active `RUNHAVEN_TUI_IMAGE_SMOKE` path.
+The bundled Cubby package and lower pet/image modules remain parked as
+source-first infrastructure. Reintroduce a bounded visual smoke only in a
+final-pass pet slice or when a core terminal-image check explicitly requires it.
 
 ### Codex Renderable Contract
 
@@ -283,7 +340,7 @@ Why leaving and adapting is better than removing:
 - `terminal_probe.rs` preserves Codex's short startup probes for default colors,
   cursor position, and keyboard enhancement support.
 - RunHaven keeps the Codex motion primitive boundary test, but points it at
-  `src/runhaven/cli/tui/` and uses RunHaven's existing `regex` dependency
+  `crates/runhaven-tui/src/tui/` and uses RunHaven's existing `regex` dependency
   instead of Codex's `codex_utils_cargo_bin` test helper.
 - The Unix default-color requery path uses the vendored bounded terminal probe
   instead of Codex's fork-only crossterm color-query helpers. Revisit this only
@@ -309,7 +366,7 @@ Why leaving and adapting is better than removing:
 
 ### Earlier RunHaven Zork Implementation
 
-Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
+Decision: leave `crates/runhaven-tui/src/tui/zork/` absent from the raw Codex vendor
 baseline.
 
 Why removal is acceptable for the baseline:
@@ -338,8 +395,9 @@ The first milestone is a clean vendor baseline:
 ## Known Integration Gaps
 
 - The first compile gap after the reset was RunHaven's missing module entrypoint.
-  `src/runhaven/cli/tui/mod.rs` now keeps the crate buildable and fails closed
-  for interactive TUI launch while the vendored Codex entrypoint is adapted.
+  `crates/runhaven-tui/src/tui/mod.rs` now keeps the crate buildable and dispatches to
+  a temporary RunHaven-owned MVP launch flow while the vendored Codex entrypoint
+  is adapted.
 - The lower native pet runtime, terminal protocol detection, frame extraction,
   Sixel encoder, Kitty image writers, ambient draw request model, and Tokio
   frame scheduler now compile and pass their tests.
@@ -352,6 +410,11 @@ The first milestone is a clean vendor baseline:
   compile and pass their focused tests.
 - Codex's shared style and text helpers now compile and pass their focused
   tests.
+- `app_shell.rs` now restores a real bare interactive TUI path. It consumes
+  `LaunchPlanData`, keeps the first chooser plain, shows dense launch detail in
+  review and confirm, and hands confirmed plans to the foreground launch path
+  after terminal restore. It is temporary glue until the Codex app shell is
+  adapted.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

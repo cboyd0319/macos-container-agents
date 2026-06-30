@@ -1,1133 +1,1519 @@
 # Current State
 
-Last Updated: 2026-06-27 UTC
+Last updated: 2026-06-30 UTC
 
 ## Current Objective
 
-The active slice is the TUI Codex vendor reset. The previous custom RunHaven
-TUI implementation is being replaced by the full local Codex TUI source
-baseline from `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/`, then
-RunHaven-specific integration will continue from that baseline.
+The product direction changed on 2026-06-30: stop treating terminal UI
+completion as the primary user-facing goal. The secure path should be easiest for
+non-technical users through a native-feeling macOS GUI. The CLI remains the
+complete technical, automation, recovery, and verification surface. The TUI
+should be finished only where it hardens the shared workflow and proves backend
+contracts, not polished into a standalone product.
 
-The RunHaven TUI setup is the reference implementation for several sibling
-projects. Treat reusable TUI structure as a product requirement: keep Codex
-vendoring source-first, keep RunHaven-specific behavior in thin adapters, use
-shared data contracts, record every culling decision, and keep user-facing text
-plain enough for non-technical users.
+Current branch goal: finish the remaining TUI hardening surfaces already backed
+by `runhaven-core`, do one more CLI surface audit, commit and push the branch,
+then merge this branch/PR and shift focus to the GUI. Do not publish, tag,
+version-bump, or cut a release from this work unless the maintainer explicitly
+asks for a release pass.
 
-The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26
-(first release; pre-1.0, CLI only). Runtime and security hardening,
-multi-provider broker work, isolated OAuth login, and release-readiness remain
-`passing`. The TUI is now `active` again in `feature_list.json` while the vendor
-baseline and integration work are rebuilt.
+RunHaven is replacing its previous custom TUI with the pinned upstream Codex
+TUI source baseline:
 
-Do not publish a release from the interim vendor-reset state. After the TUI is
-fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`.
-Temporary public-doc placeholder statements are not needed; do the full
-README/usage/release-doc refresh at the end.
+```text
+repo: https://github.com/openai/codex.git
+commit: 5267e805fb830891c0b23376bcd9cbd382c3473c
+path: codex-rs/tui/src/
+```
+
+Keep Codex vendoring source-first, RunHaven behavior in thin adapters, shared
+data contracts in `runhaven-core`, every culling decision documented, and
+user-facing copy plain enough for non-technical users.
+
+## TUI/CLI Hardening Acceptance Scope
+
+Before merge, the terminal checkpoint should cover the RunHaven workflow parts
+that harden the shared backend:
+
+- Plain startup: bare interactive `runhaven` opens a calm, nontechnical TUI;
+  non-TTY and explicit subcommands stay CLI-first.
+- Launch flow: workspace choice, agent choice, network/auth visibility, plan
+  review, exact-command review, typed confirmation when required, terminal
+  restore, foreground launch handoff, and post-run recovery all work through
+  `PreparedLaunch` and `AgentRunPlan`.
+- Run operation: active-run status, typed stop/hard-stop/repair controls,
+  bounded readable logs, confirmation-gated raw output, failure states, and
+  remediation text are visible without exposing workspace paths or secrets.
+- Diagnostics: doctor/preflight, provider egress, auth status/log metadata,
+  terminal capability status, and common blocked-state guidance are reachable
+  from the TUI and stay secret-free.
+- Records: history or run-record review is present when existing
+  `runhaven-core` data already supports it; otherwise the TUI must state the
+  CLI fallback plainly and keep branch scope honest.
+- Scope decisions: Cubby/pet behavior, terminal image polish, mascot work,
+  Zork, native Codex `App`, and native `ChatWidget` are not blockers for this
+  branch. Keep them dormant, parked, or explicitly out of scope unless they
+  harden the shared RunHaven workflow.
+- Boundary guards: native Codex app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, session recording, external editors,
+  hooks, broad shell execution, cloud/browser credential access, and
+  host-reaching Codex paths remain dormant or fail-closed unless a reviewed
+  RunHaven boundary promotes them.
+- Verification: the final gate includes fmt, check, `runhaven-tui` tests,
+  `codex-vendored-tests` no-run, clippy, pin check, Codex TUI compare, JSON
+  validation, snap-new scan, diff check, non-TTY proof, live PTY open/quit
+  proof, live or deterministic confirmed-launch proof, and the CLI surface
+  check.
+- CLI pass: run the existing CLI surface check, inspect command help/output for
+  stale TUI/v0.6 wording, and fix any CLI-facing mismatch before merge.
+- GUI handoff: after merge, research existing Apple `container` GUI projects on
+  GitHub and decide whether to build, adapt, or avoid them before starting the
+  native macOS GUI.
 
 ## Startup State Contract
 
 - `AGENTS.md`: root instruction map.
 - `feature_list.json`: compact feature status and next product slice.
-- `current-state.md`: progress, trusted facts, blockers, and handoff.
+- `current-state.md`: current facts, blockers, and handoff.
 
 Do not recreate separate root `progress.md` or `session-handoff.md` files.
 Load deeper docs only when the task touches that surface.
 
 ## Product Facts
 
-- RunHaven is a Rust 1.96.0 CLI for running AI coding agents inside Apple
+- RunHaven is a Rust 1.96.0 workspace for running AI coding agents inside Apple
   `container` on macOS 26+ on Apple silicon.
-- The CLI is the complete `v0.5.0` pre-release surface and remains the
-  explicit automation and recovery backend.
-- The terminal UI is unreleased and in an active Codex vendor-reset slice. The
-  intended release behavior remains a bare interactive `runhaven` opening the
-  TUI while pipes, redirection, and subcommands stay CLI-first.
-- The alpha desktop shell lives under `ui/` and `src-tauri/`; it remains
-  deferred to a later first-class release phase.
-- RunHaven remains alpha/pre-release after `v0.5.0`; stable release scope is
-  still open.
-- Current sequence: CLI-complete pre-release, completed runtime/security
-  hardening slices kept current when touched, active terminal UI vendor reset
-  and RunHaven integration, full confirmation and `v0.6.0` release bump, then
-  remaining non-UI scope and the first-class desktop app.
-- Above all else, secure defaults must be the easiest path. Supported
-  lower-security choices should warn and require explicit intent; unsupported
-  or hard-boundary violations still fail closed.
-- Apple `container machine` is not the default RunHaven boundary, but explicit
-  or user-managed machine workflows should not be blocked solely because they
-  are less secure. They should warn, require intent, and fail only for concrete
-  unsupported or unsafe states.
-- All current and future development is DRY and documentation-first. Walk the
-  build-necessity ladder (YAGNI, standard library, native platform,
-  already-installed dependency, one clear line, then minimum custom code),
-  prefer boring over clever, remove meaningful duplication, and ship docs in the
-  same slice as the behavior. Every stage also considers file size, modularity,
-  crate/component organization, exact current-stable pins, and harness state.
-  `AGENTS.md` Working Rules and `docs/harness/boundaries/change-contract.md`
-  hold the canonical gate.
+- The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26.
+- The CLI remains the complete automation and recovery backend.
+- The terminal UI is unreleased and active. A bare interactive `runhaven` opens
+  the verified RunHaven-only checkpoint; pipes, redirection, and explicit
+  subcommands stay CLI-first. The TUI should now be hardened only where it
+  strengthens shared RunHaven workflow contracts.
+- The alpha desktop shell lives under `ui/` and `src-tauri/`. `src-tauri` is a
+  Rust workspace member over typed `runhaven-core` commands. The desktop shell
+  remains deferred to a later first-class release phase.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
-- GitHub Actions CI is disabled during alpha/pre-release. Local verification is
-  authoritative until a maintainer explicitly re-enables CI.
-- Default safety boundaries remain: no host home mount, no cloud credential
-  folder mount, no raw SSH key mount, no arbitrary environment passthrough,
-  explicit workspace scope, non-root bundled images, and provider egress
-  allowlisting only through reviewed provider mode.
+- GitHub Actions CI is disabled during alpha/pre-release. Local macOS 26+
+  verification is authoritative until a maintainer explicitly re-enables CI.
+
+## Rust Source Layout
+
+| Area | Path | Owns |
+| --- | --- | --- |
+| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins` startup, including the bare-interactive TUI routing decision. |
+| Core library | `crates/runhaven-core/` | Runtime, provider, records, image, doctor, diagnostics, support, harness pin logic, and shared UI contracts. |
+| CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
+| Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
+| Desktop Rust shell | `src-tauri/` | Narrow typed Tauri commands over `runhaven-core`. |
+| Frontend | `ui/` | Alpha Svelte desktop UI. |
+
+`crates/runhaven` is binary-only. Do not rebuild a root compatibility facade.
+Shared runtime truth belongs in `runhaven-core`; presentation belongs in CLI,
+TUI, Tauri, or frontend layers.
 
 ## Key Decisions
 
-Durable rationale that compaction tends to lose. Change these only with new
-evidence and a recorded reason.
-
-- Sequencing history: the 2026-06-26 directive deferred GUI/UI behind runtime
-  hardening and CLI release readiness; the 2026-06-27 directive pulled the TUI
-  forward as a reference implementation for sibling projects. The TUI build plan
-  is now complete; the desktop app remains deferred; already-shipped desktop
-  slices stay `passing`.
-- Default boundary is task-scoped `container run`, not `container machine`,
-  because machine workflows map the host user, home, and credentials into the
-  guest. Machine use is warned and explicit, not blocked.
-- `--ssh` fails closed because Apple `container` 1.0.0 exposed the forwarded
-  socket to the non-root guest but `ssh-add -l` returned permission denied;
-  enabling it would need a raw key mount or a root default user. Reopen only
-  with a no-secret runtime proof.
-- CI stays disabled during alpha because local macOS 26 verification is
-  authoritative and hosted CI cannot exercise the Apple `container` boundary.
-  Re-enable only by explicit maintainer decision.
-- The harness is a three-file startup contract because bulk startup context was
-  the failure mode; deeper `docs/harness/` material is on-demand reference.
-- During active development, exactly one feature should be `active` in
-  `feature_list.json` to hold scope; the `active` row is the current slice,
-  distinct from `planned` work. After a slice is completed and before the next
-  slice is selected, no feature may be active.
-- All development is DRY and documentation-first by standing rule (2026-06-24
-  user directive), not a per-slice decision. The build-necessity ladder in
-  `AGENTS.md` Working Rules and the `change-contract.md` Build Necessity Gate are
-  the single canonical source; documentation-is-product means an undocumented
-  behavior is treated as not shipped. Boring-over-clever and the edge-case
-  tiebreaker (between equally small standard-library options, take the one
-  correct on edge cases) resolve style and algorithm choices.
+- Secure defaults must be the easiest path. Supported lower-security choices
+  warn and require explicit intent. Unsupported or hard-boundary violations
+  fail closed.
+- Default runs use task-scoped `container run`, not `container machine`,
+  because normal machine workflows can expose host home and credentials.
+  Explicit or user-managed machine workflows are not blocked solely for being
+  less secure, but any RunHaven machine integration must warn and require
+  intent.
+- Do not mount host home directories, cloud credential folders, raw SSH keys,
+  browser profiles, or arbitrary host environment variables by default.
+- `--ssh` remains fail-closed. Apple `container` 1.0.0 exposes the forwarded
+  socket to the non-root guest, but `ssh-add -l` returns permission denied.
+  Reopen only with a no-secret runtime proof.
+- Provider egress stays default-deny in provider mode. Agent provider domains
+  can be expressed as reviewed stable domain-family patterns, but data-egress
+  hosts stay closed by not being in the allowlist.
+- Log sanitization and host-held secret storage are separate non-TUI security
+  slices. Because RunHaven is macOS 26+ only, RunHaven-owned host secrets should
+  prefer macOS Keychain where practical. This does not authorize reading
+  provider-owned Keychain items, browser profiles, cloud credential stores, or
+  arbitrary host credentials.
+- TUI image and pet rendering must follow Codex source behavior. Use the pinned
+  upstream Codex TUI source and local Codex config evidence before writing custom pet,
+  terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
+  Cubby, pet polish, mascot work, and terminal image polish are parked, not part
+  of this branch's hardening checkpoint. Keep existing pet code as source-first
+  infrastructure; do not add a live env-gated smoke path unless a future
+  explicitly scoped TUI or GUI slice needs it.
+- TUI implementation slices should use the repo-local
+  `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
+  skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
+  `rust` and `adversarial-review` as the end-of-slice gate before commit: Rust
+  crate/tooling correctness, Codex source-pattern alignment, then boundary and
+  overclaim review.
+- Antigravity (`agy`) is research-only in this repo. Do not use it for
+  end-of-slice code review, adversarial review, verification, or proof of
+  correctness.
+- For Codex-vendored TUI and `codex-*` dependencies, preserving the original
+  Codex package name, crate name, and module path is the default. Use a local
+  bridge only when compiling or activating the real Codex surface would cross a
+  RunHaven security boundary that has not been designed and tested.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
-  README/usage docs, and setup instructions target non-technical users at
-  roughly an 8th grade reading level. Keep exact commands, paths, hosts, and
-  safety facts when needed, but explain them with short sentences, plain verbs,
-  concrete nouns, and clear next actions.
-- The `GitSnapshot`/`GitChange` `available` field is a serde enum tag that
-  serializes as the string "true"/"false", never a JSON boolean. Read serialized
-  git values with `git_value_available` (or match the typed enum); never
-  `Value::as_bool` on `available`. Reading it as a bool silently broke every
-  worktree run, diff, and merge until 2026-06-25. The `dirty`, `changed`, and
-  `truncated` fields are real booleans.
-- The default `--network` mode is profile-aware so the secure path is also the
-  default path (2026-06-25 user directive: the secure path must be the easiest
-  path, inform rather than block, do not restrict where a restriction cannot be
-  made easy). Profiles with bundled provider hosts default to `provider`;
-  profiles without them default to `internet` because provider mode would be an
-  empty-allowlist dead end. Internet mode is never blocked, only warned. Revisit
-  only if a broader safe default becomes both more secure and as usable.
-- The `glib` advisory GHSA-wrw7-89jp-8q8g is treated as not-affected because
-  `glib` enters only through Tauri's Linux GTK backend and is absent from the
-  macOS build graph; it is capped at 0.18.x by `gtk 0.18.2`. Dependabot alert
-  was dismissed as "not used" on 2026-06-24. Rationale in `docs/PINNING.md`.
-- Provider egress should be low-friction for non-technical users without
-  weakening the boundary (2026-06-26 user direction: RunHaven is primarily for
-  less-technical people; the user must not manage hosts; exact hosts appear only
-  when needed for safety review or troubleshooting). The
-  agreed model: trust each agent's own provider expressed as a few stable
-  domain-family patterns, not individual hosts; keep default-deny so data-egress
-  hosts (`storage.googleapis.com`, etc.) stay closed by simply never being in an
-  allow-pattern; degrade gracefully when an optional host is blocked; and
-  eventually ship the per-agent policy as signed, auto-updating data so new
-  provider endpoints need no release or user action. Step 1 (narrow
-  `*-name.domain.tld` family patterns in the egress matcher, anchored to one
-  registrable domain) is built and used for Antigravity. Remaining: graceful
-  degradation, plain-language foreign-host messaging, and the auto-updating
-  policy. This is still an allowlist (default-deny); it just speaks in families.
-- Log sanitization and host-held secret storage are a separate non-TUI security
-  slice, not part of the TUI build phases (2026-06-27 user direction). Existing
-  structured records are intended to be secret-free and raw log views are
-  bounded/acknowledged, but the backlog now requires a centralized sanitizer for
-  untrusted agent/container stdout/stderr, provider CLI output, raw log
-  snapshots, JSONL records, UI state, support bundles, and docs examples. Because
-  RunHaven is macOS 26+ only, host-held RunHaven secret material should prefer
-  macOS Keychain where practical (for example Claude setup tokens or future
-  broker-owned secrets), with a fail-closed or explicit fallback if Keychain is
-  unavailable. This does not authorize reading provider-owned Keychain items,
-  browser profiles, cloud credential stores, or arbitrary host credentials, and
-  it does not reopen the rejected host-side OAuth/subscription-token broker.
-- TUI terminal image rendering must follow Codex's protocol choice, not a
-  generic crate's auto-detection (2026-06-26 lesson). `ratatui-image` 11.0.6
-  auto-selected iTerm2's own OSC 1337 inline-image protocol, which renders blank
-  in a full-screen alternate-screen TUI; the image tier was reverted. Codex
-  (`codex-rs/tui/src/pets/image_protocol.rs` and `pets/ambient.rs`) instead
-  renders via the Kitty graphics protocol on iTerm2 (3.6+) and emits images as
-  direct overlays outside the cell buffer, which is TUI-safe. The current reset
-  vendors the full Codex TUI source baseline first; future RunHaven image, logo,
-  and pet work should adapt Codex native paths instead of rebuilding custom
-  renderers.
-- The RunHaven TUI is a first-class, reference-quality, reusable
-  implementation, not a deferred minimal launcher. It is the intended guided
-  front door for a bare interactive `runhaven` and the reference TUI for sibling
-  projects. The current active plan is the Codex vendor reset in
-  `docs/plans/tui-codex-vendor-reset.md`; the older phase build-plan docs remain
-  historical/product intent until the new baseline is integrated.
+  README/usage docs, and setup instructions target non-technical users at about
+  an 8th grade reading level.
 - The hidden Zork I easter egg remains wanted. The current reset keeps the
-  MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`,
-  but the earlier Ferrif-derived engine under `src/runhaven/cli/tui/zork/` was
-  removed with the old custom TUI tree and is recoverable from git history. If
-  Zork is reintroduced, it must stay TUI-local and attributed, add no
-  subprocess/network/workspace/credential/container access, validate bundled
-  story bytes, and treat disk save/restore as a carefully validated private
-  RunHaven cache feature.
-- `src/runhaven/` ownership is locked before TUI Phase 4. Shared host readiness
-  lives in `doctor.rs`, secret-free diagnostics data in `diagnostics.rs`, auth
-  posture metadata in `provider/auth_profiles.rs`, and run history behind the
-  `records/` facade (`run_history.rs`, `run_history/`, `io.rs`). `cli/` owns
-  argument dispatch and human presentation, not shared runtime truth. Internal
-  `src/runhaven` code imports explicit `crate::runhaven::...` module paths; the
-  flat `src/lib.rs` exports are compatibility for Tauri and external callers.
+  MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
+  The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
+  is recoverable from git history. If reintroduced, it must stay TUI-local,
+  attributed, offline, and carefully validate save/restore files. Defer it to a
+  future explicitly scoped polish or easter-egg slice.
+- The glib advisory GHSA-wrw7-89jp-8q8g remains treated as not affected because
+  `glib` enters only through Tauri's Linux GTK backend and is absent from the
+  macOS build graph. See `docs/PINNING.md`.
 
 ## Latest Verified Work
 
-- 2026-06-27: TUI Codex vendor reset baseline. Added
-  `docs/plans/tui-codex-vendor-reset.md` as the wishlist and culling ledger,
-  replaced the custom `src/runhaven/cli/tui/` tree with a snapshot of
-  `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/`, excluded `.DS_Store`, and
-  removed 538 copied upstream `*.snap` files as Codex test goldens with culling
-  rationale. Added `src/runhaven/cli/tui/README.md`, updated Codex attribution,
-  and recorded local Codex evidence from `/Users/c/.codex/config.toml`
-  (`[tui] pet = "custom:cubby"`) plus `/Users/c/.codex/pets/` custom pet
-  packages. Verification: `jq empty feature_list.json`, `git diff --check`,
-  zero `*.snap`, zero `.DS_Store`, and `cargo check --locked --quiet` failed at
-  the expected integration boundary (`src/runhaven/cli/mod.rs` still expects
-  `tui.rs` or `tui/mod.rs`, while the copied Codex source is crate-shaped with
-  `lib.rs` and `main.rs`). Next: integrate the vendored baseline into
-  RunHaven's module/dependency/product-data shape before claiming the TUI is
-  runnable again.
-- 2026-06-27: TUI source-first logo/native-pet polish. Replaced the oversized
-  Cubby header hero with the RunHaven logo from `docs/assets/logo.png` and kept
-  Cubby as the compact native ambient pet. Vendored an asset-agnostic
-  Codex-derived ambient image adapter from `pets/ambient.rs` and `pets/mod.rs`
-  so logo and pet overlays share Codex target sizing, right-anchor, composer
-  gap, clear-area, cursor save/restore, Kitty deletion, and Sixel clearing
-  behavior. Deleted the old hand-built `tui/mascot` sprite module, kept `p`
-  scoped to Cubby only, kept `RUNHAVEN_TUI_PET=0` from hiding the logo, renamed
-  user-facing terminal capability text from "pet image" to "terminal image",
-  and made active TUI copy use plainer non-technical labels such as "safety
-  notes", "checks", "network log", and "command". Locked the source-first and
-  8th grade user-facing writing rules into `AGENTS.md` and the TUI plans.
-  Verified: `cargo fmt --check`, `cargo test --locked tui --quiet` (267
-  TUI-filtered tests), `cargo test --locked --quiet` (338 lib + 6 integration
-  tests), `cargo clippy --all-targets --locked -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`, JSON validation,
-  `cargo build --locked --quiet`, snapshot-new scan, and `git diff --check`.
-  Branch: `terminal-ui-build-plan`.
-- 2026-06-27: TUI Zork easter egg. Added a hidden Home-only `~` screen that runs
-  the bundled MIT-licensed Zork I story through an attributed Ferrif-derived
-  Z-machine. Vendored the full `historicalsource/zork1` collection under
-  `third_party/zork1/`, added Ferrif/Zork license files and notice entries,
-  replaced the prior footer easter egg, and added a Zork VT100 snapshot plus
-  focused tests for boot, Home-only routing, `q` as game input, exact Quetzal
-  save-file shape (`FORM`/`IFZS`, `IFhd`, memory, `Stks`), restore, malformed
-  or symlinked save rejection, and private save-file permissions. The easter egg
-  adds no new Cargo dependencies and is documented as TUI-local with no
-  subprocess, network, workspace, credential, container, or arbitrary save-file
-  access. Verified: `cargo fmt --check`, `cargo test --locked zork --quiet` (79
-  filtered tests), `cargo test --locked tui --quiet`, full locked cargo tests,
-  locked clippy with warnings denied, pin check, JSON validation, security grep,
-  typography scan, `cargo build --locked --quiet`, and `git diff --check`.
-  Branch: `terminal-ui-build-plan`.
-- 2026-06-27: TUI design-review polish. Replaced the old right-side brand copy
-  with at-a-glance launch context: four-step wizard, selected agent, network,
-  workspace, boundary, and next safe action. This still used Cubby as the header
-  hero; the later source-first polish superseded that with the RunHaven logo in
-  the header and native Cubby as the ambient pet. Added a compact launch stepper
-  to workspace, review, and confirm screens; shortened Home and guide footers
-  around screen-local actions; made `p` discoverable from the guide; and
-  documented the wizard/user-flow/action model plus stock agent CLI reference
-  conventions in the TUI architecture guide. Updated README, USAGE, the brand
-  graphics plan, `feature_list.json`, and affected VT100 snapshots. Verified:
-  `cargo fmt --check`, `cargo test --locked tui` (189
-  TUI-filtered tests), `cargo clippy --all-targets --locked -- -D warnings`,
-  JSON validation, typography scan, and `git diff --check`. Branch:
-  `terminal-ui-build-plan`.
-- 2026-06-27: TUI Phase 5 polish and final build-plan closeout. Added
-  `src/runhaven/cli/tui/guide_views.rs` for the RunHaven Guide, opens it first
-  when the run-record log is missing or empty, and routes `?`/F1 to it from the
-  main screens. Added dashboard notices for status errors, stop/kill transitions,
-  stale/done containers, stale/repair markers, and log snapshots that appear to
-  be waiting for input or device-code interaction. Added line-mode render
-  coverage for guide/history/diagnostics/doctor surfaces, a guide snapshot, and
-  the former Home-only footer easter egg. Updated README, USAGE,
-  CAPABILITIES, ROADMAP, RELEASE_GAP_ANALYSIS, the TUI build plan, the TUI
-  architecture guide, the brand graphics plan, `feature_list.json`, `init.sh`,
-  and this state file. Verified: `./init.sh` with its new explicit
-  `cargo test --locked tui` lane (187 TUI-filtered tests), full root
-  `cargo test --locked` (258 lib tests + 6 integration tests), root clippy, pin
-  check, JSON validation, frontend check/test/build/e2e, Tauri fmt/test
-  (30 passed, 1 ignored)/clippy/debug no-bundle build, root build, and
-  `git diff --check`; post-state stale-reference scan, typography scan, JSON
-  validation, and `git diff --check`; and a bounded PTY launch smoke with an
-  empty cache that confirmed the first frame renders the RunHaven Guide. Live
-  Apple `container` smokes were not rerun because this phase did not change
-  runtime boundary behavior. Branch: `terminal-ui-build-plan`.
-- 2026-06-27: TUI Phase 4 history and diagnostics. Added
-  `src/runhaven/cli/tui/history.rs` and `history_views.rs` for run history,
-  per-run diff review, diagnostics, terminal capability reporting, and doctor
-  remediation screens. Added a shared `records::run_diff_text` API so the TUI
-  consumes diff text as data while `runhaven runs diff` preserves its existing
-  output. Home now exposes `h` for history and `g` for diagnostics; diagnostics
-  opens doctor with `d`. Split input/navigation handling into `tui/input.rs`,
-  bringing `tui/mod.rs` back down to about 604 lines. The diagnostics screen
-  uses only the shared
-  secret-free diagnostics readers/status payload, and doctor uses shared
-  `doctor::collect_checks`. Added VT100 snapshots for history, run diff,
-  diagnostics, and doctor screens, plus focused navigation/state tests.
-  Verified: `cargo fmt --check`, `cargo test --locked tui` (181 TUI-filtered
-  tests), `cargo test --locked` (252 lib tests + 6 integration tests), `cargo
-  clippy --all-targets --locked -- -D warnings`, `cargo test --manifest-path
-  src-tauri/Cargo.toml --locked` (30 passed, 1 ignored), `cargo clippy
-  --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`, JSON validation, typography
-  scan, `git diff --check`, and a bounded PTY launch/key smoke with `h`, `g`,
-  `q`. Branch: `terminal-ui-build-plan`. Phase 5 completed in the following
-  TUI slice.
-- 2026-06-27: Pre-Phase 4 organization/docs lock. Moved shared doctor logic to
-  `src/runhaven/doctor.rs`, secret-free diagnostics data to
-  `src/runhaven/diagnostics.rs`, run history behind the `records/` facade
-  (`run_history.rs`, `run_history/`, and `io.rs`), and shared agent auth posture
-  helpers into `provider/auth_profiles.rs`. Internal `src/runhaven` imports now
-  use explicit `crate::runhaven::...` ownership paths while `src/lib.rs` remains
-  the Tauri/external compatibility facade. Refreshed the README, product docs,
-  TUI plans, harness docs, `AGENTS.md`, `feature_list.json`, and this state
-  file so the active TUI and later desktop sequencing are consistent. Updated
-  `init.sh` to validate `feature_list.json` and run `git diff --check`.
-  Refreshed `src-tauri/Cargo.lock` offline so the Tauri crate locks current
-  root-crate dependencies. Verified: `./init.sh` (root cargo fmt/test/clippy,
-  242 lib tests + 6 integration tests, pin check, JSON validation, frontend
-  check/test/build/e2e, Tauri fmt/test/clippy, Tauri debug no-bundle build, root
-  build, and `git diff --check`), stale-reference scan, typography scan, and
-  read-only code-reviewer approval. Live Apple `container` smokes were not rerun
-  because this pass did not change runtime boundary behavior. Branch:
-  `terminal-ui-build-plan`. Phase 4 completed in the following TUI slice.
-- 2026-06-27: TUI Phase 0 foundation. Added the reusable TUI settings/theme
-  layer (`NO_COLOR`, `RUNHAVEN_TUI_REDUCED_MOTION=1`,
-  `RUNHAVEN_TUI_LINE_MODE=1`, dark/light palette seam), a synchronous
-  `event::poll` tick loop with deterministic ticker tests, Codex-derived
-  `color.rs`, a Codex-derived VT100 test backend, and an `insta` snapshot harness
-  with accepted home/detail snapshots at 80x24 and 120x36. The current screens
-  now render through the palette, Cubby has a no-color shape fallback, and the
-  80-column agent list truncates with an ASCII affordance instead of clipping
-  mid-word. New exact-pinned pure-Rust dev deps: `insta =1.48.0`
-  (`default-features = false`) and `vt100 =0.16.2`; pin checking now covers them.
-  Docs updated in `USAGE.md`, `THIRD_PARTY_NOTICES.md`, and
-  `docs/plans/tui-build-plan.md`. Verified: `cargo fmt --check`, `cargo test
-  --locked tui` (135 TUI-filtered tests), `cargo clippy --all-targets --locked
-  -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, and `git diff
-  --check`. Branch: `terminal-ui-build-plan`. Next: Phase 1 brand complete.
-- 2026-06-27: TUI Phase 1 brand. Embedded the validated Cubby Codex pet package
-  at `src/runhaven/cli/tui/assets/cubby/` and copied QA evidence to
-  `docs/assets/cubby-pet/` (validation ok, contact sheet, preview GIFs, review
-  ok with one accepted jumping `stable-slots` warning). The home banner now uses
-  the real Cubby atlas: Codex animation timing selects idle frames, reduced
-  motion pins the first idle frame, the portable fallback renders the current
-  frame as half-blocks, and graphics terminals use the Codex Kitty/iTerm2/Sixel
-  overlay path after the ratatui draw. `p` toggles Cubby for the session and
-  `RUNHAVEN_TUI_PET=0` starts hidden. Added RunHaven-authored rotating footer
-  tooltips. Verified after implementation: `cargo fmt --check`, `cargo test
-  --locked tui`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo
-  test --locked`, `cargo run --locked --bin runhaven-check-pins`, Cubby atlas
-  validation, copied metadata path sanitation, iTerm2 3.6.11 PTY launch/quit
-  smoke, and `git diff --check`. Branch:
-  `terminal-ui-build-plan`. Next: Phase 2 launcher flow.
-- 2026-06-27: TUI Phase 2 launcher flow. Added `tui/launcher.rs` for
-  workspace-picker and plan-review state, `tui/widgets.rs` for shared drawing
-  helpers, and `tui/tests.rs` to keep `tui/mod.rs` small enough to review. The
-  TUI now opens a workspace picker with simple fuzzy filtering and typed paths
-  (`w`), keeps the agent picker as the provider selector, builds a review from
-  the shared `AgentRunPlan`, shows the workspace mount, state volume, network
-  mode, provider egress posture, explicit non-mounts, and equivalent CLI command,
-  requires typing `run` only when the shared planner emits security notices,
-  restores the terminal, and launches through `launch_run_plan`. Accepted `.snap`
-  files stay tracked as golden baselines; `.gitignore` now ignores only
-  `*.snap.new`. Verified after implementation: `cargo fmt --check`, `cargo test
-  --locked tui` (159 TUI-filtered tests), `cargo clippy --all-targets --locked
-  -- -D warnings`, `cargo test --locked`, `cargo run --locked --bin
-  runhaven-check-pins`, iTerm2 3.6.11 PTY review-screen smoke, and `git diff
-  --check`. Branch: `terminal-ui-build-plan`. Next: Phase 3 run management.
-- 2026-06-27: TUI Phase 3 run management. Added `tui/runs.rs` and
-  `tui/run_views.rs` for active-run dashboard state and rendering while keeping
-  `tui/mod.rs` focused on orchestration. The dashboard opens with `d`, lists
-  active runs, shows sanitized status/resource/network details, filters provider
-  egress log entries by run id, and opens an explicit bounded log viewer with
-  search, scroll, tail-following, and ANSI parsing through `vt100` so escape
-  sequences are not replayed into the terminal. Stop, hard-stop, and stale-marker
-  repair use typed-confirm screens over the existing validated run-control
-  cores. Provider-mode runs now write egress decision deltas while active instead
-  of only at run-record finalization. `vt100 =0.16.2` moved from dev-dependency
-  to runtime dependency for the log renderer; pin checking covers the new
-  manifest shape. Verified: `cargo fmt`, `cargo test --locked tui` (171
-  TUI-filtered tests), `cargo test --locked
-  provider_decision_deltas_only_emit_new_counts`, `cargo clippy --all-targets
-  --locked -- -D warnings`, `cargo test --locked` (241 lib + 6 integration),
-  `cargo run --locked --bin runhaven-check-pins`, and a PTY smoke that opened
-  `runhaven`, pressed `d`, rendered the no-active-runs dashboard, and exited
-  cleanly. Branch: `terminal-ui-build-plan`. Phase 4 completed in a later
-  slice.
-- 2026-06-26: Vendored codex's pet/image rendering stack under
-  `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
-  three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,
-  `image_protocol.rs` with the iTerm2 3.6+ Kitty `t=f` path, `sixel.rs`), the
-  pet system (`model.rs`, `frames.rs`, `catalog.rs`), and pet animation timing
-  (`animation.rs`, the decoupled `current_animation_frame` extracted from
-  `ambient.rs`). UI/runtime-coupled codex code (the ambient state machine,
-  `FrameRequester`/tokio, picker/preview, asset_pack) was deliberately not
-  vendored; RunHaven supplies its own tick loop and run-state mapping. New
-  pure-Rust deps: `base64` `=0.22.1`, `image` `=0.25.10` (png+webp), no C.
-  Attribution: `licenses/codex-Apache-2.0.txt` + `THIRD_PARTY_NOTICES.md`
-  (carries OpenAI copyright + the Ratatui MIT note). Not yet wired into the app.
-  Text-motion polish (codex `shimmer.rs`/`motion.rs`, needs `color.rs` +
-  `supports_color`) deferred as optional. Verified: cargo build, clippy
-  `-D warnings`, `cargo fmt --check`, `cargo test --locked` (120 lib incl. 40
-  vendored + 6 integration), pin check.
-- 2026-06-26: Reverted the `ratatui-image` high-resolution image tier (it
-  rendered blank on iTerm2; see the Key Decision above). The home banner is back
-  to the reliable xterm-256 half-block Cubby hero, which renders on every
-  terminal. `ratatui-image` and `image` deps removed. High-resolution rendering
-  will be redone via codex's Kitty-graphics overlay approach. Verified: cargo
-  build, `cargo test --locked` (10 TUI tests), pin check.
-- 2026-06-27: Generated Terminal.app-safe Cubby header/hero mascot assets from
-  the reference cube image. Added exact pixel-grid PNGs plus half-block ANSI
-  renderings for 16x18, 24x26, 32x36, 40x44, and 48x52 under
-  `docs/assets/terminal-mascot/`. The generator removed the dark background with
-  edge-connected flood fill, added a one-pixel safety inset, quantized every
-  opaque pixel to stable xterm 256-color indices 16-255 (avoiding profile-
-  dependent base colors 0-15), and wrote a contact sheet plus manifest. Verified:
-  PNG dimensions, half-block cell dimensions, ANSI escape/index constraints,
-  xterm-palette membership, visual contact sheet, `magick identify`, and
+2026-06-27: Workspace crate split complete. The Rust codebase now uses
+workspace crates:
+
+- `crates/runhaven` for binary entrypoints.
+- `crates/runhaven-core` for shared runtime truth and UI contracts.
+- `crates/runhaven-cli` for CLI presentation.
+- `crates/runhaven-tui` for the Codex-vendored TUI.
+- `src-tauri` as a workspace member.
+
+This phase also removed the obsolete separate Tauri lockfile, made root Cargo
+commands cover Tauri, narrowed public crate exports, kept `runhaven`
+binary-only, and refreshed active architecture, harness, pinning, TUI, and
+state docs to the new layout.
+
+Follow-up ownership audit fix: `crates/runhaven` now owns the bare-interactive
+TUI routing decision, `crates/runhaven-cli` no longer depends on
+`crates/runhaven-tui`, the unused `records::history` compatibility alias is
+gone, `init.sh` uses `cargo test -p runhaven-tui --locked` as the TUI package
+gate, and empty untracked vendored snapshot directories were removed from the
+local tree. Dormant vendored Codex test modules remain source-first until their
+parent modules are wired back into the RunHaven TUI app shell.
+
+Repo-wide organization audit follow-up: tracked source is now clean of root
+`src/`, tracked build output, `.snap` files, `.DS_Store`, and the obsolete
+`src-tauri/Cargo.lock`. The largest visible directory clutter was ignored local
+build output, not tracked source. Tauri npm scripts now set
+`CARGO_TARGET_DIR` to the absolute root `target/` path so desktop builds use
+the root workspace target directory. The stale ignored `src-tauri/target/`,
+frontend `dist/`, Playwright
+reports, test results, and empty `.github/workflows/` directory were removed
+locally. `docs/harness/state/clean-state-checklist.md` records which ignored
+directories are allowed caches and which should be cleaned when they appear.
+Active stale doc paths were corrected in the research and Tauri/TUI design docs;
+historical evidence logs were left as records of what happened at the time.
+
+TUI native-pet image smoke follow-up (superseded): the earlier temporary
+`app_shell.rs` image-smoke path has been removed from the active shell during
+core-completion cleanup. RunHaven still bundles the verified Cubby Codex pet
+package from `docs/assets/installed-pet/cubby/` and can materialize it as
+`custom:runhaven-cubby` under `$CODEX_HOME/pets/runhaven-cubby/` through the
+lower pet modules, avoiding collisions with a user's own
+`$CODEX_HOME/pets/cubby/` package. Reintroduce terminal-image smoke only in a
+future explicitly scoped pet, terminal-image, or GUI asset slice.
+
+TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
+defines the first tagged RunHaven payload enum with `AgentCatalogData` and
+`LaunchPlanData`; `LaunchPlanData` includes the planner's auth scope so the TUI
+does not guess whether login state is agent-wide or project-scoped. Fixtures live under
+`crates/runhaven-core/tests/fixtures/ui/`. The temporary TUI adapter consumes
+`AgentCatalogItemData` for agent display, but the next visual slice should move
+toward a Codex-native shell with RunHaven product cards. dbt-wizard is only the
+architecture proof for stable domain payloads first and renderer second. The
+visual target is closer to native Codex: compact intro and status content,
+bottom composer and status line, and no analytics dashboard feel in the default
+launcher. Native Cubby behavior is parked unless a future TUI or GUI slice
+explicitly pulls it forward.
+
+TUI bottom-pane follow-up: `crates/runhaven-tui` now compiles the Codex
+`ListSelectionView` family directly from the vendored bottom-pane source through
+a narrow staging facade. The facade exposes the Codex-shaped event sender, list
+keymap, paste normalization, cancellation, and completion types needed by
+`ListSelectionView` and the pet picker. Its default list keymap now mirrors the
+upstream Codex list defaults. The upstream Codex list-selection snapshot tests
+are gated behind the opt-in `codex-vendored-tests` feature until RunHaven
+intentionally vendors or regenerates those snapshot goldens.
+
+TUI launch-picker follow-up: `app_shell.rs` no longer owns a hand-drawn
+Ratatui agent list or preview pane. It now hosts a RunHaven launch-wizard view
+model under `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs`, rendered
+through Codex `SelectionViewParams` and `ListSelectionView`. The generic picker
+logic, side-content layout, cancellation, and list key handling remain
+Codex-vendored. RunHaven-owned code maps `AgentCatalogData` and
+`LaunchPlanData` into decision rows and a short safety header. The first agent
+chooser intentionally does not show a side plan preview, exact command, broker
+detail, image detail, or provider-host list. That dense safety information
+belongs in the review and confirmation steps, where the user checks it before
+launch.
+
+TUI launch-review follow-up: Enter on a ready agent now opens a read-only review
+step rendered through the Codex menu-surface style. The review shows the
+selected agent, auth scope, network posture, workspace mount, state volume,
+non-shared host data, provider hosts, safety notes, and exact `container run`
+command. `b`, backspace, or Esc returns to the picker; `q` exits from either
+screen. Blocked plans cannot open review. At that review slice, launch and
+preflight execution were still disabled; later confirmation and foreground
+handoff follow-ups supersede that state.
+
+TUI shell-chrome follow-up: the temporary app shell now reserves a real Codex
+footer area around the launch picker and review screen. The footer is rendered
+through Codex's vendored `bottom_pane/footer.rs` with a RunHaven status line
+showing step, selected agent, network posture, boundary, and `? help`. The
+shell also uses Codex's sanitized `terminal_title.rs` writer so terminal tab
+titles track the workspace, step, and selected agent, and clears the managed
+title on exit. The vendored footer snapshot tests are gated behind
+`codex-vendored-tests`, matching the list-selection snapshot policy because
+upstream `.snap` goldens are intentionally not tracked.
+
+TUI launch-confirmation follow-up: the launch wizard now has Step 4 confirmation
+on top of the current Codex menu-surface review. Enter from review opens
+confirmation, and the confirmation screen keeps the exact planner command
+visible while using `LaunchPlanData.confirm_required` as the only typed-confirm
+gate. Plans that need extra intent now use the vendored Codex `TextArea`
+editor primitive for the confirmation phrase. While that text field is focused,
+plain `q` and `?` are text input instead of shell shortcuts; Esc returns to
+review. Paste is ignored for the lower-security confirmation phrase so the
+extra intent still means typing. Secure/default plans still confirm with Enter
+and keep `q` as the shell quit shortcut. At that point launch was still
+disabled; the later foreground launch handoff supersedes the no-launch
+behavior.
+
+TUI confirm-composer follow-up: `crates/runhaven-tui` now compiles the vendored
+Codex `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs` through the
+staging facade. The facade has the Codex editor/Vim keymap defaults, and the
+byte-range text element types now come from the real vendored `codex-protocol`
+crate. The upstream deterministic textarea tests run by default; the snapshot
+and randomized stress tests remain opt-in with the same `codex-vendored-tests`
+policy as the other upstream snapshot goldens.
+
+TUI capabilities-doc follow-up: `docs/plans/codex-tui-capabilities.md` now
+locks the full local Codex TUI capability survey into repo docs. Use it as the
+source map before custom TUI work. It confirms Codex already has mature terminal
+runtime, bottom-pane/composer, keymap, selection popup, approval, markdown,
+diff, streaming, history-cell, session, status, pet, terminal-title, and
+VT100/snapshot-test systems.
+
+TUI architecture correction: the deeper read of
+`/Users/c/Downloads/codex-tui-capabilities.md` showed that the full
+`ChatComposer` is not the next isolated seam unless RunHaven only uses the small
+`public_widgets::ComposerInput` wrapper. Native Codex TUI behavior is built as
+`Tui` runtime plus `App` event loop plus `ChatWidget` plus `BottomPane`, with
+`app_server_session.rs` owning typed client calls so transport plumbing stays out
+of `App` and `ChatWidget`. The current 2026-06-29 RunHaven direction uses the
+source-first pieces needed for the scoped MVP: Codex `Tui`, event stream,
+`BottomPane`, typed facade, RunHaven-owned views, active-run logs, diagnostics,
+and recovery. Native `App` and `ChatWidget` are separate optional future
+promotions, not default MVP parity work. Host-reaching Codex RPCs such as remote
+filesystem, MCP, and IDE actions stay fail-closed unless a RunHaven security
+design explicitly promotes them.
+
+Strategy decision: RunHaven is following the capability guide's Strategy C path,
+a Codex-compatible client, because its domain is close to Codex's
+agent/thread/turn/session model. Strategy B, extracting a small TUI kit, is only
+a temporary compile bridge for low-coupling modules such as `ComposerInput`,
+wrapping, diff rendering, or selection helpers. It is not the product
+architecture.
+
+Strategy C Phase 3 runtime-spine follow-up: `crates/runhaven-tui` now compiles
+the vendored Codex `tui.rs` runtime spine as `codex_runtime`, including the
+event stream, frame requester, frame limiter, Unix job-control hook, terminal
+stderr guard, custom terminal, insert-history writer, notifications, and
+terminal hyperlinks. The new `runhaven/app_server_session.rs` bridge routes
+supported bootstrap, agent-catalog, and workspace-validation calls into the
+local RunHaven facade and keeps unsupported Codex method families typed and
+fail-closed. Required dependency changes are exact-pinned: crossterm now enables
+the upstream event-stream and bracketed-paste features, Ratatui enables
+scrolling regions, and `tokio-stream` plus `derive_more` are direct workspace
+dependencies for the compiled Codex runtime surface. Later slices activated the
+Codex runtime for the scoped MVP; native `App` remains dormant unless RunHaven
+needs Codex app-loop ownership behind reviewed boundaries.
+
+Verified:
+
+- `cargo fmt --check`
+- `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
+- `cargo test -p runhaven-tui --locked --quiet`
+- `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
+- `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
+- `cargo test -p runhaven-cli --locked --quiet`
+- `cargo tree -p runhaven-cli --locked` with no `runhaven-tui`, `ratatui`,
+  `crossterm`, `tokio`, `reqwest`, or `image` dependency matches
+- `cargo test --workspace --locked --quiet`
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`
+- `cargo run --locked --bin runhaven-check-pins --quiet`
+- `cargo build --workspace --locked --quiet`
+- `npm --prefix ui run tauri:build` with `CARGO_TARGET_DIR` resolving to root
+  `target/`
+- `test ! -d src-tauri/target`
+- `jq empty feature_list.json`
+- `python3 -m json.tool feature_list.json`
+- `python3 -m json.tool ui/package.json`
+- active stale-reference scans
+- `git diff --check`
+- `./init.sh`
+- `cargo run --locked --bin runhaven` in a PTY, pressed Enter to open review,
+  pressed `b` to return to the picker, then pressed `q` to quit.
+
+Latest TUI smoke verification:
+
+- `cargo fmt --check`
+- `cargo test -p runhaven-tui --locked runhaven_cubby --quiet`
+- `cargo test -p runhaven-tui --locked picker_ --quiet`
+- `cargo test -p runhaven-tui --locked launch_wizard --quiet`
+- `cargo test -p runhaven-core --locked ui_contracts --quiet`
+- `cargo test -p runhaven-tui --locked app_shell --quiet`
+- `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
+- `cargo test -p runhaven-tui --locked terminal_title --quiet`
+- `cargo test -p runhaven-tui --locked textarea --quiet`
+- `cargo test -p runhaven-tui --locked runhaven::app_server_session -- --nocapture`
+- `cargo test -p runhaven-tui --locked custom_terminal::tests -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime::tests::with_restored -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime::event_stream::tests::paused_broker_drops_source_until_resume -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::terminal_handoff -- --nocapture`
+- `cargo check -p runhaven-tui --locked`
+- `cargo test -p runhaven-tui --locked --quiet`
+- `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
+- `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
+- `cargo test -p runhaven-tui --locked pets --quiet`
+- `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
+- `cargo test -p runhaven-tui --locked ambient_pet_image_restores_cursor_after_drawing --quiet`
+- `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
+- `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`
+- `cargo test --workspace --locked --quiet`
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`
+- `cargo build --workspace --locked --quiet`
+- `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
+- `cargo run --locked --bin runhaven-check-pins --quiet`
+- `jq empty feature_list.json`
+- `python3 -m json.tool feature_list.json`
+- `git diff --check`
+- `CODEX_HOME=$(mktemp -d) RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin
+  runhaven` in a PTY, quit with `q`; it materialized
+  `pets/runhaven-cubby/{pet.json,spritesheet.webp}`, emitted Codex Kitty
+  local-file frames from the `custom-runhaven-cubby` frame cache, and exited
+  cleanly.
+- `cargo run --locked --bin runhaven` in a PTY, pressed `?` to show footer
+  help, Enter to open review, `b` to return to the picker, and `q` to quit;
+  the terminal title changed between Choose agent and Review plan and cleared
+  on exit.
+- `cargo run --locked --bin runhaven` in a PTY, pressed Enter to open review,
+  Enter to open confirmation, Enter to confirm the read-only notice, `b` to
+  return to review, and `q` to quit; the terminal title changed through Choose
+  agent, Review plan, and Confirm launch, then cleared on exit.
+- `RUNHAVEN_TUI_HANDOFF_SMOKE=success cargo run --locked --bin runhaven` in a
+  PTY; Codex runtime initialized, cleared the managed title before handoff,
+  restored terminal ownership around `/usr/bin/printf`, printed the harmless
+  child marker, and exited 0.
+- `RUNHAVEN_TUI_HANDOFF_SMOKE=error cargo run --locked --bin runhaven` in a
+  PTY; Codex runtime initialized, cleared the managed title before handoff,
+  restored terminal ownership after the missing child failed to start, surfaced
+  `terminal handoff child failed to start`, and exited 2.
+
+Latest harness review:
+
+- 2026-06-27: Reviewed
+  `/Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/`,
+  including the minimal templates, reference notes, OpenAI advanced pack, SOPs,
+  and repo-template docs. Decision: keep RunHaven's three-file startup contract
+  and map external template concepts onto existing RunHaven owners instead of
+  adding parallel root progress/handoff, quality, reliability, plan, or product
+  spec files. Verified with pin check, JSON validation, typography scan over
+  changed files, and `git diff --check`.
+
+Latest TUI strategy review:
+
+- 2026-06-27: Fully read `/Users/c/Downloads/codex-tui-capabilities.md` and
+  checked the conclusion against local Codex source entrypoints for
+  `app_server_session`, `App`, `ChatWidget`, `BottomPane`, `Tui`,
+  `TuiEventStream`, and `FrameRequester`. Decision: RunHaven should follow the
+  Strategy C compatible-client path, with Strategy B limited to temporary
+  bridges and low-coupling helpers. Verified with `jq empty feature_list.json`,
+  `git diff --check`, and a no-em-dash typography scan over changed docs/state
+  files.
+
+Latest Strategy C plan import:
+
+- 2026-06-27: Imported the split Strategy C plan from
+  `/Users/c/Downloads/runhaven-codex-tui-strategy-c/` into
+  `docs/plans/codex-tui-strategy-c/`. Read all five plan files and ran
+  read-only adversarial, Rust architecture, and Rust test-architecture reviews.
+  The repo copy incorporates the review fixes: do not broadly add Codex backend
+  crates as workspace authorities; compile the dormant runtime spine before
+  terminal handoff; keep `launch_wizard.rs` UI-owned while the service returns
+  payloads/events; keep upstream `.snap` files external by default; add
+  deterministic facade, fail-closed, terminal handoff, workspace-gate, and
+  snapshot-matrix requirements; prepare foreground launch through the facade but
+  execute `launch_run_plan` on the UI thread only after terminal restore; keep
+  the hidden Zork easter egg as a future RunHaven-owned Codex-shaped view.
+
+Latest TUI Phase 0 baseline lock:
+
+- 2026-06-27: Completed Phase 0 of the Strategy C plan without runtime behavior
+  changes. `crates/runhaven-tui/src/tui/README.md` now records the upstream
+  Codex GitHub repo, pinned commit
+  `5267e805fb830891c0b23376bcd9cbd382c3473c`, upstream path
+  `codex-rs/tui/src/`, RunHaven-only files, and copied Codex files with local
+  edits. Added `scripts/compare-codex-tui.sh`, which fetches the pinned
+  upstream Codex source from GitHub into a temporary checkout and compares all
+  files under `codex-rs/tui/src/`, including Rust files, `src/bin`, nested
+  tests, and `.snap` goldens. Phase 0 audit snapshot: 894 upstream files, 364
+  RunHaven files, 356 common paths, 538 upstream `.snap` files external by
+  default, 8 RunHaven-only files, and 20 copied Codex files with local edits.
+  Verified:
+  `bash -n scripts/compare-codex-tui.sh`,
+  `scripts/compare-codex-tui.sh`,
+  `scripts/compare-codex-tui.sh --list-missing`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `jq empty feature_list.json`,
+  `python3 -m json.tool feature_list.json`, whitespace and ASCII scans, and
   `git diff --check`.
-- 2026-06-26: TUI slices 2b/2c (Cubby mascot). Moved `tui.rs` to `tui/mod.rs`
-  and added a `tui/mascot.rs` + `tui/mascot/sprites.rs` submodule so branding
-  stays separate from the functional cards. The mascot is **Cubby**: a glass
-  container cube with a gold agent spark inside, on a layered base. Slice 2b was
-  a hand-built placeholder; slice 2c replaced it with the finished art, real
-  pixel renders quantized to xterm-256 (indices 16-255, avoiding 0-15 for macOS
-  Terminal.app stability) at sizes 16x18/24x26/32x36/40x44, embedded as index
-  grids and rendered via `Color::Indexed` half-blocks (the portable rendering
-  floor, no image protocol). `hero_for_banner` shows the largest hero that fits
-  the terminal, so detail scales up on big windows and degrades to 16x18 on an
-  80x24 floor; the brand is vertically centered beside it. Source renders are in
-  `docs/assets/terminal-mascot/`, the 1024px master in
-  `docs/assets/cubby-hero-1024.png`. The animated pet (codex-pet-style atlas,
-  validated and backed up at `codex-pet`) is a separate future slice. Verified:
-  cargo fmt, `cargo test --locked` (79 lib incl. 10 TUI tests + 6 integration),
-  clippy `-D warnings`, pin check, `git diff --check`.
-- 2026-06-26: Captured TUI architecture patterns in
-  `docs/plans/tui-architecture.md` (study of the Codex `ratatui` TUI): the
-  planner and policy objects are the single source of truth; adapters build and
-  widgets only draw; fixed-size vs width-aware cards with bounded lists; shared
-  draw helpers; a palette and color-mode module; the TUI and the Tauri app share
-  data rather than duplicated logic; branding stays separate from functional
-  cards; per-card `TestBackend` fixtures. These guide the upcoming slices.
-- 2026-06-26: TUI slice 2 (agent picker). The home screen is a navigable agent
-  list (up/down or j/k, clamped) via a ratatui `ListState`; enter opens a
-  per-agent detail screen (description, image, support tiers) and esc/backspace
-  returns home. The detail tiers reuse the shared `agent_sign_in`/`agent_broker`
-  helpers from `provider/auth_profiles.rs` plus `default_network_mode`, so the
-  TUI and `runhaven agents` share one source. Input is a testable `handle_key`. Verified:
-  cargo fmt, `cargo test --locked` (74 lib incl. 5 TUI tests + 6 integration),
-  clippy `-D warnings`, non-TTY help fallback, `git diff --check`.
-- 2026-06-26: Started the terminal UI (TUI). Decision: reference the Codex TUI
-  (`codex-rs/tui`) for quality and patterns, not fork it; it is ~214k lines,
-  Apache-2.0, an agent-chat domain welded to ~30 `codex-*` internal crates (even
-  its event loop imports `codex_protocol`), while RunHaven needs a
-  launcher/manager, a different domain (the agent's own chat runs inside the
-  container). Pinned `ratatui =0.30.2` (current stable). Slice 1 (scaffold):
-  `src/runhaven/cli/tui/mod.rs` with `ratatui::init`/`restore` (panic-safe terminal),
-  a draw/key-event loop, and a home screen listing the agents from `profiles()`.
-  Bare `runhaven` opens the TUI only when both stdin and stdout are a terminal
-  (`should_launch_tui`); piped, redirected, or subcommand invocations keep the
-  CLI. Tracked as the active `terminal-ui` feature. Also fixed the v0.5.0
-  pin-check miss (`pins.toml [runhaven] version` was left at 0.1.0; bumped to
-  0.5.0, fixed forward on `main`, not re-tagged). Verified: cargo fmt, `cargo
-  test --locked` (71 lib incl. 2 TUI tests + 6 integration), clippy `-D
-  warnings`, pin check passes, non-TTY falls back to help, `git diff --check`.
-- 2026-06-26: Cut and published the `v0.5.0` CLI-complete pre-release. Closed
-  V05-G4 (Apple container smokes, default plus `--with-provider` and
-  `--with-ssh`, passed on the current code, validating the egress wildcard
-  matcher and SSH fail-closed) and V05-G8 (`CHANGELOG.md` release notes, README
-  pre-release caution, feature_list and current-state closure). Bumped the
-  runhaven CLI crate `0.1.0` to `0.5.0` (`runhaven --version` = 0.5.0); src-tauri
-  rebuilt against it (30 Tauri tests pass); both `Cargo.lock` files updated; image
-  template tags stay `0.1.0` (built locally, unchanged). Pushed `main` to origin,
-  tagged `v0.5.0`, pushed the tag, and published a GitHub pre-release. This closes
-  all eight v0.5.0 gap-analysis blockers. Verified: cargo fmt, `cargo test
-  --locked` (69 lib + 6 integration), clippy `-D warnings`, src-tauri tests (30),
-  Apple container smokes, `cli_surface_check.sh` 39/39, doc scans, `git diff
-  --check`.
-- 2026-06-26: Closed the last two `v0.5.0` CLI-complete items (on `main`,
-  committed locally), so all four closure items are now done. JSON and local-data
-  lifecycle: recorded an explicit decision in `V1_RELEASE_PLAN.md` (Data, Storage,
-  And Recovery) with a `USAGE.md` pointer, through `v0.5.0` every CLI `--json`
-  output and local record file (`runs.jsonl`, `egress-policy.jsonl`,
-  `auth-broker.jsonl`, active-run markers) is best-effort and unversioned; OAuth
-  tokens, locks, the login workspace, and volumes are internal; stability needs
-  an explicit `schema_version` field first (audit/log outputs are the first
-  candidates). CLI maintainability check (lean-reviewer pass against the
-  ~500-line guard): deleted dead `ApiKeyBrokerProxy::bind` and deduped
-  `logout_shared_volume` onto the shared existence-aware `delete_volume` (logout
-  now gets the same existence check and retry). `egress.rs` (525),
-  `auth_broker.rs` (512), and `app.rs` (508) are slightly over the guard but
-  cohesive surfaces left whole; `egress.rs` has a policy-vs-proxy seam to split
-  only if it grows. Verified: cargo fmt, `cargo test --locked` (69 lib + 6
-  integration), clippy `-D warnings`, doc scans and `git diff --check` clean.
-- 2026-06-26: CLI command + docs contract audit (a `v0.5.0` closure item, on
-  `main`, committed locally). Cross-checked the full command tree (14 top-level
-  commands plus all subcommand groups: runs 15, image 3, network 2, state 3,
-  auth 3, egress 1, why 4) against the clap help, `CLI_SURFACE_COVERAGE.md`, and
-  `USAGE.md`. Fixed one doc gap (`runhaven agents` was missing from USAGE; added
-  a List Agents section). The breadth surface check then caught a real regression
-  from this session's `--auth-scope agent` default: `runhaven run --session X`
-  now uses the shared per-agent volume, so `state reset --session X` (always
-  project-scoped) targeted a session volume the run no longer creates and failed
-  on a non-existent volume. Fixes: `state reset`/`state prune` deletion is now
-  existence-aware (a missing volume is reported, not an error) and retries while
-  a volume is transiently held after a stop or kill (Apple container does not
-  auto-remove the container); the surface check's active run uses `--auth-scope
-  project` so the session-volume reset path is actually exercised. Result:
-  `cli_surface_check.sh` 39/39. Verified: cargo fmt, `cargo test --locked` (69
-  lib incl. a new `volume_in_list` test + 6 integration), clippy `-D warnings`,
-  `git diff --check`. Follow-up: RunHaven runs without `--rm`, so killed
-  containers reap asynchronously; a runtime-lifecycle review is a separate item.
-- 2026-06-26: Profile support tiers (a `v0.5.0` CLI-complete closure item, on
-  `main`, committed locally). Made the per-agent support matrix code-derived so
-  it cannot drift: `runhaven agents` now prints sign-in path (`runhaven login`
-  vs in-sandbox vs n/a), default network (provider/internet), and API-key broker
-  (yes/no) per agent, sourced from `login::supports_login`,
-  `default_network_mode`, and `auth_profiles::is_brokered`. Fixed the stale
-  `CAPABILITIES.md` matrix (codex now lists `auth.openai.com`; copilot lists the
-  `githubcopilot.com` hosts plus `github.com`/`api.github.com`; added the
-  `runhaven login` mentions) and pointed it at `runhaven agents`; updated
-  `CLI_SURFACE_COVERAGE.md` and marked the `NON_UI_BACKLOG.md` item done. Tests
-  assert the login set {claude, codex, copilot, antigravity} and the broker set
-  {claude, codex, gemini}. Verified: cargo fmt, `cargo test --locked` (68 lib +
-  6 integration), clippy `-D warnings`, doc scans and `git diff --check` clean.
-- 2026-06-26: Full repo docs and README refresh, then merged the
-  `runtime-security-hardening` branch to `main`. Rewrote `README.md` (added the
-  `runhaven login` sign-in story for all four agents, plain-language egress
-  framing, and the then-current UI-last roadmap), and updated the product,
-  roadmap, and policy docs to match current state (PROVIDER_ENDPOINTS host sets
-  and the domain-family pattern, USAGE/CAPABILITIES/SECURITY_MODEL/ARCHITECTURE
-  broker-and-egress wording, ROADMAP/V1_RELEASE_PLAN/NON_UI_BACKLOG re-sequencing
-  and login-done, CLI_SURFACE_COVERAGE login row, CONTRIBUTING/SECURITY/RESEARCH).
-  Verified: `git diff --check`, em-dash/emoji/canned-phrase scans clean, relative
-  Markdown link check (32 README links + the rest, 0 broken), pin check passed,
-  and a final `cargo fmt`/`test --locked` (66 lib + 6 integration)/clippy
-  `-D warnings` green. Pushed to `origin/main`.
-- 2026-06-26: Non-technical UX pass on login/run output (the "much easier"
-  thread, after the four-agent set). (1) `launch_run_plan` now preflights the
-  agent image (`image_doctor::image_is_built`) and fails with "Build it once
-  with: runhaven image build <agent>" instead of the cryptic
-  `registry-1.docker.io 401`. (2) Login guidance anticipates the two verified
-  friction points: Codex points to ChatGPT Settings then Security for device-code
-  login; Copilot pre-warns that the plaintext-keychain prompt should be answered
-  `y` because the file lives in the isolated volume. (3) The end-of-run
-  blocked-host output is now a calm two-line plain-language notice ("RunHaven
-  kept <agent> inside its provider's network and blocked N other destinations to
-  protect your data; run `runhaven egress log` ...") instead of a per-host
-  technical dump; detail stays in `runhaven egress log`, and the now-dead
-  `provider_denial_next_action` was removed. Verified: fmt, `cargo test --locked`
-  (66 lib + 6 integration), clippy `-D warnings`, `git diff --check`. Remaining
-  UX: the auto-updating signed provider-policy file (post-alpha, the bigger
-  lift), and a live look at the new messages on the user's machine.
-- 2026-06-26: Added narrow domain-family allowlist patterns (step 1 of the
-  lower-friction egress design). The egress matcher now accepts maintainer-
-  curated `*-name.domain.tld` wildcard patterns, anchored so the wildcard can
-  only expand a subdomain label inside one registrable domain (must start with
-  `-` or `.` and carry a >=2-dot tail; `*-foo.com` is rejected at construction).
-  Applied to Antigravity: the exact `daily-cloudcode-pa` pin became
-  `*-cloudcode-pa.googleapis.com`, so any Google Cloud Code channel/region prefix
-  is covered without a re-pin while `storage` and other googleapis.com services
-  stay denied. Tests: positive (daily-/us- allowed), negative-exfil (storage
-  denied), construction guard (cross-domain rejected). Verified: fmt, `cargo test
-  --locked` (65 lib + 6 integration), clippy `-D warnings`, `git diff --check`.
-- 2026-06-26: Built and live-verified `runhaven login antigravity`, completing
-  the user's four-agent set (Claude, Codex, Copilot, Antigravity). agy has no
-  login subcommand, so `runhaven login antigravity` runs agy, whose first run
-  triggers a Google OAuth sign-in (the user approves in the host browser, then
-  types /exit); the login persists in the shared home volume. Observing the real
-  egress corrected the reverse-engineered research: the flow is Google
-  auth-code with a redirect to `antigravity.google` (not device-code, not
-  localhost), and the live model endpoint is `daily-cloudcode-pa.googleapis.com`
-  (not `cloudcode-pa` alone). Pinned 4 bundled hosts from the egress ledger:
-  `oauth2.googleapis.com`, `www.googleapis.com`, `cloudcode-pa.googleapis.com`,
-  `daily-cloudcode-pa.googleapis.com`. `accounts.google.com` and
-  `antigravity.google` are browser-side only, not bundled. Live-verified: the
-  model answered prompts ("Kermit is green"). agy's startup eligibility check
-  fetches `lh3.googleusercontent.com` (profile pic); blocked it is a cosmetic
-  "Eligibility check failed" line and the agent still works, so it is left out of
-  the default (least privilege) with a documented `--provider-host` opt-in.
-  antigravity now defaults to provider mode (it has bundled hosts), a security
-  improvement over the prior internet default. Decision: keep tight host pins,
-  not `*.googleapis.com` (that would open `storage.googleapis.com` as an
-  exfil channel). Verified: fmt, `cargo test --locked` (63 lib incl. an updated
-  default-network test + 6 integration), clippy `-D warnings`, `git diff
-  --check`. Open question from the user: geo/endpoint variation of the
-  cloudcode-pa hosts; a narrow `*-cloudcode-pa.googleapis.com` matcher (Google
-  controls googleapis.com, so it cannot open storage/gmail) is the candidate fix.
-- 2026-06-26: Built `runhaven login` for Codex and Copilot (in-sandbox device
-  flow). Each runs the CLI's own device-code login (`codex login --device-auth`;
-  `copilot login`) once inside the sandbox on the agent's shared home volume
-  (`--auth-scope agent`), reusing `launch_run_plan` in provider mode. The
-  credential stays in the isolated volume; RunHaven never sees the token.
-  Allowlisted the login/refresh hosts in `endpoints.rs`: `auth.openai.com` for
-  Codex; `github.com` and `api.github.com` for Copilot (a deliberate, documented
-  egress widening, flipped from `candidate` to `bundled` in the endpoint matrix).
-  `--clear` deletes that agent's shared home volume. Added
-  `paths::login_workspace_dir` (a stable read-only login workspace), command +
-  allowlist unit tests, and `AUTH_BROKER`/`USAGE` docs. Verified: cargo fmt,
-  `cargo test --locked` (63 lib incl. 2 new login tests + 6 integration), clippy
-  `-D warnings`, `git diff --check`. Live-verified 2026-06-26: `runhaven login
-  codex` reached `auth.openai.com/codex/device` and returned "Successfully
-  logged in"; `runhaven login copilot` reached `github.com/login/device` and
-  returned "Signed in successfully", both persisted in the shared home volume.
-  Two verified gotchas: Codex needs the ChatGPT account "device code
-  authorization" setting on (OpenAI gates it, not RunHaven); Copilot has no
-  in-container keychain so it prompts "Store token in plaintext config file?
-  (y/N)" defaulting to N, the user must answer y (the token lands in the
-  isolated volume, the same model as every other in-container login). Prereqs
-  that bit during verification: the agent image must be built first
-  (`runhaven image build <agent>`; an unbuilt image fails with a cryptic
-  registry-1.docker.io 401), and Apple container DNS had gone stale after a host
-  network change (fixed with `container system stop && container system start`).
-  The user flagged that these friction points need much friendlier UX/phrasing
-  (image-not-built message, Copilot keychain heads-up, Codex toggle heads-up) as
-  the next thread. Antigravity login is the last of the four (its hosts are
-  reverse-engineered, so observe real egress before pinning an allowlist).
-- 2026-06-26: Built `runhaven login claude`, the Claude setup-token opt-in (the
-  zero-friction path the user chose; Claude has no in-container device login at
-  the pinned version). It runs Anthropic's `claude setup-token` on the host
-  (needs host Claude Code), stores the token `0600` in the RunHaven cache, and
-  `runhaven run claude` injects it at run time as a name-only
-  `--env CLAUDE_CODE_OAUTH_TOKEN` (value from the RunHaven process env, never on
-  the argv or in the printed `plan`). A run-time notice marks the injection;
-  provider-mode egress confines the token to Anthropic's hosts;
-  `runhaven login claude --clear` removes it. New
-  `src/runhaven/runtime/login.rs` + `paths::oauth_token_path`, wired into the
-  standard and provider run paths; docs in `AUTH_BROKER`/`USAGE`. Verified: cargo
-  fmt, `cargo test --locked` (61 lib incl. 2 new login tests + 6 integration),
-  clippy `-D warnings`, Tauri builds and clippy. Live-verified 2026-06-26:
-  `runhaven login claude` stored the token and `runhaven run claude` came up
-  authenticated with no login prompt (zero friction).
-- 2026-06-26: Started the `oauth-isolated-login` slice (easy OAuth; the product's
-  target audience uses subscription/OAuth logins, not API keys). Live-verified
-  that a Claude Max subscription OAuth login works end to end inside a RunHaven
-  sandbox: provider mode with the login hosts (`api.anthropic.com`, `claude.ai`,
-  `platform.claude.com`) allowlisted, no host credentials mounted; telemetry and
-  registry hosts were correctly blocked and the agent still ran. The OAuth path
-  is the isolated in-container login (not a broker; brokering is ToS-forbidden).
-  Built the first piece: `--auth-scope <agent|project>` (default `agent`) shares
-  one per-agent home volume (`runhaven-<agent>-shared-home`) across all
-  workspaces so the login is done once; `project` keeps the per-workspace volume.
-  Documented the shared-login tradeoff in `SECURITY_MODEL`/`USAGE`/`CAPABILITIES`.
-  Verified: cargo fmt, `cargo test --locked` (59 lib incl. a new auth-scope test
-  + 6 integration), clippy `-D warnings`, Tauri test (30) and clippy. One UX
-  friction the user flagged: the in-sandbox login requires copy/pasting the URL
-  to the browser and the code back; remaining work cuts that (see Next Step).
-- 2026-06-26: Completed the `multi-provider-broker` slice (branch
-  `runtime-security-hardening`, not yet merged). Generalized the Codex API-key
-  broker into a provider-agnostic core (`ProviderBrokerProfile`: upstream host,
-  path matcher, credential-injection strategy, guest redirect) and wired Codex,
-  Claude, and Gemini brokers into the run orchestration. The real host key stays
-  host-side for every provider; the guest gets only a placeholder plus a base-URL
-  redirect (Codex custom-provider config; Claude `ANTHROPIC_BASE_URL` with
-  `x-api-key`; Gemini `GOOGLE_GEMINI_BASE_URL` with `x-goog-api-key`). Renamed
-  `--codex-api-key-broker-env` to `--api-key-broker-env` (old name kept as an
-  alias) and the field/types; flipped Claude/Gemini `auth_profiles` from
-  design-only to the api-key-broker status; Copilot stays design-only (token
-  exchange + dynamic API host cannot be brokered without TLS interception). OAuth
-  and subscription logins stay out of broker scope and use isolated in-container
-  state; RunHaven never reads host `~/.claude.json` or the Keychain. Docs updated:
-  `AUTH_BROKER.md`, `SECURITY_MODEL.md`, `ARCHITECTURE.md`, `CAPABILITIES.md`,
-  `USAGE.md`. Verified: cargo fmt, `cargo test --locked` (58 lib incl. 3 new
-  broker-config tests + 6 integration), clippy `-D warnings`, Tauri `cargo test`
-  (30) and clippy. Claude/Gemini live redirect needs a real provider key on the
-  target CLI version (unit and fail-closed tested here). Commits 4f11716,
-  b5cf193, 2d696e2 plus docs.
-- 2026-06-26: Completed the `runtime-security-hardening` audit-and-fix slice
-  (branch `runtime-security-hardening`, not yet merged). Ran a two-lens audit
-  (apple-container-expert + security-audit) cross-referenced against the upstream
-  Apple source clone; the core boundary verified sound. Empirically confirmed
-  audit finding #1 (Medium) with a scoped live probe on macOS 27.0: a hostOnly
-  guest opened raw TCP to a host listener on the gateway while direct internet
-  egress was refused. Apple `container` 1.0.0 has no per-port guest-to-host
-  firewalling, so #1 is remediated by a `SECURITY_MODEL.md` caveat plus guidance,
-  with an in-guest eBPF egress filter logged design-first. Fixed under test: #2
-  the state-volume-prep root container now drops all caps and re-adds only
-  CHOWN/FOWNER/DAC_OVERRIDE (live smoke confirmed prep still works); #4 added
-  `/usr`, `/bin`, `/sbin`, `/opt` to `sensitive_workspace_paths`; #5 the provider
-  proxy and Codex broker warn on the `0.0.0.0` bind fallback. Also ran a
-  competitive landscape scan (clones under `~/Documents/GitHub/`: `sand`,
-  `container-use`, `agent-sandbox`) and recorded borrowed ideas in
-  `NON_UI_BACKLOG.md`. Verified: cargo fmt, `cargo test --locked` (52 unit incl.
-  3 new + 6 integration), clippy `-D warnings`, `git diff --check`, and
-  `scripts/apple_container_smoke.sh` on macOS 27.0.
-- 2026-06-25: Added desktop diagnostics (partial V1-G5): read-only, secret-free
-  `get_egress_log`, `get_auth_log`, and `get_auth_status` behind the `main-read`
-  capability. `read_egress_policy_log`/`read_auth_broker_log` back the logs; a new
-  shared `auth_status_payload` core backs both the CLI `auth status` and the Tauri
-  command. Responses map only metadata (host/port/decision/reason/count,
-  method/path/upstream-status) and intentionally omit workspace paths, mirroring
-  the CLI text output. A self-contained `DiagnosticsPanel` fetches and renders
-  them on demand, keeping `App.svelte` lean. `why` explanations, blocked-host
-  review, and auth explain remain CLI-only. Verified: main `cargo test` (49),
-  Tauri `cargo test` (30, incl. 3 diagnostics mapper tests + `capability_guard`)/
-  clippy, svelte-check, 15 unit tests, build, and Playwright e2e (3, incl. a
-  diagnostics load test).
-- 2026-06-25: Completed the V1-G3 desktop run-control surface by adding GUI
-  `kill_run` and `repair_run`, mirroring `stop_run`. Shared library cores
-  `kill_active_run` and `repair_active_run` validate the run id, active marker,
-  and RunHaven-owned container before `container kill` / stale-marker repair, and
-  back both the CLI `runs_kill`/`runs_repair` and the typed Tauri commands. Both
-  require confirmation and sit behind the `run-control` capability
-  (`allow-kill-run`, `allow-repair-run`). `RunStatusPanel` now has Hard stop and
-  Repair marker controls with per-action confirm checkboxes over consolidated
-  `controlBusy`/`controlError`/`controlMessage` state and a shared `runControl`
-  helper in `App.svelte` (DRY across stop/kill/repair). Verified: main
-  `cargo test` (49), Tauri `cargo test` (27, incl. 4 new kill/repair tests +
-  `capability_guard`)/clippy, svelte-check, 15 unit tests, build, and Playwright
-  e2e (2, extended to stop+kill+repair a preview run).
-- 2026-06-25: Implemented `tauri-stop-run-control`, the first v1 desktop GUI
-  feature. Added a shared library core `stop_active_run` that validates the run
-  id, active marker, and RunHaven-owned container before `container stop`, and
-  backs both the CLI `runs_stop` and the typed Tauri `stop_run` command. The
-  command requires `confirm_stop`, lives behind the narrow `run-control`
-  capability (`allow-stop-run` added to `build.rs` and `run-control.json`;
-  `capability_guard` confirms it is an `allow-*` scope), and `RunStatusPanel`
-  shows a confirm checkbox plus a Stop button whose success state is set only
-  after the command returns. Verified: main `cargo test` (49), Tauri `cargo test`
-  (23, incl. 4 new `stop_run` tests + `capability_guard`)/clippy, svelte-check,
-  15 unit tests, build, and Playwright e2e (2, extended to stop a preview run).
-- 2026-06-25: Completed the v1 desktop maintainability split (milestone 1 /
-  V1-G10) before adding GUI controls. Split `src-tauri/src/commands/mod.rs`
-  (528 -> 342) into `validation.rs` (bounds validators) and `warnings.rs` (plan
-  warnings); split `ui/src/commands/runhaven.ts` (543) into `types.ts`,
-  `client.ts`, and `plan.ts` behind a 6-line barrel so importers are unchanged;
-  split `ui/src/app/App.svelte` (569 -> 409) into `SetupChecksPanel`,
-  `PlanReviewPanel`, `LastLaunchPanel`, `RunStatusPanel`, and `RunOutputPanel`
-  components, keeping the launch form and container state in `App.svelte`.
-  Behavior preserved: Tauri tests (19)/clippy, svelte-check (0 errors), 15 unit
-  tests, build, and Playwright e2e (2) pass. `tauri-stop-run-control` is now the
-  active slice.
-- 2026-06-25: Produced documented evidence that every CLI surface is tested.
-  Added `scripts/cli_surface_check.sh`, a repeatable live breadth check that
-  exercises every command family (agents, doctor, setup, plan, run,
-  run --worktree, image build/rebuild/doctor, network list/prune,
-  state list/reset/prune, runs list/show/log/diff/keep/recover/merge/discard/
-  active/status/attach/kill/repair, egress log, auth status/explain/log, why
-  host/workspace/network/state) and self-cleans. It found a real bug: the
-  `GitSnapshot`/`GitChange` `available` serde tag serializes as the string
-  "true"/"false", but four sites read it with `Value::as_bool` (always None),
-  silently breaking `run --worktree`, `runs diff`, and `runs merge` for every
-  clean repo. Fixed with a canonical `git_value_available` reader plus typed
-  `GitSnapshot` enum matches in the worktree code, with a regression test.
-  Coverage is indexed in `docs/CLI_SURFACE_COVERAGE.md`. Final evidence on macOS
-  27.0: `cli_surface_check.sh` 39/39, `apple_container_smoke.sh --with-provider
-  --with-ssh` passed, and both crates green on fmt/test/clippy plus pins, JSON,
-  and diff checks.
-- 2026-06-25: Made the network mode secure-by-default per the user directive
-  that the secure path must be the easiest path. `--network` is now optional and
-  resolves profile-aware in `make_run_plan` via `default_network_mode`: provider
-  for profiles with bundled provider hosts (claude, codex, copilot, gemini) and
-  internet for those without (shell, antigravity), where provider would be an
-  empty allowlist. A provider-default run reaches the agent's own API but not
-  arbitrary hosts; `plan` and `run` inform the `--provider-host` / `--network
-  internet` escape hatch and never block. Updated CLI plus `CAPABILITIES`,
-  `USAGE`, `ARCHITECTURE`, `SECURITY_MODEL`, `README`, `V1_RELEASE_PLAN`, and the
-  harness security-boundary map; added a focused `default_network_mode` test.
-  Verified with cargo fmt/test (48 unit + 6 integration)/clippy, Tauri test
-  (19, 1 ignored)/clippy, and live plan checks (claude defaults to provider,
-  shell to internet, explicit `--network internet` override works). This resolves
-  the last open v0.5.0 decision, so `cli-complete-v0.5.0` is now `passing`.
-- 2026-06-24: Closed the `cli-complete-v0.5.0` contract gaps (G1-G7) in one
-  pass. Added plain-language security notices to standard error for every
-  lower-security run choice (internet default, `--env`, custom or root `--user`,
-  extra `--provider-host`, `--allow-sensitive-workspace`, `--image`), computed
-  once in `build_run_plan`, carried on `AgentRunPlan`, and emitted at plan and
-  run time; secure defaults stay silent (G6). Documented the previously
-  undocumented `--user` and `runs attach` `--user`/`--workdir`/`--tty` overrides
-  (G1), published the per-profile support matrix (G3), documented the
-  runs/egress/auth JSONL records as best-effort/pre-stable, append-only,
-  metadata-only with `--json` as the supported read path (G2), confirmed `--ssh`
-  fail-closed posture is consistent across docs, behavior, and tests with no
-  raw-key workaround (G5), and kept touched modules under the size guard with no
-  new duplication (G7; `auth_broker.rs` 499 and `egress.rs` 495 remain watched,
-  untouched). Verified with root cargo fmt/test (47 unit + 6 integration)/clippy,
-  Tauri test (19, 1 ignored)/clippy, and a live `plan` security-notice check. One
-  product decision is open: whether to flip the warned `internet` default to a
-  stricter mode before `v1.0.0`. Tagged release notes are deferred to the
-  release-readiness step. Status in `docs/RELEASE_GAP_ANALYSIS.md`.
-- 2026-06-24: Proved the Apple `container` runtime on the current host. The
-  session host moved to macOS 27.0 (build 26A5368g); prior runtime evidence was
-  macOS 26.5.1. Started the Apple `container` system service (it was stopped at
-  session start), confirmed `runhaven doctor` is green for every pinned
-  prerequisite on macOS 27.0 (Rust 1.96.0, container CLI/apiserver 1.0.0 commit
-  ee848e3, builder 0.12.0, vminit 0.33.3, Kata kernel 6.18.15-186), verified the
-  bundled shell image (`runhaven/base:0.1.0`, digest `818ed6181723`), and ran
-  `scripts/apple_container_smoke.sh --with-provider --with-ssh` to completion.
-  The smoke exercised an internal read-only `/workspace` run with the full
-  active/status/logs-follow/stop/show lifecycle, the live provider allowlist
-  (allowed `example.com`; denied non-allowlisted host, proxied IP literal,
-  direct egress, and direct IP egress), and SSH fail-closed at plan and run,
-  then cleaned up with no stale active marker. No code bug surfaced; the only
-  friction was the stopped system service, which `doctor` reports. This refreshes
-  the V05-G4 runtime evidence on the current host. Static baseline (root and
-  Tauri fmt/test/clippy, pin check, UI check/test) was green first. Command
-  detail is in `docs/harness/evidence/evidence-log.md`.
-- 2026-06-24: Locked the DRY and documentation-first development rule into the
-  harness per user directive. Reframed the `AGENTS.md` build-necessity bullet as
-  the named DRY ladder (YAGNI, standard library, native platform, installed
-  dependency, one line, then minimum custom code) and added
-  documentation-is-product and boring-over-clever principles; aligned the
-  `change-contract.md` Build Necessity Gate rungs plus acceptance criteria with
-  the same wording and the edge-case tiebreaker; added a doc-ships-with-behavior
-  and ladder-applied check to the `AGENTS.md` Definition Of Done; recorded the
-  standing rule in Product Facts and Key Decisions. Kept one canonical gate
-  (no ladder copy/paste) so the change is itself DRY. Docs-only change: verified
-  with `git diff --check` (clean) and confirmed the referenced gate path
-  resolves; no code, JSON, or pins changed, so cargo/JSON/pin checks were not
-  run.
-- 2026-06-24: Ran a repo-wide docs accuracy audit across all 54 tracked
-  Markdown files against the canonical current state. Root, core-product, and
-  most harness docs were already accurate. Fixed: `docs/RESEARCH.md` reframed
-  its 2026-06-18 "current image pins" line as dated and added a 2026-06-24
-  current-pins note plus a no-workflows qualifier on the Actions source;
-  `docs/harness/state/modularization-plan.md` dropped the removed
-  `cli/lock.rs` pointer (locking lives in `runtime/lock.rs`) and refreshed the
-  largest-file line counts; `.agents/skills/harness/references/repo-harness.md`
-  corrected relative paths that were one level too shallow. Verified with a
-  repo-wide relative Markdown link check (0 broken), path-resolution checks,
-  pin check, JSON validation, and `git diff --check`.
-- 2026-06-24: Ran a full dependency pin audit triggered by the `glib`
-  Dependabot alert. Confirmed every Cargo, npm, image-CLI, base-image, and
-  Debian pin is hard-pinned and that `.github/workflows/` is empty (no actions
-  to pin). Brought the 10 pins behind latest stable to current: `time`
-  0.3.49->0.3.51; ui `@lucide/svelte` 1.21.0, `svelte` 5.56.4,
-  `@playwright/test` 1.61.1, `@tauri-apps/cli` 2.11.3, `svelte-check` 4.7.1,
-  `vite` 8.1.0; bundled CLIs Claude Code 2.1.190, Codex 0.142.0, Copilot
-  1.0.64, Gemini CLI 0.47.0 (integrity hashes regenerated). Refreshed Cargo and
-  npm lockfiles. The `glib` alert was dismissed as not-affected (macOS-only;
-  Linux-GTK-only transitive dep capped at 0.18.x). Verified with root and Tauri
-  fmt/test/clippy, image dry-run builds, ui ci/check/test/build/e2e,
-  `tauri:build`, pin check, JSON validation, and `git diff --check`.
-- 2026-06-24: Applied a harness gap-analysis pass against the
-  learn-harness-engineering course. Added a `feature_list.json` status_legend
-  and marked the single current slice `active`; added a startup baseline gate to
-  `AGENTS.md`; added this Key Decisions section; added a boundary-journey table
-  and independent-evaluator routing to `security-boundary-map.md`; added
-  verify-before-refactor and agent-oriented-error gates to `change-contract.md`;
-  defined a representative task set in `quality-document.md` and linked it from
-  `roadmap.md`; and added a mechanical `capability_guard` test that fails closed
-  if a Tauri capability grants a host bridge. Tauri tests (incl. the capability
-  guard), pin check, JSON validation, Markdown link check, and diff checks
-  passed.
-- 2026-06-18: Clarified the Container Machine policy across active docs and
-  harness state. Task-scoped `container run` remains the secure-easy default,
-  while explicit or user-managed Apple `container machine` workflows should be
-  warned and require intent rather than blocked solely because they are less
-  secure.
-- 2026-06-18: Ran a full active-doc release-status pass. User-facing docs,
-  roadmap/planning docs, Tauri planning docs, and harness routing were aligned
-  to the then-current release ladder: alpha through the CLI-complete milestone,
-  `v0.5.0` as CLI-complete, and `v1.0.0` as the first-class desktop release.
-  Later sequencing changes are recorded above. Historical evidence remains
-  historical.
-- 2026-06-18: Added `docs/RELEASE_GAP_ANALYSIS.md` as the active v0.5/v1 gap
-  tracker. It records observed CLI command coverage, current desktop command
-  coverage, maintainability pressure, v0.5 blockers, v1 blockers, v1.x
-  deferrals, and immediate next actions. Linked it from README, roadmap,
-  release plan, non-UI backlog, feature state, and harness routing.
-- 2026-06-18: Locked secure-easy and maintainability gates into `AGENTS.md`,
-  `docs/V1_RELEASE_PLAN.md`, `docs/SECURITY_MODEL.md`, and focused harness
-  docs. Future slices must make secure defaults the easiest path, warn and
-  require intent for supported lower-security choices, fail closed on hard
-  boundary violations, avoid deferred large-file debt, remove meaningful
-  duplication, prefer standard/native/installed solutions, keep exact
-  current-stable pins, and update harness state when scope changes.
-- 2026-06-18: Added and revised `docs/V1_RELEASE_PLAN.md` as the proposed
-  durable release ladder. The plan now sets `v0.5.0` as CLI-complete, makes
-  `v1.0.0` a first-class desktop release for the safe beginner workflow, keeps
-  the CLI as the stable backend and automation surface, records missing
-  runtime/data/storage/network/auth/UX/accessibility/performance edge cases,
-  and defines release milestones and verification gates. Linked it from
-  `README.md` and `docs/ROADMAP.md`; added `cli-complete-v0.5.0` and
-  `desktop-first-class-v1` to `feature_list.json`.
-- 2026-06-18: Refreshed direct package pins and lockfiles to current stable
-  package-manager releases. Tauri Rust pins moved to `tauri` 2.11.3 and
-  `tauri-build` 2.6.3; frontend `@tauri-apps/api` moved to 2.11.1; bundled
-  image CLIs moved to Claude Code 2.1.181, Codex 0.140.0, and Copilot 1.0.63.
-  Cargo and npm lockfiles were refreshed. Playwright now starts an isolated
-  strict-port RunHaven dev server instead of reusing an unrelated process on
-  port 5173.
-- 2026-06-18: Implemented OWASP-informed local hardening from the Cheat Sheet
-  review. Tauri commands now reject oversized IPC fields before planning or
-  launch confirmation, and RunHaven cache markers, logs, and locks are created
-  with owner-only permissions on Unix.
-- 2026-06-17: Simplified the repo harness to the lightweight five-subsystem
-  model from the referenced harness-learning material. Startup now routes
-  through only `AGENTS.md`, `feature_list.json`, and `current-state.md`;
-  harness docs are on-demand reference material.
-- 2026-06-16: Implemented the first raw-log snapshot slice. `get_log_snapshot`
-  lives behind `run-control`, requires sensitive-output acknowledgement,
-  validates the run id and RunHaven-owned active container marker, calls only
-  bounded `container logs -n`, and keeps raw output out of durable frontend
-  state.
-- 2026-06-16: Tauri launch flow can confirm launch, check image readiness,
-  show resource warnings, render sanitized run snapshots, and refresh live run
-  status without exposing raw logs or raw Apple inspect payloads.
 
-## Trusted Verification
+Latest TUI Phase 1 service extraction:
 
-- 2026-06-24 Apple container runtime smoke (macOS 27.0):
-  - `sw_vers` reported macOS 27.0 build 26A5368g; `uname -m` reported `arm64`.
-  - `container --version` reported Apple `container` CLI 1.0.0 commit `ee848e3`.
-  - `container system status` reported the apiserver not running at session
-    start; `container system start` brought it to `status running`.
-  - `runhaven doctor` returned ok for Rust 1.96.0, macOS 27.0, arm64, the
-    container CLI/runtime commit ee848e3, builder image 0.12.0, vminit 0.33.3,
-    and the Kata 6.18.15-186 kernel.
-  - `runhaven image doctor shell` reported `ok shell: runhaven/base:0.1.0`.
-  - `scripts/apple_container_smoke.sh --with-provider --with-ssh` printed
-    "Apple container smoke checks passed." and exited 0.
-  - Static baseline before runtime work passed: root `cargo fmt --check`,
-    `cargo build --locked`, `cargo test --locked` (46 unit + 6 integration),
-    `cargo clippy --all-targets --locked -- -D warnings`, and
-    `cargo run --locked --bin runhaven-check-pins`; Tauri `cargo fmt --check`,
-    `cargo test --locked` (19 passed, 1 ignored), and
-    `cargo clippy --all-targets --locked -- -D warnings`; and
-    `npm --prefix ui run check` (0 errors) with `npm --prefix ui test`
-    (15 passed).
-- 2026-06-18 README and Container Machine policy docs checks:
-  - `sw_vers` reported macOS 26.5.1 build 25F80.
-  - `uname -m` reported `arm64`.
-  - `container --version` reported Apple `container` CLI 1.0.0 commit
-    `ee848e3`.
-  - `container machine --help` passed and showed create, delete, inspect,
-    list, logs, run, set, set-default, and stop subcommands.
-  - Stale hard-block wording scan for old Container Machine policy phrasing
-    passed.
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 54 Markdown files passed.
-  - `git diff --check` passed.
-- 2026-06-18 v0.5.0/v1.0.0 gap-analysis docs checks:
-  - CLI help smokes passed for top-level `runhaven`, `runs`, `image`,
-    `network`, `state`, `egress`, `auth`, and `why`.
-  - Tauri command/capability scan and source file-size scan completed for
-    gap-analysis evidence.
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 54 Markdown files passed.
-  - Stale wording scan for old pre-Tauri/release-boundary/package-evidence
-    phrasing passed with only intentional README release-plan link text.
-  - Explicit trailing-whitespace check over changed docs/state files passed.
-  - `git diff --check` passed.
-- 2026-06-18 active-doc release-status checks:
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 53 Markdown files passed.
-  - Stale wording scans for old pre-Tauri, release-boundary, alpha, `v0.5.0`,
-    and `v1.0.0` phrasing passed with only intentional historical/evidence
-    matches.
-  - Explicit trailing-whitespace check over changed docs/state files passed.
-  - `git diff --check` passed.
-- 2026-06-18 secure-easy and maintainability docs/harness checks:
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 53 Markdown files passed.
-  - Explicit trailing-whitespace check over the changed docs/state files
-    passed.
-  - `git diff --check` passed.
-- 2026-06-18 v0.5.0/v1.0.0 release-ladder docs checks:
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 53 Markdown files passed.
-  - Explicit trailing-whitespace check over the changed docs/state files
-    passed.
-  - `git diff --check` passed.
-- 2026-06-18 package pin refresh checks:
-  - `rustup check` reported stable `1.96.0` up to date.
-  - `cargo info`, `cargo search`, and `npm view` checked current stable direct
-    package versions.
-  - `cargo update` and `cargo update --manifest-path src-tauri/Cargo.toml`
-    refreshed Cargo lockfiles to the latest Rust 1.96-compatible versions.
-  - `npx -y npm@11.17.0 --prefix <package> install --package-lock-only
-    --ignore-scripts` refreshed UI and bundled-image npm lockfiles.
-  - `npx -y npm@11.17.0 --prefix <package> audit --audit-level=moderate`
-    passed for the UI and bundled-image npm packages.
-  - `cargo update --dry-run --verbose` reported zero remaining root Cargo
-    lockfile updates.
-  - `cargo update --manifest-path src-tauri/Cargo.toml --dry-run --verbose`
-    reported zero remaining Tauri lockfile updates; remaining newer transitive
-    releases are outside upstream semver constraints.
-  - `cargo tree --manifest-path src-tauri/Cargo.toml --locked --target
-    aarch64-apple-darwin -i glib` found no macOS dependency path for `glib`.
-  - `cargo fmt --check` passed.
-  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check` passed.
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - `git diff --check` passed.
-  - `cargo test --locked` passed.
-  - `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed.
-  - `cargo clippy --all-targets --locked -- -D warnings` passed.
-  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked
-    -- -D warnings` passed.
-  - `npx -y npm@11.17.0 --prefix ui test -- --run` passed.
-  - `npx -y npm@11.17.0 --prefix ui run check` passed.
-  - `npx -y npm@11.17.0 --prefix ui run build` passed.
-  - `npx -y npm@11.17.0 --prefix ui run test:e2e` passed after Playwright was
-    isolated from the unrelated JobSentinel dev server on port 5173.
-  - `cargo build --locked` passed.
-  - `npx -y npm@11.17.0 --prefix ui run tauri:build` passed.
-  - `cargo run --locked --bin runhaven -- image build <agent> --dry-run`
-    passed for Claude, Codex, Copilot, and Gemini.
-- 2026-06-18 security hardening checks:
-  - Red checks first failed for oversized IPC payloads and default active-run
-    marker permissions.
-  - `cargo fmt --check` passed.
-  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check` passed.
-  - `cargo test --locked` passed.
-  - `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed.
-  - `cargo clippy --all-targets --locked -- -D warnings` passed.
-  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked
-    -- -D warnings` passed.
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `npm --prefix ui test -- --run` passed.
-  - `npm --prefix ui run check` passed.
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - `git diff --check` passed.
-- 2026-06-17 harness simplification checks:
-  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
-    passed.
-  - Local Markdown link check over 52 tracked Markdown files passed.
-  - `cargo run --locked --bin runhaven-check-pins` passed.
-  - `git diff --check` passed.
-  - Stale-reference scans for retired root `progress.md`/`session-handoff.md`,
-    old Python pin-check commands, and old mandatory harness roadmap routing
-    found only intentional archive or historical evidence references.
-  - `./init.sh` was not run because this pass changed documentation, harness
-    instructions, and state only; no runtime code, lockfile, package, image, or
-    Tauri capability behavior changed.
-- 2026-06-16 Tauri raw-log snapshot checks passed:
-  - `cargo test --manifest-path src-tauri/Cargo.toml --locked`
-  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check`
-  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`
-  - `cargo test --locked`
-  - `cargo clippy --all-targets --locked -- -D warnings`
-  - `npm --prefix ui test -- --run`
-  - `npm --prefix ui run check`
-  - `npm --prefix ui run test:e2e`
-  - `npm --prefix ui run build`
-  - `scripts/apple_container_smoke.sh`
+- 2026-06-27: Completed Phase 1 of the Strategy C plan. `app_shell.rs` no
+  longer calls `runhaven-core` planner/profile APIs directly. The temporary
+  RunHaven TUI service in `crates/runhaven-tui/src/tui/runhaven/service.rs`
+  builds launch preview payloads from core profiles and `LaunchPlanData`, keeps
+  per-agent planner errors typed, and leaves
+  `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs` as the UI-owned view
+  model over Codex `ListSelectionView`. Service tests cover agent-name
+  mapping, default network and auth scope, provider metadata, shell internet
+  confirmation, shared agent state volumes, nested git workspace notes, and
+  fail-per-agent missing-workspace errors. Phase 1 audit snapshot: 894 upstream
+  files, 365 RunHaven files, 356 common paths, 538 upstream `.snap` files
+  external by default, 9 RunHaven-only files, and 20 copied Codex files with
+  local edits.
+
+Latest TUI Phase 2 backend facade:
+
+- 2026-06-27: Completed Phase 2 of the Strategy C plan. Added the local
+  Codex-shaped request, event, server-request, validation, and disabled-method
+  contract in `crates/runhaven-tui/src/tui/runhaven/protocol.rs`. Added the
+  bounded in-process client facade in
+  `crates/runhaven-tui/src/tui/runhaven/app_server_client.rs` with
+  `request_typed`, `next_event`, `shutdown`, a cloneable request handle,
+  request cancellation, server-request resolve/reject methods, lossless
+  transcript/completion/launch-prepared event delivery, and best-effort
+  progress/log dropping with lag markers. `RunHavenTuiService` now dispatches
+  neutral facade requests for agent catalog and workspace validation while
+  keeping the temporary launch-preview payload for the staging shell. The
+  request worker spawns service work off the command loop, matching Codex's
+  non-blocking client shape for future interactive flows. Focused facade tests
+  cover the Phase 2 matrix, including the fail-closed disabled method families.
+  Verified: `cargo fmt --check`,
+  `cargo test -p runhaven-tui --locked app_server_client --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `scripts/compare-codex-tui.sh`, `cargo run --locked --bin runhaven-check-pins --quiet`,
+  JSON validation, ASCII and whitespace scans, and `git diff --check`.
+
+Latest TUI Strategy C drift correction:
+
+- 2026-06-27: Imported
+  `docs/plans/codex-tui-strategy-c/05-adversarial-drift-ledger.md` and restored
+  the plan's vendor-first wording at that time. The 2026-06-29 MVP-first
+  direction now supersedes native `App` and `ChatWidget` as default next
+  targets; they remain optional promotions behind reviewed boundaries.
+  `tui/mod.rs` now has guard tests that fail if dormant host-reaching Codex
+  surfaces are declared before their risky upstream markers are removed or
+  fail-closed.
+
+Latest TUI staging-facade shrink:
+
+- 2026-06-27: Removed the inline `codex_protocol::user_input` shim from
+  `crates/runhaven-tui/src/tui/mod.rs` and first replaced it with file-backed
+  staged leaves under `crates/runhaven-tui/src/tui/codex_protocol/`. Added drift
+  guards so `mod.rs` cannot grow new inline staging modules, new `codex_*`
+  self-aliases, or a native `app` declaration that still routes `run()` through
+  `app_shell::run()`.
+- 2026-06-29: Moved the `tui/mod.rs` drift and security guard tests into
+  `tui/drift_tests.rs`. This keeps the same guard coverage while shrinking
+  `tui/mod.rs` to declarations plus the TUI entrypoint. The only remaining
+  inline staging module in `tui/mod.rs` is the narrow `onboarding` hyperlink
+  shim, and the guard still fails if new inline staging modules are added.
+
+Latest Codex protocol crate vendoring:
+
+- 2026-06-27: Began real `codex-*` crate vendoring under original package and
+  library names. Added `crates/codex/` workspace members for
+  `codex-protocol`, `codex-app-server-protocol`, and their first dependency
+  closure: `codex-async-utils`, `codex-execpolicy`,
+  `codex-experimental-api-macros`, `codex-network-proxy`,
+  `codex-shell-command`, and the required `codex-utils-*` crates. Vendored
+  crate manifests use explicit Apache-2.0, `0.0.0`, and `publish = false`
+  local metadata, keep internal `codex-*` paths relative, preserve the upstream
+  `runfiles` git rev for schema fixture tests, and align only external exact
+  pins that Cargo's unified workspace resolver cannot hold twice. `runhaven-tui`
+  now depends on the real vendored `codex-protocol` and
+  `codex-app-server-protocol` crates, and the active `TextArea` path consumes
+  `ByteRange` and `TextElement` from `codex_protocol::user_input`. Deleted the
+  local `tui/codex_protocol/` staged leaf. Verified so far:
+  `cargo check -p codex-protocol`, `cargo check -p codex-app-server-protocol`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p codex-protocol --locked --quiet`,
+  `cargo test -p codex-app-server-protocol --locked --quiet`, and
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`.
+
+Latest TUI Phase 3 runtime and handoff gate:
+
+- 2026-06-27: Completed the terminal-handoff proof without wiring real agent
+  launch. `Tui::with_restored(...)` now has deterministic sequencing tests
+  for normal and alt-screen handoff, including child-error resume. The event
+  broker has a pause/drop/resume regression to prove events sent while the
+  source is dropped do not leak into the resumed TUI. Added the local
+  `runhaven/terminal_handoff.rs` smoke hook, gated by
+  `RUNHAVEN_TUI_HANDOFF_SMOKE=success|error`, which initializes the Codex
+  runtime, clears managed terminal title and pet image state before handoff,
+  runs only a harmless foreground child or an intentional missing child, restores
+  terminal ownership, and exits. Ambient and picker-preview pet image state now
+  share a combined cleanup helper, including native `App` shutdown. Phase 3
+  audit snapshot: 894 upstream files, 370 RunHaven files, 356 common
+  paths, 538 upstream `.snap` files external by default, 14 RunHaven-only files,
+  and 53 copied Codex files with local edits.
+
+Latest Codex config/keymap crate vendoring:
+
+- 2026-06-27: Continued real `codex-*` crate vendoring under original package
+  and library names. Added workspace members for `codex-config`,
+  `codex-api`, `codex-client`, `codex-features`, `codex-file-system`,
+  `codex-git-utils`, `codex-model-provider-info`, `codex-otel`, and
+  `codex-utils-path`, plus their local manifest wiring. `runhaven-tui` now
+  depends on the real vendored `codex-config` crate, `lib.rs` no longer aliases
+  `codex_config`, and the file-backed vendored `keymap.rs` compiles against
+  `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}` instead
+  of an inline RunHaven keymap extract.
+- Preserved upstream OpenAI fork git revs for `tokio-tungstenite` and
+  `tungstenite` because Codex relies on those forks for proxy-enabled websocket
+  behavior. `codex-client` pins `sha2` 0.10 because that source formats the
+  digest with the 0.10 trait behavior; RunHaven-owned code keeps its existing
+  `sha2` 0.11 pin.
+- The active RunHaven launch/security authority is unchanged. These crates are
+  vendored source authorities for TUI config/keymap/protocol types, not a
+  promotion of Codex auth, filesystem RPC, app-server, or network client
+  behavior into the active RunHaven runtime.
+- `scripts/compare-codex-tui.sh` now compares deterministic file manifests
+  instead of looping over `cmp` calls. Each manifest records relative path, byte
+  size, and SHA-256, and `--write-manifests <dir>` writes the upstream/local
+  manifests plus missing, local-only, common, and changed lists for audit.
+- Verified:
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `cargo check -p codex-config --locked`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked keymap --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo test -p codex-config --locked --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `bash -n scripts/compare-codex-tui.sh`, and
+  `scripts/compare-codex-tui.sh --write-manifests <tempdir>`.
+
+Latest Codex event-data crate vendoring:
+
+- 2026-06-27: Continued real `codex-*` crate vendoring for the next
+  `app_event.rs` activation. Added workspace members for `codex-connectors`,
+  `codex-file-search`, `codex-plugin`, and
+  `codex-utils-approval-presets`, plus the required plugin namespace closure:
+  `codex-utils-plugins`, `codex-exec-server`,
+  `codex-exec-server-protocol`, `codex-sandboxing`, `codex-utils-pty`, and
+  `codex-windows-sandbox`.
+- `runhaven-tui` now depends on the real vendored connector, file-search,
+  plugin, and approval-preset crates so the real vendored `app_event.rs`
+  imports have crate authority available. `app_event.rs` itself remains
+  dormant until its shared TUI types are exposed without activating
+  host-reaching Codex app paths.
+- Added the same `tokio-tungstenite` and `tungstenite` crates.io patches used
+  by upstream Codex, and pinned `codex-exec-server` to upstream Codex's
+  `axum` 0.8.8. This avoids carrying an extra registry websocket stack
+  (`tokio-tungstenite` 0.29) beside Codex's patched 0.28 fork.
+- The active RunHaven launch/security authority is unchanged. These crates are
+  vendored source authorities for TUI event-data compatibility, not a promotion
+  of Codex exec-server, filesystem RPC, app-server, sandbox launch, plugin
+  execution, or connector network behavior into the active RunHaven runtime.
+- Local manifest integration found by the end-of-slice adversarial pass:
+  `codex-plugin` allows Clippy's `result_large_err`, matching existing
+  package-level exceptions in other vendored Codex crates and preserving
+  upstream source under RunHaven's stricter `-D warnings` gate.
+- The same adversarial pass found loose version specs inherited in target/dev
+  dependency sections of new vendored manifests; they were tightened to exact
+  pins before commit.
+- Focused Cargo efficiency note: use one umbrella `cargo check -p runhaven-tui`
+  after dependency graph changes, then rerun `cargo check -p runhaven-tui
+  --locked`. Avoid parallel Cargo checks; they serialize behind package-cache
+  and build-directory locks and are slower than one incremental umbrella check.
+- Verified:
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `cargo check -p runhaven-tui`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo check -p codex-plugin --locked`,
+  `cargo check -p codex-file-search --locked`,
+  `cargo check -p codex-connectors --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `git diff --check`,
+  `cargo tree -p runhaven-tui --locked -i tokio-tungstenite@0.29.0`
+  (expected no package match), and
+  `cargo tree -p runhaven-tui --locked -i tokio-tungstenite@0.28.0`.
+
+Latest Codex event-bus activation:
+
+- 2026-06-27: Activated the real vendored `app_event.rs` and
+  `app_event_sender.rs` files. The four-variant inline `AppEvent` shim and the
+  inline optional-channel `AppEventSender` shim are gone.
+- Added `app_event_shared.rs` as a narrow inert leaf-type bridge for
+  `AppServerStartedThread`, `UserMessage`, `GoalDraft`, `HistoryCell`,
+  `StatusLineGitSummary`, hook trust updates, workspace headline results, and
+  no-op session logging while the owning modules remain dormant. This is
+  temporary bridge debt, not product behavior.
+- `runhaven-tui` now directly depends on `codex-features` and
+  `codex-utils-absolute-path` because the real event bus imports those
+  authorities directly.
+- The temporary launch wizard now gives `ListSelectionView` a real
+  `AppEventSender` backed by a scratch channel instead of relying on a local
+  `Default` implementation that does not exist upstream.
+- Verified:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
+Latest Codex bottom-pane activation:
+
+- 2026-06-27: Promoted the real vendored `bottom_pane/mod.rs` source under its
+  original module path and added the original-name crate authorities needed by
+  that surface: `codex-core-skills`, `codex-feedback`,
+  `codex-models-manager`, and `codex-utils-fuzzy-match`.
+- The default remains original Codex package, crate, and module names. Local
+  bridges are exceptions only when activating the real surface would cross an
+  unreviewed RunHaven security boundary or pull host-reaching behavior into the
+  active TUI. The latest TUI sections below are authoritative for current
+  named bridge exceptions; at this point in the history they included
+  `app_event_shared.rs`, `status`, `onboarding`, and the narrow exposed
+  surfaces inside `codex-core-skills`, `codex-feedback`, and
+  `codex-models-manager`.
+  `codex-feedback::FeedbackDiagnostics::collect_from_env()` is kept
+  shape-compatible but returns no diagnostics until RunHaven has a redaction
+  policy for host environment capture.
+- Snapshot-heavy upstream bottom-pane tests are gated behind
+  `codex-vendored-tests`; default RunHaven tests do not create `.snap.new`
+  files from external Codex goldens. The opt-in feature still compiles as a
+  vendored-source check.
+- `scripts/compare-codex-tui.sh` now reports 894 upstream files, 370 RunHaven
+  TUI files, 356 shared paths, 538 external upstream `.snap` goldens, 14
+  RunHaven-only files, and 43 copied Codex files with local edits.
+- Native Codex `App` remains inactive because its owning app/session/chat
+  paths still include host environment, filesystem RPC, onboarding auth,
+  external editor, clipboard, and hooks surfaces that need RunHaven-specific
+  fail-closed design before activation.
+- Verified so far:
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`,
+  `cargo fmt --check`, and
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `git diff --check`, and
+  `scripts/compare-codex-tui.sh`.
+
+Latest Codex utility crate vendoring:
+
+- 2026-06-27: Added original-name vendored workspace crates for
+  `codex-utils-cli`, `codex-utils-elapsed`, and
+  `codex-utils-sleep-inhibitor`, copied from the pinned local Codex source.
+  `runhaven-tui` now depends on those authorities for dormant Codex TUI CLI,
+  history, exec-cell, and chat turn-lifecycle imports.
+- `codex-utils-sleep-inhibitor` has a scoped `unsafe_code = "allow"` lint
+  exception because the upstream macOS implementation uses native IOKit power
+  assertion FFI. The exception is local to that vendored utility crate and does
+  not change RunHaven runtime safety boundaries.
+- A direct `chatwidget` module declaration was tested and reverted before this
+  commit because it exposed the pending shared closure rather than a clean
+  activation point: real `ChatWidget` and `status` still require more of
+  Codex's `legacy_core::config::Config` and app-server shape. `history_cell`
+  has since been promoted through the reduced config boundary. Do not replace
+  that with another custom RunHaven TUI stand-in.
+- 2026-06-29: Promoted the real vendored Codex `history_cell/*`,
+  `diff_render.rs`, `exec_cell/*`, `markdown*.rs`, `session_state.rs`,
+  `tooltips.rs`, `update_action.rs`, and related root-module aliases out of the
+  inert `app_event_shared.rs` bridge. Added original-name `codex-ansi-escape`
+  plus the upstream markdown/diff/tooltip dependency closure and the upstream
+  `tooltips.txt` asset. The reduced `codex-core` config now loads the
+  upstream `tui.show_tooltips` field so session tooltip suppression follows the
+  same setting. Two small source exceptions remain: update notices use plain
+  Ratatui `Line`/`Text` construction because upstream `ratatui-macros` targets
+  Ratatui 0.29, and yolo mode reads RunHaven's reduced Codex config shape until
+  full Codex core config is promoted. The full upstream `history_cell/tests.rs`
+  module remains parked because it currently requires full Codex config/MCP
+  surfaces and snapshot goldens that are not promoted; default tests cover the
+  reduced tooltip/config seams, yolo-mode mapping, basic diff rendering, decoded
+  local-link control stripping, terminal print-boundary control stripping, and
+  ANSI-output degradation.
+- Verified so far:
+  `cargo check -p codex-utils-cli --locked`,
+  `cargo check -p codex-utils-elapsed --locked`,
+  `cargo check -p codex-utils-sleep-inhibitor --locked`, and
+  `cargo check -p runhaven-tui --locked`.
+- Latest `history_cell` promotion verification:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo check -p codex-ansi-escape --locked`,
+  `cargo check -p codex-install-context --locked`,
+  `cargo test -p codex-core --locked show_tooltips --quiet`,
+  `cargo test -p codex-ansi-escape --locked malformed_ansi_degrades_without_control_bytes --quiet`,
+  `cargo test -p runhaven-tui --locked local_link_display_strips_decoded_terminal_controls --quiet`,
+  `cargo test -p runhaven-tui --locked safe_print_symbol --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
+Latest Codex terminal-detection crate vendoring:
+
+- 2026-06-28: Promoted `codex-terminal-detection` from the temporary
+  `runhaven-tui` self-alias to a real original-name vendored crate under
+  `crates/codex/terminal-detection`. The copied source and tests are
+  byte-identical to the pinned local Codex source. `runhaven-tui` now depends
+  on the crate directly, and the duplicate local `terminal_detection.rs` and
+  `terminal_tests.rs` files were deleted. This removes the last `codex_*`
+  self-alias from `runhaven-tui` without changing active TUI behavior.
+- Verified:
+  `cargo check -p codex-terminal-detection --locked`,
+  `cargo test -p codex-terminal-detection --locked --quiet`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked terminal_palette --quiet`,
+  `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo fmt --check`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
+
+Latest Codex config support crate vendoring:
+
+- 2026-06-28: Added original-name vendored workspace crates for
+  `codex-context-fragments`, `codex-install-context`,
+  `codex-memories-read`, `codex-response-debug-context`,
+  `codex-utils-output-truncation`, and `codex-utils-stream-parser`. These are
+  low-coupling upstream support crates for the next reduced `codex-core`
+  config compatibility closure. They are not active RunHaven product authority,
+  and `runhaven-tui` does not route launch, install, memory, response-debug,
+  app-server, login, MCP, or filesystem behavior through them in this slice.
+- Added two drift guards: local `legacy_core` compatibility shims are blocked,
+  and `app_event_shared.rs` may shrink but cannot grow new bridge modules or
+  host-reaching behavior.
+- Full upstream `codex-app-server-client` and full upstream `codex-core` remain
+  intentionally inactive. The next useful step is the reduced original-name
+  `codex-core` config compatibility closure, not promoting the app-server
+  backend stack.
+- Verified:
+  `cargo check -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --offline`,
+  `cargo check -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --locked`,
+  `cargo test -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --locked --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo fmt --check`, `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, metadata
+  check, typography scan for changed files, and `git diff --check`.
+
+Latest Codex reduced core config authority:
+
+- 2026-06-28: Added `crates/codex/core` as an original-name reduced
+  `codex-core` workspace crate for the config compatibility path needed by
+  native `App`/`ChatWidget` promotion. It exposes config-facing source-shaped
+  surfaces, including terminal resize reflow, bootstrap keyring resolution,
+  exec-policy warning/loading placeholders, Windows sandbox config helpers, and
+  small path/unified-exec constants.
+- This is not full Codex backend activation. The crate deliberately omits
+  app-server, login, MCP, filesystem RPC, hooks, tools, rollout, state, and
+  session runtime modules until RunHaven designs and verifies those boundaries.
+  Guard tests prevent those backend dependencies/modules and block
+  RunHaven-owned TUI adapters from importing `codex_core` runtime surfaces.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo test -p codex-core --locked --quiet`,
+  `cargo check -p codex-core --locked`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
+Latest Codex reduced app-server client compatibility authority:
+
+- 2026-06-28: Added `crates/codex/app-server-client` as an original-name
+  reduced `codex-app-server-client` workspace crate. It exposes only the
+  upstream-shaped `codex_app_server_client::legacy_core` re-export backed by
+  reduced `codex-core`. It deliberately omits app-server transport, remote
+  clients, in-process client startup, login, MCP, filesystem RPC, exec-server,
+  rollout, state, and thread-store behavior.
+- A direct real `status`/`history_cell` activation was tested and reverted in
+  the working tree because it cascaded into `ChatWidget` and richer config
+  methods before the bottom pane ownership slice was ready. `history_cell` has
+  since been promoted through the reduced config boundary. Under the current
+  MVP-first direction, future `ChatWidget` work should stay dormant unless
+  RunHaven needs source-shaped transcript ownership and can keep native `App`,
+  real app-server session, and app-server transport host-reaching behavior
+  fail-closed or behind reviewed boundaries.
+- Verified so far:
+  `cargo check -p codex-app-server-client --offline`,
+  `cargo test -p codex-app-server-client --locked --quiet`,
+  `cargo check -p runhaven-tui --offline`, and
+  `cargo test -p runhaven-tui --locked drift_tests --quiet`.
+
+Latest TUI native bottom-pane ownership:
+
+- 2026-06-28: The live staging `app_shell.rs` now hosts `LaunchWizardView`
+  inside the real vendored `BottomPane`. Key events, paste, render, cursor
+  placement, frame scheduling, selected-index lookup, terminal title, footer
+  status, text-input routing, and footer help now flow through `BottomPane` or
+  defaulted `BottomPaneView` contracts instead of direct launch-wizard
+  ownership.
+- At that point, confirmation was still read-only and the view completed only
+  on cancel. The later foreground launch handoff supersedes that behavior.
+  Native `App`, `ChatWidget`, real `app_server_session`, and app-server
+  transport remain dormant until host-reaching surfaces are removed,
+  fail-closed, or routed through reviewed RunHaven boundaries.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
+
+Latest TUI Codex runtime ownership:
+
+- 2026-06-29: The live staging `app_shell.rs` now initializes and restores the
+  real vendored Codex `Tui` runtime instead of using `ratatui::try_init()` and
+  raw `crossterm::event::poll/read`. Its active loop consumes
+  `TuiEventStream`, draws through `Tui::draw`, and shares the Codex
+  `FrameRequester` with the hosted `BottomPane`. The earlier Cubby image-smoke
+  path is no longer active.
+- This preserved the launch picker, review, and confirmation behavior from
+  that earlier disabled-launch phase. Native `App`, `ChatWidget`, real
+  `app_server_session`, and app-server transport remain dormant until
+  host-reaching surfaces are removed, fail-closed, or routed through reviewed
+  RunHaven boundaries.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`, and
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
+
+Latest ChatWidget status-source promotion:
+
+- 2026-06-29: Promoted the real vendored Codex `branch_summary.rs` and the
+  `workspace_command.rs` contract for the next ChatWidget status-line path.
+  `app_event_shared.rs` no longer owns the `StatusLineGitSummary` bridge; it
+  re-exports the real upstream type from `branch_summary.rs`.
+- This does not activate Codex app-server transport or host command execution.
+  The upstream `AppServerWorkspaceCommandRunner` remains compiled dormant in
+  `workspace_command.rs`, and a drift guard blocks `app_shell.rs` plus
+  RunHaven-owned adapters from using it in this slice. `branch_summary.rs`
+  remains best-effort metadata over an injected `WorkspaceCommandExecutor` and
+  has no direct host process, environment, filesystem, or RunHaven core access.
+- Verified so far:
+  `cargo test -p runhaven-tui --locked` as the baseline,
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked --tests`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked branch_summary -- --show-output`,
+  `cargo test -p runhaven-tui --locked unsupported_methods_fail_closed -- --show-output`,
+  `cargo test -p runhaven-tui --locked unsupported_method_matrix_fails_closed -- --show-output`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
+Latest repo-local agent harness audit:
+
+- 2026-06-29: Deep review of `.agents/` found that
+  `.agents/skills/codex-tui` is now a full repo-local TUI routing skill.
+  `AGENTS.md`, this file, repo-local skills, and focused harness docs now
+  describe `.agents/skills/` as on-demand instruction surfaces while
+  preserving the three-file startup contract.
+- Verified with repo-local skill validation for `codex-tui` and `harness`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json >/dev/null`, local Markdown link
+  check over touched docs, and `git diff --check`.
+
+Latest TUI status-bridge reduction:
+
+- 2026-06-29: Removed the inline root `status` bridge from
+  `crates/runhaven-tui/src/tui/mod.rs` without activating the full Codex
+  `status/` module. Active footer and hook-browser call sites now use
+  `tui/runhaven/status_format.rs` for the two helper functions they need.
+  `token_usage.rs` is active from real source, and a drift guard keeps full
+  `status/` dormant until its config, model-provider, remote-app-server, and
+  status-card closure is intentionally promoted.
+- `AppEvent::StatusLineGitSummaryUpdated` now uses
+  `branch_summary::StatusLineGitSummary` directly, so `app_event_shared.rs`
+  no longer re-exports that type through the `chatwidget` bridge.
+- Full `status/`, native `App`, `ChatWidget`, real `app_server_session`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and other host-reaching Codex paths remain dormant or
+  fail-closed.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked status_format -- --show-output`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`, and
+  `cargo test -p runhaven-tui --locked footer -- --show-output`.
+  Final gate:
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
+Latest TUI session-log source promotion:
+
+- 2026-06-29: Promoted the real vendored Codex `session_log.rs` source and
+  removed the no-op `session_log` bridge from `app_event_shared.rs`. This is a
+  ChatWidget/AppEvent support surface only; a source-tree guard allows
+  `session_log::maybe_init` and `CODEX_TUI_RECORD_SESSION` only in
+  `session_log.rs` itself and the parked dormant vendored `tui/lib.rs`
+  launcher, not the active temporary `app_shell` path or RunHaven adapters.
+- Reduced `codex-core` now exposes `Config::model_provider_id` with the
+  default `openai` id, derives known built-in ids from `model_provider`
+  overrides, resolves built-in id-only overrides to their matching provider,
+  rejects unknown id-only overrides, and preserves explicit custom provider ids
+  only when a provider override is supplied. This keeps the upstream session-log
+  source compiling without adding full Codex core, app-server transport, login,
+  MCP, filesystem, hooks, tools, rollout, state, or thread-store behavior.
+- Full `status/`, native `App`, `ChatWidget`, real `app_server_session`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and other host-reaching Codex paths remain dormant or
+  fail-closed. Codex session recording initialization is not active; before any
+  native `App` startup promotes it, RunHaven needs a reviewed env/path and
+  redaction policy.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  fail-first
+  `cargo test -p runhaven-tui --locked session_log_uses_source_first_boundary_without_active_recording -- --show-output`,
+  green rerun of the same guard,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo fmt --check`,
+  focused `codex-core` config tests,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `cargo test -p codex-core --locked`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
+Latest TUI MVP workspace picker:
+
+- 2026-06-29: Added the missing MVP workspace picker as Step 1 inside the
+  existing BottomPane-owned `LaunchWizardView`, without adding product screens
+  to `app_shell.rs`. `RunHavenTuiService` now offers the current directory plus
+  the git repository root when the selected directory is nested inside a repo.
+  Selecting the git root rebuilds the agent preview list for that workspace
+  before review, so the mounted `/workspace` path and exact command match the
+  chosen workspace.
+- Security boundary is unchanged: the picker only changes the validated
+  workspace path sent to the existing planner. It does not mount host home,
+  credentials, SSH keys, browser profiles, cloud credential folders, arbitrary
+  host environment variables, or activate launch execution. Foreground launch
+  remains disabled after confirmation.
+- Verified so far:
+  red compile failures for missing workspace-choice API and wizard path,
+  `cargo test -p runhaven-tui --locked launch_workspace_choices_offer_current_and_git_root_for_nested_repo -- --show-output`,
+  `cargo test -p runhaven-tui --locked workspace_picker_selects_git_root_before_agent_review -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
+  `cargo test -p runhaven-tui --locked service -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`,
+  `cargo fmt --check`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, and
+  `git diff --check`.
+
+Latest TUI foreground launch handoff:
+
+- 2026-06-29: Confirmation now carries a typed RunHaven `PreparedLaunch`:
+  display-only `LaunchPlanData` plus the original executable `AgentRunPlan`.
+  `LaunchWizardView` emits `AppEvent::RunHavenLaunchPrepared` with that value,
+  and the staging shell exits the draw loop with `ShellExit::Launch` instead of
+  starting work from the widget.
+- `runhaven/launch_handoff.rs` is the only active TUI file allowed to call
+  `runhaven_core::runtime::launch::launch_run_plan`. It clears TUI-owned title
+  and terminal image state, clears the TUI screen before handoff, calls Codex
+  `Tui::with_restored(RestoreMode::Full, ...)`, and then launches from the
+  stored `AgentRunPlan`. It does not reconstruct execution from
+  `LaunchPlanData.command`.
+- Security boundary is unchanged for Codex host-reaching surfaces:
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and Codex session recording remain dormant or fail-closed. The
+  full RunHaven launch intent remains excluded from Codex session logging until
+  RunHaven owns a redaction policy.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  red compile failures for the missing handoff owner, missing
+  `ShellAction::Launch`, and display-only `LaunchPlanData` still being
+  stored in shell state,
+  `cargo test -p runhaven-tui --locked shell_confirm_enter_requests_foreground_launch_handoff -- --show-output`,
+  `cargo test -p runhaven-tui --locked secure_plan_confirm_enter_prepares_foreground_launch_handoff -- --show-output`,
+  `cargo test -p runhaven-tui --locked prepared_launch_handoff_restores_terminal_before_launcher -- --show-output`,
+  `cargo test -p runhaven-tui --locked prepared_launch_handoff_uses_executable_plan_not_display_command -- --show-output`,
+  `cargo test -p runhaven-tui --locked foreground_runtime_launch_call_stays_in_ui_thread_handoff_owner -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
+  `cargo test -p runhaven-tui --locked service -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`,
+  `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --show-output`,
+  and full `cargo test -p runhaven-tui --locked --quiet` coverage for typed
+  confirmation handoff, display-only protocol notification, session-log
+  exclusion, and `PreparedLaunch` display/executable consistency.
+  Final gate passed:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --quiet` (761 passed, 5 ignored),
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
+Latest TUI active-run log snapshot seam:
+
+- 2026-06-29: Added the first active-run transcript/log backing route without
+  adding product UI to `app_shell.rs`. `runhaven/run/logSnapshot` now flows
+  through the local RunHaven protocol, in-process client, service, and session
+  bridge into `runhaven_core::runtime::active::active_run_log_snapshot_payload`.
+  The shared UI contract exposes `ActiveRunLogSnapshotData` as camelCase display
+  data converted from the existing core snake_case payload.
+- Guard posture: only `runhaven/service.rs` may call the active-run log snapshot
+  runtime API, raw-output requests require explicit confirmation before
+  validation or backend lookup, malformed line counts fail validation before
+  active-run or container log lookup, and `app_shell.rs` must not grow active-run
+  log product behavior. This does not activate native `App`, `ChatWidget`,
+  app-server transport, filesystem RPC, MCP, login, workspace command execution,
+  Codex session recording, or host-reaching Codex execution. Future visible log
+  UI must add a redaction and session-recording policy before it renders,
+  caches, or logs raw container output.
+- Verified:
+  red compile failures for the missing `ActiveRunLogSnapshotData`,
+  `RunHavenRunLogSnapshot`, and `AppServerSession::run_log_snapshot` APIs;
+  `cargo test -p runhaven-core --locked active_run_log_snapshot_contract -- --show-output`;
+  `cargo test -p runhaven-tui --locked run_log_snapshot_request_uses_runhaven_method -- --show-output`;
+  `cargo test -p runhaven-tui --locked log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked run_log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked log_snapshot_rejects_invalid_line_count_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked active_run_log_snapshot_route_stays_in_runhaven_facade -- --show-output`;
+  `cargo check -p runhaven-core --locked`;
+  `cargo check -p runhaven-tui --locked`;
+  `cargo test -p runhaven-core --locked --quiet` (78 passed);
+  `cargo test -p runhaven-tui --locked --quiet` (767 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`;
+  `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`;
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`;
+  `cargo run --locked --bin runhaven-check-pins --quiet`;
+  `scripts/compare-codex-tui.sh`;
+  `cargo fmt --check`;
+  `python3 -m json.tool feature_list.json >/dev/null`;
+  snap-new scan;
+  `git diff --check`;
+  codex-tui-expert review, adversarial-reviewer review, and rust-expert
+  re-review after the sensitive-output confirmation fix.
+
+Latest RunHaven-only TUI MVP surface:
+
+- 2026-06-29: Added the RunHaven-owned MVP root view in
+  `crates/runhaven-tui/src/tui/runhaven/mvp.rs` and made the staging shell host
+  that view inside the real vendored `BottomPane`. The active TUI now covers
+  the scoped MVP path: workspace picker, agent picker, policy changes for
+  network mode and auth scope, plan review, typed launch confirmation,
+  foreground launch handoff, post-run recovery back into the TUI, active-run
+  list, confirmation-gated raw log snapshot display, and secret-free diagnostics
+  for auth broker status/log plus provider egress decisions.
+- 2026-06-29: Simplified the initial agent chooser for non-technical users.
+  The chooser now shows plain guidance, status-first agent rows, workspace,
+  current network posture, and the short `/workspace only` safety summary. It
+  no longer renders catalog-style agent descriptions, the side `Plan Preview`,
+  exact `container run` command, provider-host list, or broker/image/auth
+  detail on the first screen. Review and confirm still show auth scope, network
+  posture, not-shared host data, provider hosts, safety notes, and the exact
+  command before launch.
+- 2026-06-29: Removed the active `RUNHAVEN_TUI_IMAGE_SMOKE` hook from the live
+  `app_shell.rs` path so terminal hardening stays free of Cubby/pet polish
+  scope. The bundled Cubby package and lower pet/image modules remain parked
+  for future explicit scope. Source scan confirms no active image-smoke symbols
+  remain in `app_shell.rs` or the RunHaven TUI view modules.
+- Shared UI contracts now include `ActiveRunListData` and
+  `RunHavenDiagnosticsData`. Active-run summaries intentionally omit workspace
+  paths, diagnostics map only metadata fields, auth broker request paths are
+  scrubbed of query strings and fragments at producer, reader, and UI-contract
+  boundaries, and raw container output remains hidden until the user types
+  `logs`. Raw log text is kept in live view state only; the active path still
+  does not initialize Codex session recording. Post-run recovery preserves the
+  effective launch workspace and selected policy, and TUI diagnostics use
+  bounded tail reads for log files.
+- Guard posture: direct container log backend access still belongs only to
+  `runhaven/service.rs`; visible raw-log rendering is guarded to
+  `runhaven/mvp.rs`; `app_shell.rs` only owns terminal runtime, foreground
+  launch handoff/recovery routing, and process exit-code tracking. Native
+  `App`, `ChatWidget`, full `status/`, real app-server transport, filesystem
+  RPC, MCP, login, workspace command execution, Codex session recording
+  initialization, and host-reaching Codex execution remain dormant or
+  fail-closed.
+- Verified: `cargo test -p runhaven-core --locked ui_contracts --quiet`;
+  `cargo test -p runhaven-core --locked --quiet` (84 passed);
+  `cargo test -p runhaven-tui --locked runhaven::mvp -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::app_server_session --
+  --nocapture`; `cargo test -p runhaven-tui --locked app_shell --
+  --nocapture`; `cargo check -p runhaven-tui --locked`;
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`;
+  `cargo test -p runhaven-tui --locked --quiet` (781 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests
+  --no-run`; `cargo clippy -p runhaven-core --all-targets --locked --
+  -D warnings`; `cargo clippy -p runhaven-tui --all-targets --locked --
+  -D warnings`; `cargo run --locked --bin runhaven-check-pins --quiet`;
+  `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::mvp -- --nocapture`;
+  `scripts/compare-codex-tui.sh` (372 RunHaven files, 16 RunHaven-only files,
+  53 copied Codex files with local edits); `cargo fmt --check`;
+  `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and
+  `git diff --check`; local Rust/Codex/adversarial review of this cleanup found
+  no blocker.
+
+Latest TUI onboarding shim hardening:
+
+- 2026-06-29: Added a focused drift/security guard for the remaining inline
+  `onboarding` shim in `crates/runhaven-tui/src/tui/mod.rs`. The shim is
+  allowed only to expose the hyperlink helper required by active vendored
+  widgets, while the full onboarding module stays dormant until RunHaven owns a
+  reviewed login/browser/app-server/environment boundary. The guard checks the
+  exact inline shim body and verifies risky markers still exist somewhere under
+  `onboarding/`, so future source movement forces the boundary decision to be
+  revisited instead of silently activating login behavior.
+- Updated `crates/runhaven-tui/src/tui/README.md` to match the current vendor
+  audit: 372 RunHaven TUI files, 16 RunHaven-only files, 356 common paths, 538
+  upstream snapshot goldens not vendored, and 53 copied Codex files with local
+  edits.
+- Security boundary is unchanged: native `App`, `ChatWidget`, full onboarding,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, Codex session recording, and host-reaching Codex execution remain
+  dormant or fail-closed.
+- Verified: baseline and final `cargo test -p runhaven-tui --locked`, focused
+  onboarding-shim guard test, focused `drift_tests`, `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`, codex-vendored-tests no-run build,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, em dash scan
+  for changed docs/state, Rust/security/adversarial re-review after the stricter
+  guard patch, and
+  `git diff --check`.
+
+Latest TUI MVP shell ownership guard:
+
+- 2026-06-29: Recorded the current MVP ownership decision in
+  `crates/runhaven-tui/src/tui/README.md`: `runhaven/mvp.rs` remains the active
+  RunHaven product shell hosted by temporary `app_shell.rs` inside Codex `Tui`
+  and the real vendored `BottomPane`. Native Codex `App` and `ChatWidget` stay
+  dormant for the scoped RunHaven MVP because the current product flow is
+  launch, recovery, active-run logs, and diagnostics, not Codex chat product
+  parity.
+- Added a drift guard that blocks declaring native `app` or `chatwidget` in
+  `tui/mod.rs`, including `#[path = "app.rs"]` or
+  `#[path = "chatwidget.rs"]` aliases, while `app_shell.rs` hosts the MVP shell.
+  The guard requires only inert `app_event_shared` bridge exports for those
+  names, verifies the shell installs `RunHavenMvpView` into the real
+  `BottomPane`, and checks that `app_shell.rs` does not activate native `App` or
+  `ChatWidget` markers. A focused regression keeps the path-alias detector from
+  missing legal Rust blank/comment lines between `#[path = "..."]` and the next
+  module item. Native `App` and `ChatWidget` are separate future promotion
+  decisions: native `App` requires a RunHaven app-loop need, and `ChatWidget`
+  requires a RunHaven conversation-transcript need. Either promotion must first
+  replace the temporary shell path it supersedes and add a reviewed redaction,
+  session-recording, and app-server boundary.
+- Updated the repo-local `codex-tui` skill and Strategy C plan docs so they no
+  longer conflict with the MVP-first direction. The current path is Codex `Tui`
+  plus real `BottomPane` hosting RunHaven-owned views; native `App` and
+  `ChatWidget` are dormant optional promotions, not default MVP parity work.
+- Security boundary is unchanged: app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, Codex session recording, full onboarding,
+  native `App`, `ChatWidget`, and host-reaching Codex execution remain dormant
+  or fail-closed.
+- Verified: baseline `cargo test -p runhaven-tui --locked`, expected red
+  failure for the native App/ChatWidget ownership guard before the README
+  decision was recorded, focused green ownership guard test, focused
+  `drift_tests` (17 tests), helper bypass regression, `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`, final
+  `cargo test -p runhaven-tui --locked` (784 passed, 5 ignored),
+  codex-vendored-tests no-run build, clippy with warnings denied, pin policy,
+  `scripts/compare-codex-tui.sh`, JSON validation, stale-direction scan,
+  snap-new scan, em dash scan for changed docs/state, Rust/Codex/security/
+  adversarial re-review after patching reviewer findings, and
+  `git diff --check`.
+
+Latest TUI MVP snapshot matrix:
+
+- 2026-06-29: Added the authoritative RunHaven-owned MVP snapshot matrix under
+  `crates/runhaven-tui/src/tui/snapshots/`, with a test-only
+  `runhaven/mvp_snapshots.rs` module. The initial matrix covered the agent
+  picker, plan review, confirm launch, typed confirm-required launch,
+  active-run list, raw-log confirmation, loaded bounded log snapshot,
+  secret-free diagnostics, and post-run recovery at both `80x24` and `120x48`.
+- 2026-06-29: Expanded the matrix to include the workspace picker with both the
+  current-directory option and git-repository-root option selected. The fixture
+  mirrors the live service labels and descriptions, uses neutral synthetic
+  placeholder paths, and keeps `/workspace only`, host-home exclusion, and
+  credentials-not-mounted-by-default safety facts visible in both narrow and
+  wide split layouts.
+- The snapshots use deterministic fixture data, do not touch external temp or
+  workspace state, and do not depend on host environment passthrough. Snapshot
+  verification uses repo-local `.snap` goldens. Upstream Codex `.snap` goldens
+  remain external; these are RunHaven behavior goldens only.
+- 2026-06-30: Expanded the matrix to include confirmation-gated run diff
+  review and loaded bounded diff preview at both `80x24` and `120x48`.
+- Security boundary is unchanged: app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, Codex session recording, full onboarding,
+  native `App`, `ChatWidget`, and host-reaching Codex execution remain dormant
+  or fail-closed.
+- Verification started with the expected red missing-snapshot failure, then
+  generated and reran the matrix successfully, including an env-unset rerun.
+  Final slice verification is recorded in `feature_list.json`.
+
+Latest TUI MVP module cleanup:
+
+- 2026-06-29: Moved the RunHaven MVP unit tests from inline
+  `runhaven/mvp.rs` into sibling `runhaven/mvp_tests.rs`, leaving `mvp.rs`
+  focused on runtime state handling and rendering while keeping the snapshot
+  matrix in `runhaven/mvp_snapshots.rs`.
+- Behavior and security boundary are unchanged: the same tests still cover
+  policy key rebuilds, active-run path omission, raw-log confirmation,
+  diagnostics redaction, post-run recovery, and the MVP snapshot matrix.
+- Verification for the split started with the existing MVP test baseline and
+  focused `cargo test -p runhaven-tui --locked runhaven::mvp -- --show-output`.
+  Final slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Moved the launch wizard unit tests from inline
+  `runhaven/launch_wizard.rs` into sibling `runhaven/launch_wizard_tests.rs`,
+  reducing the active launch wizard module while preserving the same
+  BottomPane, workspace picker, review, typed confirmation, and foreground
+  handoff coverage.
+- Behavior and security boundary are unchanged: no launch flow, `app_shell.rs`,
+  native `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP, login,
+  workspace command execution, session recording, or host-reaching Codex path
+  changed. Final slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Batched the remaining inline RunHaven TUI unit tests into
+  sibling test modules for `app_server_client`, `app_server_session`,
+  `launch_handoff`, `protocol`, `service`, `status_format`, and
+  `terminal_handoff`. The production modules now keep runtime/service/handoff
+  code plus `#[cfg(test)]` path hooks, while existing test names and coverage
+  stay under their original parent modules.
+- Behavior and security boundary are unchanged: the move does not change
+  launch, logs, diagnostics, service routing, `app_shell.rs`, native `App`,
+  `ChatWidget`, app-server transport, filesystem RPC, MCP, login, workspace
+  command execution, session recording, or host-reaching Codex paths. Final
+  slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Split the remaining large active TUI shell/view files without
+  changing behavior. `app_shell.rs` now keeps the Codex runtime host and
+  `BottomPane` wiring while shell tests live in `app_shell_tests.rs`.
+  `runhaven/mvp.rs` now keeps MVP state/input and delegates panel rendering to
+  `runhaven/mvp_render.rs`. `runhaven/launch_wizard.rs` now keeps the wizard
+  state machine, delegates workspace/agent picker params and headers to
+  `runhaven/launch_wizard_picker.rs`, and delegates review/confirmation
+  rendering to `runhaven/launch_wizard_render.rs`. Current active file sizes
+  are: `app_shell.rs` 469 lines, `runhaven/mvp.rs` 654 lines,
+  `runhaven/launch_wizard.rs` 702 lines,
+  `runhaven/launch_wizard_picker.rs` 393 lines, and
+  `runhaven/launch_wizard_render.rs` 491 lines.
+- Behavior and security boundary are unchanged: this split does not change
+  launch, logs, diagnostics, service routing, native `App`, `ChatWidget`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, session recording, or host-reaching Codex paths. Final slice
+  verification is recorded in `feature_list.json`.
+- 2026-06-30: Updated public TUI documentation to match the current active
+  MVP instead of the older disabled-launch status. README and Usage now describe
+  workspace choice, agent choice, policy changes, plan review, typed
+  confirmation, foreground launch handoff, active-run summaries,
+  typed run control, confirmation-gated log snapshots, confirmation-gated run
+  diff review, diagnostics, and post-run recovery. Worktree review, cleanup,
+  Cubby/pet polish, terminal image polish, and Zork remain out of this
+  hardening path.
+- 2026-06-30: Final scoped TUI MVP checkpoint audit verified the current
+  baseline after review found stale repo-state/docs wording and a missing
+  shell-loop launch recovery proof. This did not close the `terminal-ui` feature
+  because the product direction now favors CLI plus native GUI instead of
+  terminal polish as the product finish line. Local evidence covers the
+  checkpoint matrix:
+  bare interactive TUI launch and quit, non-TTY CLI help fallback, workspace
+  and agent choice, policy changes, plan review, typed confirmation, foreground
+  terminal handoff, active-run summaries, typed-confirm raw log snapshots,
+  diagnostics, post-run recovery, public docs, vendor audit counts, and
+  dormant/fail-closed Codex host-reaching surfaces. The focused app-shell
+  recovery test drives the real confirmation action, passes the exact
+  executable `AgentRunPlan` into the launcher seam, and renders post-run
+  recovery with the returned exit code without requiring Apple `container` or
+  credentials.
+
+Latest TUI run history surface:
+
+- 2026-06-30: Promoted the existing `runhaven-core` run records into the
+  RunHaven-only TUI without expanding `app_shell.rs`. Shared UI contracts now
+  expose newest-first `RunHistoryListData`, with run id, status, policy counts,
+  git summary, review command, and worktree branch details. Stored host
+  workspace paths and terminal control bytes stay out of the TUI payload.
+- The BottomPane-hosted RunHaven view reads recent run history through the
+  local RunHaven TUI service using a bounded tail read. Press `h` to open
+  recent run history. Snapshot coverage includes `80x24` and `120x48`.
+- Security boundary is unchanged: native `App`, `ChatWidget`, app-server
+  transport, filesystem RPC, MCP, login, workspace command execution, Codex
+  session recording, and host-reaching Codex execution remain dormant or
+  fail-closed. Verification covered the red/green history ordering contract,
+  focused TUI history tests, snapshot matrix, full `runhaven-tui` tests,
+  `codex-vendored-tests` no-run, clippy for `runhaven-core` and
+  `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
+  scan, and diff check.
+
+Latest TUI run diff surface:
+
+- 2026-06-30: Promoted confirmation-gated run diff review into the
+  RunHaven-only TUI without expanding `app_shell.rs`. Shared UI contracts now
+  expose `RunDiffData`, built from the existing `runhaven-core`
+  `run_diff_text` path and bounded before rendering.
+- Press Enter on a history record to open run review. The TUI requires typing
+  `diff` before backend lookup, rejects paste, keeps the CLI review command as
+  fallback text, and warns that diffs can show workspace file contents.
+- Security boundary is unchanged: only `runhaven/service.rs` may call
+  `run_diff_text`; `runhaven/protocol.rs` and `runhaven/app_server_session.rs`
+  expose only the reviewed `runhaven/run/diff` method; `app_shell.rs`, native
+  `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP, login,
+  workspace command execution, Codex session recording, and host-reaching
+  Codex execution remain dormant or fail-closed.
+
+Latest TUI preflight diagnostics surface:
+
+- 2026-06-30: Promoted shared `runhaven-core` doctor checks into the
+  RunHaven-only TUI diagnostics screen without expanding `app_shell.rs`. The
+  TUI service now combines preflight checks, auth status, provider egress
+  metadata, and auth broker metadata in `RunHavenDiagnosticsData`.
+- The diagnostics view shows concise `ok` or `fix` preflight rows and inline
+  remedies before auth/network metadata. Terminal control bytes are stripped
+  from doctor-derived UI fields, successful `container` binary checks do not
+  expose host install paths, broker request paths remain scrubbed, and log reads
+  stay bounded.
+- Security boundary is unchanged: native `App`, `ChatWidget`, app-server
+  transport, filesystem RPC, MCP, login, workspace command execution, Codex
+  session recording, and host-reaching Codex execution remain dormant or
+  fail-closed. Verification covered focused diagnostics contracts, the
+  diagnostics snapshot matrix, full `runhaven-core` and `runhaven-tui` tests,
+  `codex-vendored-tests` no-run, clippy for `runhaven-core` and
+  `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
+  scan, and diff check.
+
+## Latest TUI Slice
+
+- 2026-06-30: Promoted TUI run-control from a gap into a guarded RunHaven
+  surface. Active Runs now opens separate Stop, Hard stop, and Repair marker
+  screens; each requires typing `stop`, `kill`, or `repair` before the service
+  calls the shared `runhaven-core` stop/kill/repair function. Run-control
+  results use `RunControlResultData`, the app-server facade has explicit
+  RunHaven methods for those three actions, snapshots cover confirmation and
+  result states, and a drift guard keeps direct run-control calls inside
+  `runhaven/service.rs` instead of `app_shell.rs` or dormant Codex surfaces.
+  Verified with focused run-control tests, the full `runhaven-core` and
+  `runhaven-tui` suites, `codex-vendored-tests` no-run, clippy for
+  `runhaven-core` and `runhaven-tui`, pin policy, Codex TUI compare, JSON
+  validation, snap-new scan, and diff check.
+- 2026-06-30: Promoted TUI run-diff review from CLI-only fallback text into a
+  guarded RunHaven surface. History Enter opens a Run review screen, typing
+  `diff` gates backend lookup, paste is ignored, loaded output is bounded and
+  warning-labeled, and the CLI review command remains visible as fallback.
+  `RunDiffData` is the shared UI contract; `runhaven/service.rs` is the only
+  TUI owner allowed to call `run_diff_text`; and drift guards keep
+  `app_shell.rs` plus dormant Codex host-reaching surfaces out of the path.
+  Final verification for this slice is recorded in `feature_list.json`.
+
+Latest CLI surface pass:
+
+- 2026-06-30: Re-ran `scripts/cli_surface_check.sh` on macOS 27.0 build
+  26A5368g with Apple `container` 1.0.0 commit ee848e3. The breadth check
+  passed 39/39 command-family surfaces, including plan/run, worktree diff,
+  keep/recover/merge/discard, active run status/attach/kill/repair, state and
+  network cleanup confirmation gates, auth/egress logs, and safety `why`
+  commands. `docs/CLI_SURFACE_COVERAGE.md` now records this current evidence.
 
 ## Blockers
 
-- `--ssh` remains fail-closed. Apple `container` 1.0.0 exposes an SSH agent
-  socket to the non-root guest user, but `ssh-add -l` returns permission
-  denied. Do not re-enable SSH forwarding, mount raw SSH keys, or switch the
-  default agent user to root without explicit security review and no-secret
-  runtime proof.
-
-## Touched Surfaces In This Pass
-
-- tauri-diagnostics: `src/runhaven/diagnostics.rs` (`auth_status_payload`
-  core and secret-free log readers), `src/runhaven/cli/diagnostics.rs` (CLI adapter); `src-tauri/src/commands/diagnostics.rs` (new), `commands/mod.rs`,
-  `lib.rs`, `build.rs`, `contracts.rs`, `capabilities/main-read.json`;
-  `ui/src/commands/{types.ts,client.ts}`,
-  `ui/src/components/DiagnosticsPanel.svelte` (new, self-contained),
-  `ui/src/app/App.svelte`, `ui/e2e/app.spec.ts`.
-- tauri-kill-repair-run-control: `src/runhaven/runtime/active/mod.rs`
-  (`kill_active_run` + thin `runs_kill`), `active/repair.rs` (`repair_active_run`);
-  `src-tauri/src/commands/run_control.rs` (kill_run/repair_run + tests),
-  `lib.rs`, `build.rs`, `contracts.rs`, `capabilities/run-control.json`;
-  `ui/src/commands/{types.ts,client.ts}`, `ui/src/components/RunStatusPanel.svelte`,
-  `ui/src/app/App.svelte` (shared `runControl`), `ui/e2e/app.spec.ts`.
-- tauri-stop-run-control: `src/runhaven/runtime/active/mod.rs` (`stop_active_run`
-  core + thin `runs_stop`); `src-tauri/src/commands/run_control.rs` (new),
-  `commands/mod.rs`, `lib.rs`, `build.rs`, `contracts.rs`,
-  `capabilities/run-control.json`; `ui/src/commands/{types.ts,client.ts}`,
-  `ui/src/components/RunStatusPanel.svelte`, `ui/src/app/App.svelte`,
-  `ui/e2e/app.spec.ts`.
-- Desktop maintainability split (v1 milestone 1): `src-tauri/src/commands/`
-  (`mod.rs`, new `validation.rs`, new `warnings.rs`, sibling import updates);
-  `ui/src/commands/` (`runhaven.ts` barrel, new `types.ts`/`client.ts`/`plan.ts`);
-  `ui/src/app/App.svelte` plus new `ui/src/components/{SetupChecksPanel,
-  PlanReviewPanel,LastLaunchPanel,RunStatusPanel,RunOutputPanel}.svelte`.
-- CLI surface verification + git-availability bug fix (code): new
-  `scripts/cli_surface_check.sh`; `src/runhaven/support/git.rs`
-  (`git_value_available`); `src/runhaven/runtime/worktrees/mod.rs` and
-  `merge.rs` (typed `GitSnapshot` matches + regression test);
-  `src/runhaven/records/run_history.rs`, `records/run_history/diff.rs`,
-  and the `records/` facade (canonical reader). Docs: new `docs/CLI_SURFACE_COVERAGE.md`, `docs/harness/evidence/evidence-log.md`,
-  `docs/harness/feedback/verification-matrix.md`, `README.md` (docs index),
-  `feature_list.json`, and this state file.
-- Secure-by-default network (code): `src/runhaven/cli/args.rs` (`--network`
-  optional), `src/runhaven/runtime/plans/validation.rs` (`default_network_mode`),
-  `mod.rs` (re-export + focused test), `src/runhaven/cli/app.rs` (resolve default
-  + provider escape-hatch info line). Docs: `CAPABILITIES`, `USAGE`,
-  `ARCHITECTURE`, `SECURITY_MODEL`, `README`, `V1_RELEASE_PLAN`,
-  `docs/harness/boundaries/security-boundary-map.md`, `docs/RELEASE_GAP_ANALYSIS.md`,
-  `feature_list.json`, and this state file.
-- v0.5.0 CLI contract closure (code): `src/runhaven/runtime/plans/types.rs`
-  (`security_notices` field), `validation.rs` (`security_notices` function),
-  `mod.rs` (compute + carry + focused tests), and `src/runhaven/cli/app.rs`
-  (`eprint_security_notices` emitted from `plan` and `run`).
-- v0.5.0 CLI contract closure (docs/state): `docs/CAPABILITIES.md` (profile
-  support matrix, lower-security overrides, local record files), `docs/USAGE.md`,
-  `docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/ROADMAP.md` (active TUI plus later desktop), `docs/RELEASE_GAP_ANALYSIS.md`, `feature_list.json`, and this
-  state file.
-- Earlier this session (already committed): macOS 27 runtime evidence
-  (`current-state.md`, `docs/harness/evidence/evidence-log.md`).
+- SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-`v0.5.0` is released (pre-release; see `CHANGELOG.md`). The active slice is
-`terminal-ui`: integrate the full Codex-vendored TUI source baseline into
-RunHaven, then adapt it to the wishlist in
-`docs/plans/tui-codex-vendor-reset.md`.
-
-Immediate next step: adapt the full Codex bottom-pane and app-shell crate
-assumptions into RunHaven entrypoint and product adapters without culling
-product surfaces prematurely. `src/runhaven/cli/tui/mod.rs` currently keeps the
-crate buildable and fails closed for bare interactive TUI launch until that
-integration is complete. The lower native pet runtime now compiles and passes
-tests, including terminal detection, frame extraction, image protocol writers,
-Sixel encoding, ambient draw requests, Tokio frame scheduling, native pet
-picker discovery, picker preview state, the Codex renderable contract, and the
-Codex terminal title helper. The motion, shimmer, terminal palette, and bounded
-terminal probe helpers now compile and pass focused tests too. Shared Codex
-style and text helpers now compile as well: line truncation, text formatting,
-URL-aware wrapping, render line utilities, and terminal-palette-aware styles.
-The picker currently uses a staged bottom-pane selection contract until the
-full Codex bottom-pane view is adapted. For each removal, record why removal is
-better than leaving and adapting. Keep the reference-implementation requirement
-in view because this TUI setup will guide several sibling projects.
-
-Do not publish a release from the interim vendor-reset state. After the TUI is
-fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`
-with a full public docs refresh.
-
-Separate non-TUI follow-up already called out by the user: logs sanitization and
-secure secrets/OAuth-token handling, with macOS Keychain preferred for
-RunHaven-owned host secrets where practical. Other non-blocking follow-ups on
-record: RunHaven runs containers without `--rm` (killed containers reap
-asynchronously) and a signed auto-updating provider-policy candidate.
+Commit and push this TUI hardening plus CLI-audit branch, then merge the
+branch/PR. After merge, shift focus to a native-feeling macOS GUI as the easy
+path for nontechnical users. Before designing that GUI, research the existing
+GitHub-hosted Apple `container` GUI work and decide whether RunHaven should
+build, adapt, or avoid it. Do not cut a release, tag, or version bump unless
+the maintainer explicitly asks for a release pass.

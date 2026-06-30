@@ -2,7 +2,7 @@
   "version": 2,
   "generatedFor": "RunHaven",
   "maintainedBy": "RunHaven maintainers",
-  "lastUpdated": "2026-06-17",
+  "lastUpdated": "2026-06-27",
   "purpose": "Compact map of the active RunHaven harness. This file is not startup context.",
   "platformContract": {
     "macOS": "26+",
@@ -38,8 +38,8 @@
     "environment": [
       "Cargo.toml",
       "Cargo.lock",
+      "crates/",
       "src-tauri/Cargo.toml",
-      "src-tauri/Cargo.lock",
       "ui/package.json",
       "ui/package-lock.json",
       "rust-toolchain.toml",
@@ -59,7 +59,9 @@
     ]
   },
   "onDemandDocs": {
+    "harnessEvaluation": "docs/HARNESS_EVALUATION.md",
     "harnessOverview": "docs/harness/README.md",
+    "harnessSources": "docs/harness/research/sources.md",
     "verificationRouting": "docs/harness/feedback/verification-matrix.md",
     "componentBoundaries": "docs/harness/boundaries/component-inventory.md",
     "securityBoundaries": "docs/harness/boundaries/security-boundary-map.md",
