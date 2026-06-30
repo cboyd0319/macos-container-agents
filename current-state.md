@@ -4,9 +4,10 @@ Last updated: 2026-06-30 UTC
 
 ## Current Objective
 
-The scoped RunHaven-only TUI MVP is complete and passing. The next product
-decision is release readiness for `v0.6.0`, a final polish slice, or a separate
-non-TUI backlog item chosen by the maintainer.
+The scoped RunHaven-only TUI MVP checkpoint is verified, but `v0.6.0` is still
+reserved for the fully complete TUI. The active work is full-TUI gap analysis,
+acceptance criteria, and implementation toward `v0.6.0`, not release readiness
+from the MVP checkpoint.
 
 RunHaven is replacing its previous custom TUI with the pinned upstream Codex
 TUI source baseline:
@@ -22,8 +23,9 @@ Keep Codex vendoring source-first, RunHaven behavior in thin adapters, shared
 data contracts in `runhaven-core`, every culling decision documented, and
 user-facing copy plain enough for non-technical users.
 
-Do not publish a release from the unreleased TUI checkout without a separate
-release-readiness pass and explicit version bump to `v0.6.0`.
+Do not publish, tag, or version-bump from the MVP checkpoint. `v0.6.0` requires
+the fully complete TUI, explicit maintainer confirmation, and a separate
+release-readiness pass after that full-TUI scope is complete.
 
 ## Startup State Contract
 
@@ -40,9 +42,9 @@ Load deeper docs only when the task touches that surface.
   `container` on macOS 26+ on Apple silicon.
 - The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26.
 - The CLI remains the complete automation and recovery backend.
-- The terminal UI is unreleased and passing for the scoped RunHaven-only MVP.
-  A bare interactive `runhaven` opens the TUI; pipes, redirection, and
-  explicit subcommands stay CLI-first.
+- The terminal UI is unreleased and active. A bare interactive `runhaven` opens
+  the verified MVP checkpoint; pipes, redirection, and explicit subcommands stay
+  CLI-first. `v0.6.0` is the fully complete TUI target, not the MVP checkpoint.
 - The alpha desktop shell lives under `ui/` and `src-tauri/`. `src-tauri` is a
   Rust workspace member over typed `runhaven-core` commands. The desktop shell
   remains deferred to a later first-class release phase.
@@ -1354,18 +1356,20 @@ Latest TUI MVP module cleanup:
   confirmation-gated log snapshots, diagnostics, and post-run recovery.
   Advanced run management, history, worktree review, cleanup, Cubby/pet
   polish, terminal image polish, and Zork remain out of this core MVP path.
-- 2026-06-30: Final scoped TUI MVP completion audit moved `terminal-ui` to
-  passing after review found stale repo-state/docs wording and a missing
-  shell-loop launch recovery proof. Local evidence covers the full MVP
-  requirement matrix: bare interactive TUI launch and quit, non-TTY CLI help
-  fallback, workspace and agent choice, policy changes, plan review, typed
-  confirmation, foreground terminal handoff, active-run summaries,
-  typed-confirm raw log snapshots, diagnostics, post-run recovery, public docs,
-  vendor audit counts, and dormant/fail-closed Codex host-reaching surfaces.
-  The focused app-shell recovery test drives the real confirmation action,
-  passes the exact executable `AgentRunPlan` into the launcher seam, and renders
-  post-run recovery with the returned exit code without requiring Apple
-  `container` or credentials.
+- 2026-06-30: Final scoped TUI MVP checkpoint audit verified the current
+  baseline after review found stale repo-state/docs wording and a missing
+  shell-loop launch recovery proof. This did not close the `terminal-ui` feature
+  for `v0.6.0`; `terminal-ui` remains active because `v0.6.0` is reserved for
+  the fully complete TUI. Local evidence covers the MVP requirement matrix: bare
+  interactive TUI launch and quit, non-TTY CLI help fallback, workspace and
+  agent choice, policy changes, plan review, typed confirmation, foreground
+  terminal handoff, active-run summaries, typed-confirm raw log snapshots,
+  diagnostics, post-run recovery, public docs, vendor audit counts, and
+  dormant/fail-closed Codex host-reaching surfaces. The focused app-shell
+  recovery test drives the real confirmation action, passes the exact
+  executable `AgentRunPlan` into the launcher seam, and renders post-run
+  recovery with the returned exit code without requiring Apple `container` or
+  credentials.
 
 ## Blockers
 
@@ -1373,13 +1377,15 @@ Latest TUI MVP module cleanup:
 
 ## Next Step
 
-The scoped RunHaven-only TUI MVP is passing in the staging Codex runtime. Next
-work should be chosen explicitly: `v0.6.0` release readiness, final polish such
-as Cubby/pet/terminal-image/Zork, or a non-TUI backlog item. Keep native `App`
-and `ChatWidget` dormant unless a future RunHaven scope genuinely needs that
-specific owner. If native `App` startup is promoted later, first replace raw
+The next work is a full-TUI gap analysis and completion plan for `v0.6.0`.
+Start from the verified MVP checkpoint, then decide what full TUI means in
+RunHaven terms: final launch UX, active-run/log UX, diagnostics, recovery,
+history or run-management surfaces, Cubby/pet/terminal-image/Zork polish, and
+whether native `App` or `ChatWidget` should stay dormant or be promoted. Keep
+native `App` and `ChatWidget` dormant unless the full-TUI scope genuinely needs
+that specific owner. If native `App` startup is promoted, first replace raw
 Codex env/path session-recording behavior and app-server assumptions with
 reviewed RunHaven redaction and app-server boundaries. If `ChatWidget` is
-promoted later, first define the RunHaven transcript, raw-log redaction, and
-session-recording policy. Keep unrelated Codex product features dormant,
-fail-closed, or deleted.
+promoted, first define the RunHaven transcript, raw-log redaction, and
+session-recording policy. Do not cut `v0.6.0` until the full-TUI scope is
+implemented, verified, and explicitly approved.
