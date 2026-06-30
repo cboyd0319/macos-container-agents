@@ -14,6 +14,7 @@ pub enum RunHavenComponentPayload {
     LaunchPlan(Box<LaunchPlanData>),
     ActiveRunList(ActiveRunListData),
     ActiveRunLogSnapshot(Box<ActiveRunLogSnapshotData>),
+    RunDiff(Box<RunDiffData>),
     RunControlResult(Box<RunControlResultData>),
     Diagnostics(Box<RunHavenDiagnosticsData>),
 }
@@ -82,6 +83,17 @@ pub struct ActiveRunLogSnapshotData {
     pub run_id: String,
     pub captured_at: String,
     pub requested_lines: u32,
+    pub text: String,
+    pub returned_lines: usize,
+    pub truncated: bool,
+    pub source: String,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunDiffData {
+    pub run_id: String,
     pub text: String,
     pub returned_lines: usize,
     pub truncated: bool,
@@ -413,6 +425,38 @@ impl ActiveRunLogSnapshotData {
     }
 }
 
+impl RunDiffData {
+    pub fn from_run_diff_text(run_id: &str, text: &str, max_lines: usize) -> Self {
+        let sanitized = strip_terminal_controls_preserving_lines(text);
+        let mut returned = Vec::new();
+        let mut total_lines = 0usize;
+        for line in sanitized.lines() {
+            total_lines += 1;
+            if returned.len() < max_lines {
+                returned.push(line.to_string());
+            }
+        }
+        let mut text = returned.join("\n");
+        if !text.is_empty() {
+            text.push('\n');
+        }
+        let truncated = total_lines > returned.len();
+        let mut warnings = vec!["Diff can include workspace file contents.".to_string()];
+        if truncated {
+            warnings.push("Diff output was truncated to the bounded preview size.".to_string());
+        }
+
+        Self {
+            run_id: strip_terminal_controls(run_id),
+            text,
+            returned_lines: returned.len(),
+            truncated,
+            source: "git diff".to_string(),
+            warnings,
+        }
+    }
+}
+
 impl RunControlResultData {
     pub fn from_stop_payload(value: serde_json::Value) -> serde_json::Result<Self> {
         Self::from_stop_or_kill_payload("stop", value)
@@ -658,6 +702,12 @@ fn strip_terminal_controls(text: &str) -> String {
     text.chars().filter(|ch| !ch.is_control()).collect()
 }
 
+fn strip_terminal_controls_preserving_lines(text: &str) -> String {
+    text.chars()
+        .filter(|ch| *ch == '\n' || *ch == '\t' || !ch.is_control())
+        .collect()
+}
+
 impl From<&AgentRunPlan> for LaunchPlanData {
     fn from(plan: &AgentRunPlan) -> Self {
         Self::from_plan(plan)
@@ -863,6 +913,61 @@ mod tests {
 
         let decoded: RunHavenComponentPayload =
             serde_json::from_value(encoded).expect("deserialize snapshot payload");
+
+        assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn run_diff_contract_bounds_output_and_preserves_layout() {
+        let data = RunDiffData::from_run_diff_text(
+            "run-\u{1b}123",
+            "diff --git a/file b/file\n+\tsecret-shaped line\n-\u{1b}[31mold line\n",
+            2,
+        );
+
+        assert_eq!(data.run_id, "run-123");
+        assert_eq!(
+            data.text,
+            "diff --git a/file b/file\n+\tsecret-shaped line\n"
+        );
+        assert_eq!(data.returned_lines, 2);
+        assert!(data.truncated);
+        assert_eq!(data.source, "git diff");
+        assert!(
+            data.warnings
+                .iter()
+                .any(|warning| { warning.contains("workspace file contents") })
+        );
+        assert!(
+            data.warnings
+                .iter()
+                .any(|warning| { warning.contains("truncated") })
+        );
+        assert!(!data.text.contains('\u{1b}'));
+    }
+
+    #[test]
+    fn run_diff_component_payload_round_trips_json() {
+        let data = RunDiffData::from_run_diff_text("run-123", "+added\n", 200);
+        let payload = RunHavenComponentPayload::RunDiff(Box::new(data));
+
+        let encoded = serde_json::to_value(&payload).expect("serialize diff payload");
+
+        assert_eq!(
+            encoded.get("type").and_then(serde_json::Value::as_str),
+            Some("runDiff")
+        );
+        let data = encoded.get("data").expect("diff data");
+        assert_eq!(
+            data.get("runId").and_then(serde_json::Value::as_str),
+            Some("run-123")
+        );
+        assert!(data.get("returnedLines").is_some());
+        assert!(data.get("run_id").is_none());
+        assert!(data.get("returned_lines").is_none());
+
+        let decoded: RunHavenComponentPayload =
+            serde_json::from_value(encoded).expect("deserialize diff payload");
 
         assert_eq!(decoded, payload);
     }

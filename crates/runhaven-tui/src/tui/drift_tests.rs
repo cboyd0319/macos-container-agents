@@ -720,6 +720,59 @@ fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
 }
 
 #[test]
+fn run_diff_stays_in_runhaven_service_with_typed_confirmation() {
+    let service_source = include_str!("runhaven/service.rs");
+    let protocol_source = include_str!("runhaven/protocol.rs");
+    let session_source = include_str!("runhaven/app_server_session.rs");
+    let mvp_source = include_str!("runhaven/mvp.rs");
+    let app_shell_source = include_str!("app_shell.rs");
+
+    let owners = tui_rust_sources()
+        .into_iter()
+        .filter_map(|path| {
+            let relative = relative_tui_source(&path);
+            if relative == std::path::Path::new("drift_tests.rs") {
+                return None;
+            }
+            let source = std::fs::read_to_string(&path).expect("source should be readable");
+            source
+                .contains("run_diff_text")
+                .then(|| relative.display().to_string())
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        owners,
+        ["runhaven/service.rs"],
+        "direct core run-diff calls must stay in the RunHaven TUI service"
+    );
+    assert!(
+        service_source.contains("validate_sensitive_diff_confirmation")
+            && service_source
+                .contains("Confirm diff viewing before loading workspace file contents."),
+        "run-diff service calls must validate explicit confirmation before backend lookup"
+    );
+    assert!(
+        protocol_source.contains("RunHavenRunDiff")
+            && protocol_source.contains("runhaven/run/diff")
+            && session_source.contains("RunHavenRunDiff"),
+        "app-server facade must expose only the reviewed RunHaven run-diff method"
+    );
+    assert!(
+        mvp_source.contains("RunDiffState::Confirm")
+            && mvp_source.contains("typed.trim() != DIFF_CONFIRM_PHRASE")
+            && mvp_source.contains("Paste is ignored here."),
+        "TUI run-diff screen must keep separate typed confirmation and reject paste"
+    );
+    for marker in ["run_diff_text", "RunHavenRunDiff", "runhaven/run/diff"] {
+        assert!(
+            !app_shell_source.contains(marker),
+            "app_shell.rs must not own run-diff marker {marker:?}"
+        );
+    }
+}
+
+#[test]
 fn app_event_shared_shrinks_only() {
     let source = include_str!("app_event_shared.rs");
     let inline_modules = top_level_inline_module_declarations(source);

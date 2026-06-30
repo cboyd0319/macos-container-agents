@@ -271,15 +271,16 @@ matrix. Include at least `80x24` and `120x48` coverage for picker, review,
 confirm, transition-clearing cases, active-run log, diagnostics, recovery, and
 any visible fail-closed unsupported surface.
 
-Completion update, 2026-06-30: the MVP checkpoint is verified but is not the
-`v0.6.0` finish line. `v0.6.0` requires the full RunHaven-only terminal
-workflow: plain startup, workspace and agent choice, policy visibility, review,
-typed confirmation, foreground handoff, recovery, active-run status, bounded
-logs, diagnostics/doctor guidance, newest-first run-record review, and explicit
-finish decisions for Cubby/pet/terminal image/Zork and native
-`App`/`ChatWidget`. The RunHaven service-backed history screen omits stored
-host workspace paths. Keep non-RunHaven Codex product features dormant or
-fail-closed.
+Direction update, 2026-06-30: the TUI is no longer the primary product finish
+line. Finish only the terminal surfaces that harden the shared RunHaven
+workflow, then merge this branch and shift focus to a native-feeling macOS GUI
+as the easy path for nontechnical users. The verified terminal checkpoint covers
+plain startup, workspace and agent choice, policy visibility, review, typed
+confirmation, foreground handoff, recovery, active-run status/control, bounded
+logs, diagnostics/doctor guidance, newest-first run-record review, and
+confirmation-gated run diff review. Cubby/pet/terminal image/Zork and native
+`App`/`ChatWidget` are not blockers unless they harden the RunHaven boundary.
+Keep non-RunHaven Codex product features dormant or fail-closed.
 
 ### Phase 5: Optional `ChatWidget` Transcript And Status
 
@@ -317,9 +318,9 @@ reduces risk or duplication versus the current RunHaven-owned views:
 - Diagnostics/doctor: status card and markdown renderer.
 
 Defer Cubby/pet polish, mascot work, terminal image polish, Zork, dashboard
-breadth, rich history/diff, and Codex-native product affordances until the core
-RunHaven TUI is fully working. Existing pet/image code remains parked
-source-first infrastructure, not near-term product scope.
+breadth, rich history/diff, and Codex-native product affordances unless a future
+explicitly scoped TUI or GUI slice pulls them forward. Existing pet/image code
+remains parked source-first infrastructure, not near-term product scope.
 
 Progress note, 2026-06-29: The MVP workspace picker became active inside the
 BottomPane-owned `LaunchWizardView` without expanding `app_shell.rs`. The
@@ -481,9 +482,9 @@ cargo insta show -p runhaven-tui <path-to-snap.new>
 cargo insta accept -p runhaven-tui
 ```
 
-For final-pass terminal image behavior, first reintroduce a bounded visual
-smoke path and verify it explicitly. The live shell currently has no active
-`RUNHAVEN_TUI_IMAGE_SMOKE` path.
+For any future explicitly scoped terminal image behavior, first reintroduce a
+bounded visual smoke path and verify it explicitly. The live shell currently has
+no active `RUNHAVEN_TUI_IMAGE_SMOKE` path.
 
 For substantial integration slices on macOS 26+:
 

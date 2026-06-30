@@ -6,6 +6,7 @@ expression: rendered
   RunHaven v0.5.0  Run history
   1 Launch  2 Runs  3 Diagnostics  h History
   Recent run records. Host workspace paths are hidden in the TUI.
+  Enter reviews the selected run diff after confirmation.
 
     run-20260629-003  codex  provider  failed  return=1
   > run-20260629-002  antigravity  provider  succeeded  return=0

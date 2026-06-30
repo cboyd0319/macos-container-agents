@@ -4,10 +4,18 @@ Last updated: 2026-06-30 UTC
 
 ## Current Objective
 
-The scoped RunHaven-only TUI MVP checkpoint is verified, but `v0.6.0` is still
-reserved for the fully complete TUI. The active work is full-TUI gap analysis,
-acceptance criteria, and implementation toward `v0.6.0`, not release readiness
-from the MVP checkpoint.
+The product direction changed on 2026-06-30: stop treating terminal UI
+completion as the primary user-facing goal. The secure path should be easiest for
+non-technical users through a native-feeling macOS GUI. The CLI remains the
+complete technical, automation, recovery, and verification surface. The TUI
+should be finished only where it hardens the shared workflow and proves backend
+contracts, not polished into a standalone product.
+
+Current branch goal: finish the remaining TUI hardening surfaces already backed
+by `runhaven-core`, do one more CLI surface audit, commit and push the branch,
+then merge this branch/PR and shift focus to the GUI. Do not publish, tag,
+version-bump, or cut a release from this work unless the maintainer explicitly
+asks for a release pass.
 
 RunHaven is replacing its previous custom TUI with the pinned upstream Codex
 TUI source baseline:
@@ -18,19 +26,14 @@ commit: 5267e805fb830891c0b23376bcd9cbd382c3473c
 path: codex-rs/tui/src/
 ```
 
-The RunHaven TUI is the reference implementation for several sibling projects.
 Keep Codex vendoring source-first, RunHaven behavior in thin adapters, shared
 data contracts in `runhaven-core`, every culling decision documented, and
 user-facing copy plain enough for non-technical users.
 
-Do not publish, tag, or version-bump from the MVP checkpoint. `v0.6.0` requires
-the fully complete TUI, explicit maintainer confirmation, and a separate
-release-readiness pass after that full-TUI scope is complete.
+## TUI/CLI Hardening Acceptance Scope
 
-## Full TUI v0.6 Acceptance Scope
-
-The verified checkpoint is not enough for `v0.6.0`. The terminal UI remains
-active until the RunHaven-only workflow is complete and verified:
+Before merge, the terminal checkpoint should cover the RunHaven workflow parts
+that harden the shared backend:
 
 - Plain startup: bare interactive `runhaven` opens a calm, nontechnical TUI;
   non-TTY and explicit subcommands stay CLI-first.
@@ -46,11 +49,11 @@ active until the RunHaven-only workflow is complete and verified:
   from the TUI and stay secret-free.
 - Records: history or run-record review is present when existing
   `runhaven-core` data already supports it; otherwise the TUI must state the
-  CLI fallback plainly and keep v0.6 scope honest.
-- Finish decisions: Cubby/pet behavior, terminal image polish, mascot work,
-  Zork, native Codex `App`, and native `ChatWidget` are each completed,
-  explicitly rejected, or recorded as not required for RunHaven v0.6 before the
-  terminal-ui feature can move to passing.
+  CLI fallback plainly and keep branch scope honest.
+- Scope decisions: Cubby/pet behavior, terminal image polish, mascot work,
+  Zork, native Codex `App`, and native `ChatWidget` are not blockers for this
+  branch. Keep them dormant, parked, or explicitly out of scope unless they
+  harden the shared RunHaven workflow.
 - Boundary guards: native Codex app-server transport, filesystem RPC, MCP,
   login, workspace command execution, session recording, external editors,
   hooks, broad shell execution, cloud/browser credential access, and
@@ -59,15 +62,13 @@ active until the RunHaven-only workflow is complete and verified:
 - Verification: the final gate includes fmt, check, `runhaven-tui` tests,
   `codex-vendored-tests` no-run, clippy, pin check, Codex TUI compare, JSON
   validation, snap-new scan, diff check, non-TTY proof, live PTY open/quit
-  proof, and live or deterministic confirmed-launch proof.
-- Work order: close the hardest and highest-risk remaining TUI problems first.
-  Prefer boundary-heavy, runtime, recovery, doctor/preflight, run-control,
-  diff/worktree, cleanup, and final App/ChatWidget decisions before low-risk
-  copy polish or cosmetic refinements.
-- Execution authorization: the user authorized downloads, installs, local
-  execution, and external research needed to complete the TUI. This does not
-  relax RunHaven security boundaries, credential handling, or the instruction
-  to avoid unnecessary scope.
+  proof, live or deterministic confirmed-launch proof, and the CLI surface
+  check.
+- CLI pass: run the existing CLI surface check, inspect command help/output for
+  stale TUI/v0.6 wording, and fix any CLI-facing mismatch before merge.
+- GUI handoff: after merge, research existing Apple `container` GUI projects on
+  GitHub and decide whether to build, adapt, or avoid them before starting the
+  native macOS GUI.
 
 ## Startup State Contract
 
@@ -85,8 +86,9 @@ Load deeper docs only when the task touches that surface.
 - The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26.
 - The CLI remains the complete automation and recovery backend.
 - The terminal UI is unreleased and active. A bare interactive `runhaven` opens
-  the verified MVP checkpoint; pipes, redirection, and explicit subcommands stay
-  CLI-first. `v0.6.0` is the fully complete TUI target, not the MVP checkpoint.
+  the verified RunHaven-only checkpoint; pipes, redirection, and explicit
+  subcommands stay CLI-first. The TUI should now be hardened only where it
+  strengthens shared RunHaven workflow contracts.
 - The alpha desktop shell lives under `ui/` and `src-tauri/`. `src-tauri` is a
   Rust workspace member over typed `runhaven-core` commands. The desktop shell
   remains deferred to a later first-class release phase.
@@ -136,11 +138,10 @@ TUI, Tauri, or frontend layers.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
   upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
-  Cubby, pet polish, mascot work, and terminal image polish are final-pass TUI
-  work after the core RunHaven TUI is complete. Keep existing pet code as
-  parked source-first infrastructure; do not add a live env-gated smoke path
-  unless a final-pass pet slice or core terminal-image check explicitly requires
-  it.
+  Cubby, pet polish, mascot work, and terminal image polish are parked, not part
+  of this branch's hardening checkpoint. Keep existing pet code as source-first
+  infrastructure; do not add a live env-gated smoke path unless a future
+  explicitly scoped TUI or GUI slice needs it.
 - TUI implementation slices should use the repo-local
   `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
   skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
@@ -161,8 +162,8 @@ TUI, Tauri, or frontend layers.
   MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
   The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
   is recoverable from git history. If reintroduced, it must stay TUI-local,
-  attributed, offline, and carefully validate save/restore files. Defer it
-  until the core TUI is complete and final polish starts.
+  attributed, offline, and carefully validate save/restore files. Defer it to a
+  future explicitly scoped polish or easter-egg slice.
 - The glib advisory GHSA-wrw7-89jp-8q8g remains treated as not affected because
   `glib` enters only through Tauri's Linux GTK backend and is absent from the
   macOS build graph. See `docs/PINNING.md`.
@@ -211,7 +212,7 @@ package from `docs/assets/installed-pet/cubby/` and can materialize it as
 `custom:runhaven-cubby` under `$CODEX_HOME/pets/runhaven-cubby/` through the
 lower pet modules, avoiding collisions with a user's own
 `$CODEX_HOME/pets/cubby/` package. Reintroduce terminal-image smoke only in a
-final-pass pet slice or when a core terminal-image check explicitly requires it.
+future explicitly scoped pet, terminal-image, or GUI asset slice.
 
 TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
 defines the first tagged RunHaven payload enum with `AgentCatalogData` and
@@ -223,8 +224,8 @@ toward a Codex-native shell with RunHaven product cards. dbt-wizard is only the
 architecture proof for stable domain payloads first and renderer second. The
 visual target is closer to native Codex: compact intro and status content,
 bottom composer and status line, and no analytics dashboard feel in the default
-launcher. Native Cubby behavior is final-pass polish after the core TUI is
-complete.
+launcher. Native Cubby behavior is parked unless a future TUI or GUI slice
+explicitly pulls it forward.
 
 TUI bottom-pane follow-up: `crates/runhaven-tui` now compiles the Codex
 `ListSelectionView` family directly from the vendored bottom-pane source through
@@ -1204,10 +1205,10 @@ Latest RunHaven-only TUI MVP surface:
   posture, not-shared host data, provider hosts, safety notes, and the exact
   command before launch.
 - 2026-06-29: Removed the active `RUNHAVEN_TUI_IMAGE_SMOKE` hook from the live
-  `app_shell.rs` path so core TUI completion stays free of Cubby/pet polish
+  `app_shell.rs` path so terminal hardening stays free of Cubby/pet polish
   scope. The bundled Cubby package and lower pet/image modules remain parked
-  for final-pass work. Source scan confirms no active image-smoke symbols remain
-  in `app_shell.rs` or the RunHaven TUI view modules.
+  for future explicit scope. Source scan confirms no active image-smoke symbols
+  remain in `app_shell.rs` or the RunHaven TUI view modules.
 - Shared UI contracts now include `ActiveRunListData` and
   `RunHavenDiagnosticsData`. Active-run summaries intentionally omit workspace
   paths, diagnostics map only metadata fields, auth broker request paths are
@@ -1334,6 +1335,8 @@ Latest TUI MVP snapshot matrix:
   workspace state, and do not depend on host environment passthrough. Snapshot
   verification uses repo-local `.snap` goldens. Upstream Codex `.snap` goldens
   remain external; these are RunHaven behavior goldens only.
+- 2026-06-30: Expanded the matrix to include confirmation-gated run diff
+  review and loaded bounded diff preview at both `80x24` and `120x48`.
 - Security boundary is unchanged: app-server transport, filesystem RPC, MCP,
   login, workspace command execution, Codex session recording, full onboarding,
   native `App`, `ChatWidget`, and host-reaching Codex execution remain dormant
@@ -1395,16 +1398,18 @@ Latest TUI MVP module cleanup:
   MVP instead of the older disabled-launch status. README and Usage now describe
   workspace choice, agent choice, policy changes, plan review, typed
   confirmation, foreground launch handoff, active-run summaries,
-  confirmation-gated log snapshots, diagnostics, and post-run recovery.
-  Advanced run management, diff review, worktree review, cleanup, Cubby/pet
-  polish, terminal image polish, and Zork remain out of this core MVP path.
+  typed run control, confirmation-gated log snapshots, confirmation-gated run
+  diff review, diagnostics, and post-run recovery. Worktree review, cleanup,
+  Cubby/pet polish, terminal image polish, and Zork remain out of this
+  hardening path.
 - 2026-06-30: Final scoped TUI MVP checkpoint audit verified the current
   baseline after review found stale repo-state/docs wording and a missing
   shell-loop launch recovery proof. This did not close the `terminal-ui` feature
-  for `v0.6.0`; `terminal-ui` remains active because `v0.6.0` is reserved for
-  the fully complete TUI. Local evidence covers the MVP requirement matrix: bare
-  interactive TUI launch and quit, non-TTY CLI help fallback, workspace and
-  agent choice, policy changes, plan review, typed confirmation, foreground
+  because the product direction now favors CLI plus native GUI instead of
+  terminal polish as the product finish line. Local evidence covers the
+  checkpoint matrix:
+  bare interactive TUI launch and quit, non-TTY CLI help fallback, workspace
+  and agent choice, policy changes, plan review, typed confirmation, foreground
   terminal handoff, active-run summaries, typed-confirm raw log snapshots,
   diagnostics, post-run recovery, public docs, vendor audit counts, and
   dormant/fail-closed Codex host-reaching surfaces. The focused app-shell
@@ -1431,6 +1436,22 @@ Latest TUI run history surface:
   `codex-vendored-tests` no-run, clippy for `runhaven-core` and
   `runhaven-tui`, pin policy, Codex TUI compare, JSON validation, snap-new
   scan, and diff check.
+
+Latest TUI run diff surface:
+
+- 2026-06-30: Promoted confirmation-gated run diff review into the
+  RunHaven-only TUI without expanding `app_shell.rs`. Shared UI contracts now
+  expose `RunDiffData`, built from the existing `runhaven-core`
+  `run_diff_text` path and bounded before rendering.
+- Press Enter on a history record to open run review. The TUI requires typing
+  `diff` before backend lookup, rejects paste, keeps the CLI review command as
+  fallback text, and warns that diffs can show workspace file contents.
+- Security boundary is unchanged: only `runhaven/service.rs` may call
+  `run_diff_text`; `runhaven/protocol.rs` and `runhaven/app_server_session.rs`
+  expose only the reviewed `runhaven/run/diff` method; `app_shell.rs`, native
+  `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP, login,
+  workspace command execution, Codex session recording, and host-reaching
+  Codex execution remain dormant or fail-closed.
 
 Latest TUI preflight diagnostics surface:
 
@@ -1466,6 +1487,23 @@ Latest TUI preflight diagnostics surface:
   `runhaven-tui` suites, `codex-vendored-tests` no-run, clippy for
   `runhaven-core` and `runhaven-tui`, pin policy, Codex TUI compare, JSON
   validation, snap-new scan, and diff check.
+- 2026-06-30: Promoted TUI run-diff review from CLI-only fallback text into a
+  guarded RunHaven surface. History Enter opens a Run review screen, typing
+  `diff` gates backend lookup, paste is ignored, loaded output is bounded and
+  warning-labeled, and the CLI review command remains visible as fallback.
+  `RunDiffData` is the shared UI contract; `runhaven/service.rs` is the only
+  TUI owner allowed to call `run_diff_text`; and drift guards keep
+  `app_shell.rs` plus dormant Codex host-reaching surfaces out of the path.
+  Final verification for this slice is recorded in `feature_list.json`.
+
+Latest CLI surface pass:
+
+- 2026-06-30: Re-ran `scripts/cli_surface_check.sh` on macOS 27.0 build
+  26A5368g with Apple `container` 1.0.0 commit ee848e3. The breadth check
+  passed 39/39 command-family surfaces, including plan/run, worktree diff,
+  keep/recover/merge/discard, active run status/attach/kill/repair, state and
+  network cleanup confirmation gates, auth/egress logs, and safety `why`
+  commands. `docs/CLI_SURFACE_COVERAGE.md` now records this current evidence.
 
 ## Blockers
 
@@ -1473,17 +1511,9 @@ Latest TUI preflight diagnostics surface:
 
 ## Next Step
 
-The next work is a hardest-first full-TUI gap analysis and completion plan for
-`v0.6.0`. Start from the verified checkpoint plus run-history and preflight
-diagnostics surfaces, then close the highest-risk RunHaven needs before
-low-risk polish: final launch UX, active-run/log UX, failure recovery,
-diff/worktree review or CLI fallback text, cleanup guidance,
-Cubby/pet/terminal image/Zork decisions, and whether native
-`App` or `ChatWidget` should stay dormant or be promoted. Keep native `App` and
-`ChatWidget` dormant unless the full-TUI scope genuinely needs that specific
-owner. If native `App` startup is promoted, first replace raw Codex env/path
-session-recording behavior and app-server assumptions with reviewed RunHaven
-redaction and app-server boundaries. If `ChatWidget` is promoted, first define
-the RunHaven transcript, raw-log redaction, and session-recording policy. Do
-not cut `v0.6.0` until the full-TUI scope is implemented, verified, and
-explicitly approved.
+Commit and push this TUI hardening plus CLI-audit branch, then merge the
+branch/PR. After merge, shift focus to a native-feeling macOS GUI as the easy
+path for nontechnical users. Before designing that GUI, research the existing
+GitHub-hosted Apple `container` GUI work and decide whether RunHaven should
+build, adapt, or avoid it. Do not cut a release, tag, or version bump unless
+the maintainer explicitly asks for a release pass.

@@ -10,9 +10,11 @@ RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
 Sequencing history: on 2026-06-26, GUI/UI work was deferred behind
 runtime/security hardening, remaining non-UI product scope, and a CLI-based
 public release. On 2026-06-27, the terminal UI was pulled forward by user
-directive because it will be the reference TUI for sibling projects. The Tauri
-desktop app remains re-sequenced to a later release phase; already-shipped
-desktop slices stay complete and verified.
+directive as a source-first checkpoint. On 2026-06-30, product direction shifted
+again: finish only the TUI surfaces that harden the shared workflow, audit the
+CLI, merge the branch, then focus on a native-feeling macOS GUI as the easy
+path for nontechnical users. Already-shipped desktop slices stay complete and
+verified.
 
 The consolidated non-UI backlog lives in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md). Tauri/UI research lives in
@@ -28,10 +30,10 @@ The active release gap tracker lives in
 | --- | --- | --- |
 | `v0.5.0` | CLI-complete release: command set, docs, JSON/data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, secure-easy defaults, and maintainable module boundaries are complete and verified. | Scope complete (`passing`); tag cut at release-readiness |
 | Runtime/security hardening | Re-verify and audit the Apple `container` boundary (runs, provider egress, image, cleanup) on the current host; fix real findings under test before new runtime-sensitive surfaces. | Passing for the completed hardening slices; keep evidence current when touched |
-| Terminal UI | First-class TUI over the same planner and policy objects as the CLI and desktop app. A bare `runhaven` on a TTY opens the guided launcher/run manager; the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. Build plan in `docs/plans/tui-build-plan.md`. | Build plan complete; unreleased |
+| Terminal UI checkpoint | Hardened terminal checkpoint over the same planner and policy objects as the CLI and future desktop app. A bare `runhaven` on a TTY opens the guided launcher/run manager; the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. | Active branch hardening; unreleased |
 | Remaining non-UI product scope | Promote one design-first candidate at a time from `NON_UI_BACKLOG.md` (custom profiles, MCP allowlists, path-aware host policy, workflow files, and similar), preserving CLI semantics and default safety. | Planned |
 | CLI public release | Release-readiness for the hardened CLI product: full local verification, Apple `container` smokes, current pins, docs, and security evidence. | Planned |
-| Desktop app (later release) | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Deferred to a later release phase |
+| Desktop app (next focus) | First-class native-feeling macOS release: the app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Next after this branch merges |
 
 Design rule for every phase: the secure path must be the easy path. Supported
 lower-security choices should warn and require explicit intent; unsupported or
@@ -95,14 +97,12 @@ current-stable pins, and keep the harness state current.
 
 ## Terminal UI Build
 
-- Complete phases: scaffold, agent picker, source-first Codex TUI foundation,
-  RunHaven logo header, native Cubby pet, Phase 2 launcher, Phase 3 run
-  management, Phase 4 history and diagnostics, and Phase 5 polish.
-- Phase 5 completed the fresh-cache guide, `?`/F1 help route, dashboard notices,
-  accessibility switches, light/dark palette selection, final snapshots, and
-  architecture guide. Post-polish added a hidden, attributed Zork I easter egg
-  that runs in-process, adds no dependencies, and keeps save/restore constrained
-  to one private RunHaven cache slot.
+- Historical custom-TUI phases completed scaffold, agent picker, logo/pet work,
+  launcher, run management, history/diagnostics, and polish. That custom TUI
+  was superseded by the Codex-vendored reset.
+- Current direction: keep the Codex-vendored TUI as a hardened terminal
+  checkpoint. Finish only the surfaces that strengthen shared workflow
+  contracts and keep non-RunHaven Codex product features dormant or fail-closed.
 - The TUI consumes shared Rust data APIs, not CLI prose: planner data from
   `runtime/plans`, active-run control from `runtime/active`, host readiness from
   `doctor.rs`, secret-free diagnostics from `diagnostics.rs`, auth posture from
@@ -179,11 +179,11 @@ current-stable pins, and keep the harness state current.
   contract for UI resource warnings, approval gates, typed Rust commands, and
   narrow Tauri capabilities.
 
-## Desktop Surface: Shipped Slices, Re-Sequenced To Later Release
+## Desktop Surface: Shipped Slices, Next Product Focus
 
-These slices are complete and verified. The desktop app remains re-sequenced
-behind runtime/security hardening, active TUI work, remaining non-UI product
-scope, and a CLI public release; the desktop release version label is open.
+These slices are complete and verified. Finish this branch's TUI/CLI hardening
+and merge first; then make the desktop app the next product focus. The desktop
+release version label is open.
 
 - Completed 2026-06-16 in
   [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).

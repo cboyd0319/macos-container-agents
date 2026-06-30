@@ -12,6 +12,7 @@ use runhaven_core::ui_contracts::ActiveRunListData;
 use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::AgentCatalogData;
 use runhaven_core::ui_contracts::RunControlResultData;
+use runhaven_core::ui_contracts::RunDiffData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 
 use super::app_server_client::AppServerClient;
@@ -109,6 +110,21 @@ impl AppServerSession {
                 request_id,
                 run_id,
                 lines,
+                confirm_sensitive_output,
+            })
+            .await
+    }
+
+    pub(crate) async fn run_diff(
+        &mut self,
+        run_id: String,
+        confirm_sensitive_output: bool,
+    ) -> Result<RunDiffData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenRunDiff {
+                request_id,
+                run_id,
                 confirm_sensitive_output,
             })
             .await

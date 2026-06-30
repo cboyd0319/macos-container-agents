@@ -124,15 +124,17 @@ Tauri launch/run-control behavior.
   mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
   where no Codex equivalent exists. Document each exception in the TUI plan or
   architecture docs.
-- TUI v0.6 direction: avoid non-RunHaven Codex product features. Use Codex TUI
-  architecture as the source-first shell, but finish the complete RunHaven
-  terminal workflow before release work: clean workspace and agent selection,
-  network/auth visibility, plan review, typed launch confirmation, foreground
-  launch handoff, post-run recovery, active-run status, bounded logs,
-  diagnostics/doctor guidance, history or run records when backed by existing
-  core data, and explicit final decisions for Cubby/pet/terminal image/Zork
-  polish. Leave unrelated Codex features dormant, fail-closed, stubbed, or
-  deleted with documentation instead of porting them.
+- TUI direction: avoid non-RunHaven Codex product features. Use Codex TUI
+  architecture as the source-first terminal checkpoint, but finish only the
+  terminal surfaces that harden the shared RunHaven workflow: clean workspace
+  and agent selection, network/auth visibility, plan review, typed launch
+  confirmation, foreground launch handoff, post-run recovery, active-run
+  status/control, bounded logs, diagnostics/doctor guidance, and history or
+  run-record review when backed by existing core data. Leave Cubby/pet,
+  terminal-image, Zork, native Codex App, native ChatWidget, and unrelated
+  Codex product features dormant, fail-closed, parked, or documented unless
+  they harden the RunHaven boundary. After this branch is merged, shift product
+  focus to a native-feeling macOS GUI as the easy path for nontechnical users.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar
   size, take the one correct on edge cases; lazy means writing less code, not

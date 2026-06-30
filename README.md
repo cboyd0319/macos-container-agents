@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Active Codex-vendored TUI, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, confirmation-gated log snapshots, run history, diagnostics, and post-run recovery. |
+| Terminal UI | Active Codex-vendored TUI, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, typed run control, confirmation-gated log snapshots, confirmation-gated run diff review, run history, diagnostics, and post-run recovery. |
 | Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
 
 ## Why RunHaven
@@ -99,7 +99,8 @@ The TUI is an unreleased RunHaven-only checkpoint over the same Rust backend. It
 opens with a launch flow, shows the exact command and safety facts before
 launch, requires typed confirmation for lower-security plans, restores the
 terminal before starting the agent, and includes active-run summaries,
-confirmation-gated log snapshots, run history, preflight diagnostics, and
+typed stop/hard-stop/repair controls, confirmation-gated log snapshots,
+confirmation-gated run diff review, run history, preflight diagnostics, and
 post-run recovery. It does not replace the CLI: subcommands, pipes, and
 redirected invocations still use the CLI directly.
 
@@ -171,11 +172,12 @@ runhaven network list
 runhaven image doctor
 ```
 
-The current TUI exposes active-run summaries, bounded log snapshots only after
-you type `logs`, run history without host workspace paths, preflight checks,
-secret-free diagnostics, and post-run recovery over the same validated cores.
-Stop, kill, repair, diff review, worktree merge/discard, image rebuild, state
-cleanup, and network cleanup remain CLI-first today.
+The current TUI exposes active-run summaries, typed stop/hard-stop/repair
+controls, bounded log snapshots only after you type `logs`, run history without
+host workspace paths, run diff review only after you type `diff`, preflight
+checks, secret-free diagnostics, and post-run recovery over the same validated
+cores. Worktree merge/discard, image rebuild, state cleanup, and network
+cleanup remain CLI-first today.
 
 ## Status and roadmap
 
@@ -187,7 +189,8 @@ and supports confirmed launch, image readiness, sanitized live status, bounded
 output snapshots, stop, kill, repair, and secret-free diagnostics. Image build,
 state cleanup, network cleanup, and worktree review remain CLI-first.
 
-The roadmap now separates the active TUI build from the later desktop release
+The roadmap now treats the CLI as the complete technical surface, the TUI as a
+hardened terminal checkpoint, and the desktop app as the future easiest path
 (full detail in [ROADMAP.md](docs/ROADMAP.md) and the
 [release plan](docs/V1_RELEASE_PLAN.md)):
 
@@ -197,15 +200,14 @@ The roadmap now separates the active TUI build from the later desktop release
 - **Runtime and security hardening:** completed slices are recorded in the
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
-- **First-class terminal UI, v0.6 active:** a bare interactive
-  `runhaven` opens the four-step launch wizard and run manager over the shared
-  planner and policy. The CLI stays the complete explicit and automation
-  surface.
+- **Hardened terminal checkpoint:** a bare interactive `runhaven` opens the
+  four-step launch wizard and run manager over the shared planner and policy.
+  Keep it focused on the workflow and boundary checks that harden the backend.
 - **Remaining non-UI scope and CLI public release:** promote one design-first
   item at a time without weakening CLI semantics or default safety.
-- **First-class desktop app, later:** the Tauri app becomes the easiest safe
-  path for the full workflow, signed and notarized. Its release version label is
-  open.
+- **First-class desktop app, next:** the native macOS app becomes the easiest
+  safe path for nontechnical users, signed and notarized. Its release version
+  label is open.
 
 ## Product rule
 

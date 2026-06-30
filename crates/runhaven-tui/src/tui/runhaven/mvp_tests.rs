@@ -198,6 +198,103 @@ fn history_view_lists_run_records_without_workspace_paths() {
 }
 
 #[test]
+fn history_enter_opens_confirmed_run_review() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    ensure_private_parent(&runs_log_path()).expect("runs log parent");
+    let mut file = std::fs::File::create(runs_log_path()).expect("runs log file");
+    writeln!(
+        file,
+        "{}",
+        serde_json::json!({
+            "timestamp": "2026-06-30T01:00:00Z",
+            "started_at": "2026-06-30T00:00:00Z",
+            "finished_at": "2026-06-30T01:00:00Z",
+            "run_id": "run-123",
+            "profile": "codex",
+            "workspace": "/Users/c/secret/project",
+            "workspace_scope": "current",
+            "state_volume": "runhaven-codex-shared-home",
+            "session": "none",
+            "network": "provider",
+            "status": "succeeded",
+            "return_code": 0,
+            "provider_policy": {"allowed": 3, "denied": 0},
+            "auth_broker": {"allowed": 2, "denied": 0},
+            "cleanup": {"provider_network": "removed"},
+            "git": {"available": "false", "reason": "not-a-git-worktree"}
+        })
+    )
+    .expect("write run record");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
+
+    view.handle_key_event(key(KeyCode::Char('4')));
+    view.handle_key_event(key(KeyCode::Enter));
+    let output = render_to_text(&mut view, 120, 40);
+
+    assert!(output.contains("Run review"));
+    assert!(output.contains("The diff can show workspace file contents."));
+    assert!(output.contains("Type diff"));
+    assert!(output.contains("runhaven runs show run-123"));
+    assert!(!output.contains("/Users/c/secret/project"));
+
+    assert!(view.handle_paste("diff".to_string()));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Paste is ignored"));
+
+    for ch in "nope".chars() {
+        view.handle_key_event(key(KeyCode::Char(ch)));
+    }
+    view.handle_key_event(key(KeyCode::Enter));
+    let output = render_to_text(&mut view, 120, 40);
+    assert!(output.contains("Type diff before loading the diff."));
+}
+
+#[test]
+fn loaded_run_review_shows_bounded_diff_warning() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
+    view.screen = MvpScreen::RunDiff(Box::new(RunDiffScreen {
+        run: RunHistorySummaryData {
+            run_id: "run-123".to_string(),
+            profile: "codex".to_string(),
+            network: "provider".to_string(),
+            status: "succeeded".to_string(),
+            started_at: "2026-06-29T00:00:00Z".to_string(),
+            finished_at: "2026-06-29T00:10:00Z".to_string(),
+            return_code: Some(0),
+            workspace_scope: "current".to_string(),
+            session: "none".to_string(),
+            state_volume: "runhaven-codex-shared-home".to_string(),
+            provider_allowed: 1,
+            provider_denied: 0,
+            auth_allowed: 1,
+            auth_denied: 0,
+            cleanup_provider_network: "removed".to_string(),
+            git_summary: "Git: changed=true before=abc1234 after=def5678 files=1".to_string(),
+            worktree_branch: None,
+            review_command: "runhaven runs show run-123".to_string(),
+        },
+        state: RunDiffState::Loaded(RunDiffData {
+            run_id: "run-123".to_string(),
+            text: "diff --git a/file.txt b/file.txt\n+safe preview line\n".to_string(),
+            returned_lines: 2,
+            truncated: false,
+            source: "git diff".to_string(),
+            warnings: vec!["Diff can include workspace file contents.".to_string()],
+        }),
+    }));
+
+    let output = render_to_text(&mut view, 120, 40);
+
+    assert!(output.contains("Diff preview"));
+    assert!(output.contains("diff --git a/file.txt b/file.txt"));
+    assert!(output.contains("+safe preview line"));
+    assert!(output.contains("Diff can include workspace file contents."));
+}
+
+#[test]
 fn log_confirmation_rejects_paste_and_wrong_phrase() {
     let workspace = tempfile::tempdir().expect("workspace");
     let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());

@@ -11,6 +11,7 @@ use ratatui::widgets::Wrap;
 use runhaven_core::ui_contracts::AuthDecisionData;
 use runhaven_core::ui_contracts::DoctorCheckData;
 use runhaven_core::ui_contracts::EgressDecisionData;
+use runhaven_core::ui_contracts::RunDiffData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 use runhaven_core::ui_contracts::RunHistorySummaryData;
 
@@ -26,6 +27,7 @@ use crate::style::warning_style;
 use crate::tui::bottom_pane::render_menu_surface;
 
 use super::ActiveRunsScreen;
+use super::DIFF_CONFIRM_PHRASE;
 use super::DiagnosticsScreen;
 use super::HistoryScreen;
 use super::LOG_CONFIRM_PHRASE;
@@ -34,6 +36,8 @@ use super::PostRunOutcome;
 use super::RunControlAction;
 use super::RunControlScreen;
 use super::RunControlState;
+use super::RunDiffScreen;
+use super::RunDiffState;
 use super::RunHavenMvpView;
 use super::RunLogsScreen;
 use super::RunLogsState;
@@ -43,6 +47,7 @@ pub(super) fn render(view: &RunHavenMvpView, area: Rect, buf: &mut Buffer) {
         MvpScreen::Launch => view.launch.render(area, buf),
         MvpScreen::ActiveRuns(screen) => render_active_runs(screen, area, buf),
         MvpScreen::RunLogs(screen) => render_run_logs(screen, area, buf),
+        MvpScreen::RunDiff(screen) => render_run_diff(screen, area, buf),
         MvpScreen::RunControl(screen) => render_run_control(screen, area, buf),
         MvpScreen::History(screen) => render_history(screen, area, buf),
         MvpScreen::Diagnostics(screen) => render_diagnostics(screen, area, buf),
@@ -59,6 +64,9 @@ pub(super) fn desired_height(view: &RunHavenMvpView, width: u16) -> u16 {
         }
         MvpScreen::RunLogs(screen) => {
             paragraph(run_logs_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+        }
+        MvpScreen::RunDiff(screen) => {
+            paragraph(run_diff_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
         }
         MvpScreen::RunControl(screen) => {
             paragraph(run_control_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16
@@ -342,6 +350,99 @@ fn run_logs_lines(screen: &RunLogsScreen) -> Vec<Line<'static>> {
     lines
 }
 
+fn render_run_diff(screen: &RunDiffScreen, area: Rect, buf: &mut Buffer) {
+    render_panel(area, buf, run_diff_lines(screen));
+}
+
+fn run_diff_lines(screen: &RunDiffScreen) -> Vec<Line<'static>> {
+    let mut lines = vec![
+        header_line("Run review"),
+        Line::from(vec![
+            Span::styled("Run ID  ", muted_but_readable_style()),
+            Span::styled(screen.run.run_id.clone(), boundary_style()),
+            Span::raw("  "),
+            Span::styled("Profile  ", muted_but_readable_style()),
+            Span::styled(screen.run.profile.clone(), accent_style()),
+        ]),
+        label_value(
+            "Git",
+            screen.run.git_summary.clone(),
+            muted_but_readable_style(),
+        ),
+        label_value(
+            "Fallback",
+            screen.run.review_command.clone(),
+            boundary_style(),
+        ),
+        Line::from(""),
+    ];
+
+    match &screen.state {
+        RunDiffState::Confirm { typed, notice } => {
+            lines.push(Line::from(Span::styled(
+                "The diff can show workspace file contents.",
+                warning_style(),
+            )));
+            lines.push(Line::from(vec![
+                Span::raw("Type "),
+                Span::styled(DIFF_CONFIRM_PHRASE, selected_row_style()),
+                Span::raw(", then press Enter to load a bounded preview."),
+            ]));
+            lines.push(label_value(
+                "Typed",
+                typed.clone(),
+                muted_but_readable_style(),
+            ));
+            if let Some(notice) = notice {
+                lines.push(Line::from(Span::styled(notice.clone(), warning_style())));
+            }
+        }
+        RunDiffState::Loaded(diff) => append_loaded_diff(&mut lines, diff),
+        RunDiffState::Error(message) => {
+            lines.push(Line::from(Span::styled(
+                "Could not load run review.",
+                danger_style(),
+            )));
+            lines.push(Line::from(message.clone()));
+            lines.push(Line::from(""));
+            lines.push(Line::from(
+                "Use the fallback command above if you need the full record.",
+            ));
+        }
+    }
+    lines
+}
+
+fn append_loaded_diff(lines: &mut Vec<Line<'static>>, diff: &RunDiffData) {
+    lines.push(label_value(
+        "Returned",
+        format!("{} lines", diff.returned_lines),
+        safe_style(),
+    ));
+    lines.push(label_value("Source", diff.source.clone(), safe_style()));
+    for warning in &diff.warnings {
+        lines.push(Line::from(Span::styled(warning.clone(), warning_style())));
+    }
+    if diff.truncated {
+        lines.push(Line::from(Span::styled(
+            "Only the first lines are shown here.",
+            warning_style(),
+        )));
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        "Diff preview",
+        selected_row_style(),
+    )]));
+    if diff.text.is_empty() {
+        lines.push(Line::from("(no diff output returned)"));
+    } else {
+        for line in diff.text.lines().take(160) {
+            lines.push(Line::from(line.to_string()));
+        }
+    }
+}
+
 fn render_history(screen: &HistoryScreen, area: Rect, buf: &mut Buffer) {
     render_panel(area, buf, history_lines(screen));
 }
@@ -351,6 +452,7 @@ fn history_lines(screen: &HistoryScreen) -> Vec<Line<'static>> {
         header_line("Run history"),
         tab_line(),
         Line::from("Recent run records. Host workspace paths are hidden in the TUI."),
+        Line::from("Enter reviews the selected run diff after confirmation."),
         Line::from(""),
     ];
     match &screen.result {
@@ -376,6 +478,10 @@ fn history_lines(screen: &HistoryScreen) -> Vec<Line<'static>> {
             )));
             lines.push(Line::from(error.clone()));
         }
+    }
+    if let Some(notice) = &screen.notice {
+        lines.push(Line::from(""));
+        lines.push(Line::from(Span::styled(notice.clone(), warning_style())));
     }
     lines
 }

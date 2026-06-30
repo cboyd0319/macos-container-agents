@@ -119,10 +119,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 414.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 418.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 58.
+- RunHaven-only files: 62.
 - Copied Codex files with local edits: 53.
 
 RunHaven-only files:
@@ -168,6 +168,8 @@ snapshots/runhaven_mvp_diagnostics_120x48.snap
 snapshots/runhaven_mvp_diagnostics_80x24.snap
 snapshots/runhaven_mvp_history_120x48.snap
 snapshots/runhaven_mvp_history_80x24.snap
+snapshots/runhaven_mvp_loaded_run_diff_120x48.snap
+snapshots/runhaven_mvp_loaded_run_diff_80x24.snap
 snapshots/runhaven_mvp_loaded_log_snapshot_120x48.snap
 snapshots/runhaven_mvp_loaded_log_snapshot_80x24.snap
 snapshots/runhaven_mvp_log_confirmation_120x48.snap
@@ -180,6 +182,8 @@ snapshots/runhaven_mvp_run_control_result_120x48.snap
 snapshots/runhaven_mvp_run_control_result_80x24.snap
 snapshots/runhaven_mvp_run_control_stop_120x48.snap
 snapshots/runhaven_mvp_run_control_stop_80x24.snap
+snapshots/runhaven_mvp_run_diff_confirmation_120x48.snap
+snapshots/runhaven_mvp_run_diff_confirmation_80x24.snap
 snapshots/runhaven_mvp_typed_confirm_120x48.snap
 snapshots/runhaven_mvp_typed_confirm_80x24.snap
 snapshots/runhaven_mvp_workspace_picker_repo_root_120x48.snap
@@ -373,17 +377,19 @@ Local integration exceptions:
 - `runhaven/service.rs` is the temporary RunHaven TUI service seam. It turns
   `runhaven-core` profiles and planner output into launch preview payloads, so
   `app_shell.rs` does not call core planner APIs directly. It also owns the
-  confirmation-gated active-run log snapshot route, keeping malformed or
-  unconfirmed raw-output requests from reaching container log lookup.
+  confirmation-gated active-run log snapshot, run diff, and run-control routes,
+  keeping malformed or unconfirmed sensitive requests from reaching container
+  log lookup, git diff, or active-run mutation.
 - `runhaven/protocol.rs` and `runhaven/app_server_client.rs` are the local
   Strategy C backend facade. They mirror Codex's app-server client shape while
   keeping RunHaven runtime authority in `runhaven-core` and fail-closing
   unsupported Codex method families.
 - `runhaven/app_server_session.rs` is the local Strategy C session bridge for
   this phase. It routes supported bootstrap, agent-catalog, and workspace
-  validation calls plus bounded active-run log snapshots into the RunHaven
-  facade and returns typed unsupported errors for method families that are not
-  promoted into the RunHaven security model.
+  validation calls plus bounded active-run log snapshots, run diff review, and
+  typed run-control calls into the RunHaven facade and returns typed unsupported
+  errors for method families that are not promoted into the RunHaven security
+  model.
 - `runhaven/terminal_handoff.rs` is the local Phase 4 smoke hook. It proves
   Codex `Tui::with_restored` can release terminal ownership for a harmless
   foreground child and restore afterward without wiring real agent launch.

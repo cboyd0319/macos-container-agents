@@ -17,6 +17,7 @@ use runhaven_core::ui_contracts::LaunchBoundaryData;
 use runhaven_core::ui_contracts::LaunchNetworkData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 use runhaven_core::ui_contracts::RunControlResultData;
+use runhaven_core::ui_contracts::RunDiffData;
 use runhaven_core::ui_contracts::RunHistoryListData;
 use runhaven_core::ui_contracts::RunHistorySummaryData;
 
@@ -117,6 +118,30 @@ fn runhaven_mvp_snapshot_matrix() {
     );
     snapshot_static_screen("runhaven_mvp_history_80x24", 80, 24, history_view());
     snapshot_static_screen("runhaven_mvp_history_120x48", 120, 48, history_view());
+    snapshot_static_screen(
+        "runhaven_mvp_run_diff_confirmation_80x24",
+        80,
+        24,
+        run_diff_confirmation_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_run_diff_confirmation_120x48",
+        120,
+        48,
+        run_diff_confirmation_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_loaded_run_diff_80x24",
+        80,
+        24,
+        loaded_run_diff_view(),
+    );
+    snapshot_static_screen(
+        "runhaven_mvp_loaded_run_diff_120x48",
+        120,
+        48,
+        loaded_run_diff_view(),
+    );
     snapshot_static_screen("runhaven_mvp_diagnostics_80x24", 80, 24, diagnostics_view());
     snapshot_static_screen(
         "runhaven_mvp_diagnostics_120x48",
@@ -447,8 +472,70 @@ fn history_view() -> RunHavenMvpView {
             ],
         }),
         selected_idx: 1,
+        notice: None,
     }));
     view
+}
+
+fn run_diff_confirmation_view() -> RunHavenMvpView {
+    let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
+    view.screen = MvpScreen::RunDiff(Box::new(RunDiffScreen {
+        run: history_run(),
+        state: RunDiffState::Confirm {
+            typed: String::new(),
+            notice: None,
+        },
+    }));
+    view
+}
+
+fn loaded_run_diff_view() -> RunHavenMvpView {
+    let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
+    view.screen = MvpScreen::RunDiff(Box::new(RunDiffScreen {
+        run: history_run(),
+        state: RunDiffState::Loaded(RunDiffData {
+            run_id: "run-20260629-002".to_string(),
+            text: [
+                "diff --git a/src/main.rs b/src/main.rs",
+                "index 1111111..2222222 100644",
+                "--- a/src/main.rs",
+                "+++ b/src/main.rs",
+                "@@ -1,3 +1,4 @@",
+                " fn main() {",
+                "+    println!(\"RunHaven reviewed this change\");",
+                " }",
+            ]
+            .join("\n"),
+            returned_lines: 8,
+            truncated: false,
+            source: "git diff".to_string(),
+            warnings: vec!["Diff can include workspace file contents.".to_string()],
+        }),
+    }));
+    view
+}
+
+fn history_run() -> RunHistorySummaryData {
+    RunHistorySummaryData {
+        run_id: "run-20260629-002".to_string(),
+        profile: "codex".to_string(),
+        network: "provider".to_string(),
+        status: "succeeded".to_string(),
+        started_at: "2026-06-29T17:50:00Z".to_string(),
+        finished_at: "2026-06-29T17:59:00Z".to_string(),
+        return_code: Some(0),
+        workspace_scope: "repository".to_string(),
+        session: "agent".to_string(),
+        state_volume: "runhaven-codex-shared-home".to_string(),
+        provider_allowed: 8,
+        provider_denied: 0,
+        auth_allowed: 2,
+        auth_denied: 0,
+        cleanup_provider_network: "removed".to_string(),
+        git_summary: "Git: changed=true before=1234567 after=89abcde files=3".to_string(),
+        worktree_branch: Some("runhaven/codex/run-20260629-002-review-branch".to_string()),
+        review_command: "runhaven runs show run-20260629-002".to_string(),
+    }
 }
 
 fn active_run() -> ActiveRunSummaryData {

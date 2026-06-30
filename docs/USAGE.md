@@ -31,14 +31,17 @@ require typed confirmation. Press `q` or esc to quit except while typing
 confirmation text; there, esc backs out and `q` is entered as text.
 
 The active-runs screen shows RunHaven-owned active markers without workspace
-paths. Opening logs requires typing `logs` before RunHaven reads a bounded raw
-output snapshot. The diagnostics screen shows Mac/container preflight checks,
-auth status, and recent auth/network decisions without raw secrets or workspace
-paths. The history screen shows recent run records, review commands, and
-worktree branch details without host workspace paths.
+paths. Stop, hard stop, and repair marker actions each require a typed
+confirmation before RunHaven touches the selected run. Opening logs requires
+typing `logs` before RunHaven reads a bounded raw output snapshot. The
+diagnostics screen shows Mac/container preflight checks, auth status, and
+recent auth/network decisions without raw secrets or workspace paths. The
+history screen shows recent run records, review commands, and worktree branch
+details without host workspace paths. Opening a run diff requires typing
+`diff` before RunHaven reads a bounded preview.
 
-Use the CLI for advanced run management, diff review, worktree review, cleanup,
-and maintenance:
+Use the CLI for advanced run management, worktree review, cleanup, and
+maintenance:
 
 ```bash
 runhaven plan claude

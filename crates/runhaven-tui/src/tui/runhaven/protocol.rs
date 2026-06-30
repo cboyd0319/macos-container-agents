@@ -27,6 +27,11 @@ pub(crate) enum ClientRequest {
         lines: u32,
         confirm_sensitive_output: bool,
     },
+    RunHavenRunDiff {
+        request_id: RequestId,
+        run_id: String,
+        confirm_sensitive_output: bool,
+    },
     RunHavenRunStop {
         request_id: RequestId,
         run_id: String,
@@ -61,6 +66,7 @@ impl ClientRequest {
             | Self::RunHavenDiagnostics { request_id, .. }
             | Self::RunHavenValidateWorkspace { request_id, .. }
             | Self::RunHavenRunLogSnapshot { request_id, .. }
+            | Self::RunHavenRunDiff { request_id, .. }
             | Self::RunHavenRunStop { request_id, .. }
             | Self::RunHavenRunKill { request_id, .. }
             | Self::RunHavenRunRepair { request_id, .. }
@@ -77,6 +83,7 @@ impl ClientRequest {
             Self::RunHavenDiagnostics { .. } => "runhaven/diagnostics",
             Self::RunHavenValidateWorkspace { .. } => "runhaven/workspace/validate",
             Self::RunHavenRunLogSnapshot { .. } => "runhaven/run/logSnapshot",
+            Self::RunHavenRunDiff { .. } => "runhaven/run/diff",
             Self::RunHavenRunStop { .. } => "runhaven/run/stop",
             Self::RunHavenRunKill { .. } => "runhaven/run/kill",
             Self::RunHavenRunRepair { .. } => "runhaven/run/repair",

@@ -98,6 +98,27 @@ async fn run_log_snapshot_requires_sensitive_output_confirmation_before_backend_
 }
 
 #[tokio::test]
+async fn run_diff_requires_sensitive_output_confirmation_before_backend_lookup() {
+    let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
+
+    let error = session
+        .run_diff("not-a-real-run".to_string(), false)
+        .await
+        .expect_err("missing confirmation should fail validation");
+
+    match error {
+        TypedRequestError::Validation { method, message } => {
+            assert_eq!(method, "runhaven/run/diff");
+            assert!(message.contains("Confirm diff viewing"));
+            assert!(message.contains("workspace file contents"));
+        }
+        other => panic!("expected validation error, got {other:?}"),
+    }
+
+    session.shutdown().await.expect("shutdown");
+}
+
+#[tokio::test]
 async fn run_control_requires_confirmation_before_backend_lookup() {
     let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
 

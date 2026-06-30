@@ -60,6 +60,18 @@ fn run_log_snapshot_request_uses_runhaven_method() {
 }
 
 #[test]
+fn run_diff_request_uses_runhaven_method() {
+    let request = ClientRequest::RunHavenRunDiff {
+        request_id: 46,
+        run_id: "run-123".to_string(),
+        confirm_sensitive_output: true,
+    };
+
+    assert_eq!(request.request_id(), 46);
+    assert_eq!(request.method(), "runhaven/run/diff");
+}
+
+#[test]
 fn run_control_requests_use_runhaven_methods() {
     let stop = ClientRequest::RunHavenRunStop {
         request_id: 43,
