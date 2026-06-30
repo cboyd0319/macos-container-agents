@@ -1318,6 +1318,17 @@ Latest TUI MVP module cleanup:
   native `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP, login,
   workspace command execution, session recording, or host-reaching Codex path
   changed. Final slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Batched the remaining inline RunHaven TUI unit tests into
+  sibling test modules for `app_server_client`, `app_server_session`,
+  `launch_handoff`, `protocol`, `service`, `status_format`, and
+  `terminal_handoff`. The production modules now keep runtime/service/handoff
+  code plus `#[cfg(test)]` path hooks, while existing test names and coverage
+  stay under their original parent modules.
+- Behavior and security boundary are unchanged: the move does not change
+  launch, logs, diagnostics, service routing, `app_shell.rs`, native `App`,
+  `ChatWidget`, app-server transport, filesystem RPC, MCP, login, workspace
+  command execution, session recording, or host-reaching Codex paths. Final
+  slice verification is recorded in `feature_list.json`.
 
 ## Blockers
 
