@@ -21,15 +21,20 @@ runhaven
 ```
 
 Current rebuild state: the TUI opens an unreleased RunHaven-only MVP. Use
-up/down or `j`/`k` to choose an agent, then press enter to review the launch
-plan. The first screen stays simple. Review and confirm show auth scope, network
+`1` for launch, `2` for active runs, and `3` for diagnostics. In the launch
+flow, choose a workspace and an agent, then review the launch plan. Press `n`
+to change the network policy and `a` to switch between shared agent login state
+and project-only login state. Review and confirm show auth scope, network
 posture, what is shared, what is not shared, safety notes, and the matching
-`container run` command before launch. Press `q` or esc to quit.
+`container run` command before launch. Lower-security plans require typed
+confirmation. Press `q` or esc to quit.
 
-RunHaven is reattaching the remaining history, richer dashboard, pet, and
-hidden easter egg surfaces from the Codex-vendored TUI
-baseline. Until those screens are back, use the CLI for advanced run
-management, history, and maintenance:
+The active-runs screen shows RunHaven-owned active markers without workspace
+paths. Opening logs requires typing `logs` before RunHaven reads a bounded raw
+output snapshot. Diagnostics show auth and network metadata without secrets.
+
+Use the CLI for advanced run management, history, worktree review, cleanup, and
+maintenance:
 
 ```bash
 runhaven plan claude

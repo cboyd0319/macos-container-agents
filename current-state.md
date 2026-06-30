@@ -1334,15 +1334,25 @@ Latest TUI MVP module cleanup:
   `BottomPane` wiring while shell tests live in `app_shell_tests.rs`.
   `runhaven/mvp.rs` now keeps MVP state/input and delegates panel rendering to
   `runhaven/mvp_render.rs`. `runhaven/launch_wizard.rs` now keeps the wizard
-  state machine and delegates review/confirmation rendering to
-  `runhaven/launch_wizard_render.rs`. Current active file sizes are:
-  `app_shell.rs` 469 lines, `runhaven/mvp.rs` 654 lines, and
-  `runhaven/launch_wizard.rs` 1067 lines.
+  state machine, delegates workspace/agent picker params and headers to
+  `runhaven/launch_wizard_picker.rs`, and delegates review/confirmation
+  rendering to `runhaven/launch_wizard_render.rs`. Current active file sizes
+  are: `app_shell.rs` 469 lines, `runhaven/mvp.rs` 654 lines,
+  `runhaven/launch_wizard.rs` 702 lines,
+  `runhaven/launch_wizard_picker.rs` 393 lines, and
+  `runhaven/launch_wizard_render.rs` 491 lines.
 - Behavior and security boundary are unchanged: this split does not change
   launch, logs, diagnostics, service routing, native `App`, `ChatWidget`,
   app-server transport, filesystem RPC, MCP, login, workspace command
   execution, session recording, or host-reaching Codex paths. Final slice
   verification is recorded in `feature_list.json`.
+- 2026-06-30: Updated public TUI documentation to match the current active
+  MVP instead of the older read-only preview. README and Usage now describe
+  workspace choice, agent choice, policy changes, plan review, typed
+  confirmation, foreground launch handoff, active-run summaries,
+  confirmation-gated log snapshots, diagnostics, and post-run recovery.
+  Advanced run management, history, worktree review, cleanup, Cubby/pet
+  polish, terminal image polish, and Zork remain out of this core MVP path.
 
 ## Blockers
 
@@ -1351,13 +1361,14 @@ Latest TUI MVP module cleanup:
 ## Next Step
 
 The RunHaven-only TUI MVP surface is now present in the staging Codex runtime.
-Next TUI work should be core completion, cleanup, and hardening, not final
-polish or new product scope. Defer Cubby/pet polish, mascot work, terminal image
-polish, and Zork until the end. Reduce remaining module-path debt and keep
-native `App` and `ChatWidget` dormant unless a future RunHaven scope genuinely
-needs that specific owner. If native `App` startup is promoted later, first
-replace raw Codex env/path session-recording behavior and app-server assumptions
-with reviewed RunHaven redaction and app-server boundaries. If `ChatWidget` is
-promoted later, first define the RunHaven transcript, raw-log redaction, and
-session-recording policy. Keep unrelated Codex product features dormant,
-fail-closed, or deleted.
+Next TUI work should be the final requirement-by-requirement completion audit,
+plus any gaps it proves from live files or PTY behavior. Keep this focused on
+core completion, cleanup, and hardening, not final polish or new product scope.
+Defer Cubby/pet polish, mascot work, terminal image polish, and Zork until the
+end. Keep native `App` and `ChatWidget` dormant unless a future RunHaven scope
+genuinely needs that specific owner. If native `App` startup is promoted later,
+first replace raw Codex env/path session-recording behavior and app-server
+assumptions with reviewed RunHaven redaction and app-server boundaries. If
+`ChatWidget` is promoted later, first define the RunHaven transcript, raw-log
+redaction, and session-recording policy. Keep unrelated Codex product features
+dormant, fail-closed, or deleted.
